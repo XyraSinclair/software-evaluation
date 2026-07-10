@@ -1,0 +1,63 @@
+{
+  "claims": [
+    {
+      "id": "quickstart_is_broken",
+      "prior_probability": 0.2,
+      "false_positive_loss": 1.0,
+      "false_negative_loss": 5.0,
+      "importance": 2.0
+    },
+    {
+      "id": "provenance_chain_is_broken",
+      "prior_probability": 0.35,
+      "false_positive_loss": 1.0,
+      "false_negative_loss": 8.0,
+      "importance": 3.0
+    }
+  ],
+  "probes": [
+    {
+      "id": "static_manifest_check",
+      "claim_id": "quickstart_is_broken",
+      "sensitivity": 0.65,
+      "specificity": 0.9,
+      "expected_usd": 0.01,
+      "expected_seconds": 0.2,
+      "dependence_group": "static"
+    },
+    {
+      "id": "sandbox_quickstart",
+      "claim_id": "quickstart_is_broken",
+      "sensitivity": 0.95,
+      "specificity": 0.98,
+      "expected_usd": 0.2,
+      "expected_seconds": 20.0,
+      "dependence_group": "execution"
+    },
+    {
+      "id": "static_evidence_links",
+      "claim_id": "provenance_chain_is_broken",
+      "sensitivity": 0.99,
+      "specificity": 0.99,
+      "expected_usd": 0.0,
+      "expected_seconds": 0.5,
+      "dependence_group": "reference_closure"
+    },
+    {
+      "id": "independent_archive_review",
+      "claim_id": "provenance_chain_is_broken",
+      "sensitivity": 0.85,
+      "specificity": 0.8,
+      "expected_usd": 0.6,
+      "expected_seconds": 12.0,
+      "dependence_group": "judgment"
+    }
+  ],
+  "budget": {
+    "max_usd": 1.0,
+    "max_seconds": 30.0,
+    "max_probes": 3
+  },
+  "strategy": "max_risk_reduction",
+  "conditional_independence_assumed": true
+}

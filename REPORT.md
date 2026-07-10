@@ -32,9 +32,12 @@ positions, the evidence each cites, the grounds on which the owner
 must decide. This section may be the report's most valuable output.
 
 ## Overall
-An ordinal verdict ONLY if the axis table is lopsided (strict-majority
-of applicable axes one way, none strongly the other). Otherwise:
-"stronger at different things", stated plainly, with the axis split.
+An ordinal verdict appears only when one artifact passes a preregistered
+feasibility gate the other fails, Pareto-dominates under declared practical-
+difference thresholds, or wins under an owner-supplied decision policy that
+was versioned before synthesis. Counting axes is an unstated equal-weight
+policy, not a neutral rule. Otherwise: "stronger at different things",
+stated plainly with the axis split and the policy needed to decide.
 
 ## Denominators
 Axes evaluated / waived (with reasons). Claims audited K of N. Probes

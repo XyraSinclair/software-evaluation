@@ -1,14 +1,28 @@
 # Instruments — how each axis is measured
 
 Orthogonal to *what* is measured (TAXONOMY.md) is *how*. Three instrument
-classes, in strict preference order: mechanical beats empirical beats judged
-— not because judgment is worthless, but because each step down the order
-costs provenance strength and demands more discipline to stay honest.
+classes recur: mechanical, empirical, and judged. They are not a validity
+ranking. Choose the instrument that binds the target claim most directly;
+then prefer stronger coverage, replayability, independence, lower cost, and
+lower latency. A deterministic proxy can be precisely wrong, while an
+empirical run can exactly settle a narrow behavioral contract.
+
+Every observation declares its epistemic class separately:
+
+- **exact** — directly decides a finite or formal contract in the stated scope;
+- **proxy** — reproducible evidence correlated with a target construct, with
+  the uncovered proxy gap named;
+- **judgment** — irreducibly normative evidence whose judge, rubric,
+  independence structure, and disagreement remain visible.
+
+Instrument class says how evidence was produced. Epistemic class says what it
+can certify. Never infer the second from the first.
 
 ## 1. Mechanical — computed by tools
 
-Deterministic functions of the artifact at a commit. Perfect provenance: the
-record is `(tool, version, command, commit) → number`, replayable by anyone.
+Deterministic functions of the artifact at a commit. Strong replay provenance:
+the record is `(tool, version, command, commit) → number`, reproducible by anyone;
+its construct validity and coverage still require a separate argument.
 
 | Axis | Mechanical instruments |
 |---|---|
