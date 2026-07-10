@@ -52,6 +52,26 @@ and explicit limitations. `seval repo-compare` compares only numeric leaves at
 identical JSON Pointer paths from matched program versions. It preserves each
 dimension and attaches no good/bad direction to a delta.
 
+### Implemented one-off AST metrics
+
+`seval metrics`, `seval functions`, and `seval files` use
+`big-code-analysis@2.0.0` in-process. The file walker respects ignore files and
+does not follow symlinks; analysis is parallel across files and output ordering
+is deterministic. The current grammar set is Rust, Python, JavaScript,
+TypeScript/TSX, and Go.
+
+| Program | Observation denominator | What it can establish | What it cannot establish |
+|---|---|---|---|
+| `seval metrics PATH` | recognized, non-ignored source files in the current file/worktree | LOC families, cognitive and standard/modified cyclomatic totals, arguments, exits, ABC counts, per-file Halstead/maintainability means, normalized rates, and nearest-rank function tails | correctness, runtime performance, dependency shape, duplication, test adequacy, security, or quality |
+| `seval functions PATH` | AST function spaces, including analyzer-recognized closures | deterministic hotspot rankings by cognitive/cyclomatic complexity, SLOC, arguments, exits, maintainability, or Halstead effort | whether a hotspot is wrong, unjustified, or worth changing |
+| `seval files PATH` | recognized source files | deterministic file-level hotspot rankings on the same dimensions | architectural boundaries, ownership, coupling, or fitness-to-intent |
+| `seval metrics-compare LEFT RIGHT` | independently analyzed sides; files match only at identical root-relative path and language | raw and normalized `right - left` deltas, function-tail shifts, and matched/left-only/right-only file partitions | an overall winner or any intrinsic good/bad direction |
+
+Every report names the analyzer version, enumerated/analyzed/skipped counts,
+elapsed time, and explicit limitations. JSON preserves raw rows; text defaults
+to bounded hotspot tables. Run optimized builds (`cargo run --release -- ...`)
+for representative latency.
+
 ## 2. Empirical — exercised behavior
 
 Run the thing and observe. Provenance: the transcript (commands + output),

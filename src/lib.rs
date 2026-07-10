@@ -7,4 +7,5 @@ pub mod audit;
 pub mod compare;
 pub mod info;
 pub mod kernel;
+pub mod metrics;
 pub mod repo;

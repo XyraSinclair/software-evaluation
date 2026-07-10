@@ -30,7 +30,7 @@ Built on three refusals:
 
 ## Executable core
 
-`seval` now closes four loops:
+`seval` now closes five loops:
 
 1. **Archive integrity:** prove that an evaluation has nonempty records, safe
    and existing evidence/procedure paths, literal report-to-record references,
@@ -44,12 +44,20 @@ Built on three refusals:
 4. **Repository profiling and comparison:** run two fast, deterministic proxy
    programs against committed Git snapshots, then derive matched numeric deltas
    without assigning a winner or an overall quality score.
+5. **One-off source measurement:** tabulate functions and files with AST-derived
+   complexity, LOC, argument/exit, Halstead, maintainability, and ABC metrics;
+   report normalized rates and function-distribution tails; and compare two
+   files or source trees as explicit `right - left` differences.
 
 ```console
 $ cargo run -- audit evaluations/forward-cycle1-20260709
 $ cargo run -- plan examples/audit-plan.json
 $ cargo run -- repo-profile /path/to/clean/repo --format json
 $ cargo run -- repo-compare /path/to/left /path/to/right --format json
+$ cargo run --release -- metrics /path/to/repo
+$ cargo run --release -- functions /path/to/repo --sort cognitive --top 30
+$ cargo run --release -- files /path/to/repo --sort maintainability --top 30
+$ cargo run --release -- metrics-compare /path/to/left /path/to/right --format json
 ```
 
 `repo-profile` composes two versioned programs:
@@ -69,6 +77,18 @@ SHA-256 digest, resource vector, limitations, and a kernel-measured receipt.
 both repositories, rejects incomplete or structurally incompatible results,
 and reports `right - left` at matched JSON Pointer paths. Delta direction is
 not quality direction.
+
+The source-measurement commands analyze the current file or worktree, not a
+commit snapshot. Their walker respects ignore files, does not follow symlinks,
+and currently recognizes Rust, Python, JavaScript, TypeScript/TSX, and Go.
+`metrics` reports totals, per-language aggregates, normalized rates, and
+nearest-rank function tails. `functions` and `files` expose deterministic
+rankings by cognitive complexity, cyclomatic complexity, SLOC, arguments,
+exits, maintainability, or Halstead effort. `metrics-compare` analyzes both
+sides independently, preserves raw side summaries, reports normalized and tail
+differences, partitions files into matched/left-only/right-only sets, and emits
+matched-file deltas. These are structural proxies: none establishes
+correctness, runtime performance, security, fitness-to-intent, or quality.
 
 The archive command is expected to fail on the resident evaluation: that bundle
 is deliberately the auditor's first negative fixture. A failed audit or an

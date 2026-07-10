@@ -11,6 +11,9 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
+big-code-analysis = { version = "=2.0.0", default-features = false, features = ["rust", "python", "javascript", "typescript", "go"] }
+ignore = "0.4"
+rayon = "1.11"
 regex = "1.11"
 sha2 = "0.10"
 serde = { version = "1.0", features = ["derive"] }

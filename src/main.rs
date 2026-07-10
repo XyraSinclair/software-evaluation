@@ -11,6 +11,11 @@ use software_evaluation::kernel::{
     BeliefState, CriterionProgram, DecisionSpec, EvaluationRun, ResourceBudget, StopReason,
     evaluate_pipeline,
 };
+use software_evaluation::metrics::{
+    FileIdentity, FileMetric, FunctionMetric, MatchedFileDifference, MetricSort, MetricsComparison,
+    MetricsComparisonSide, MetricsReport, NumericDifference, analyze_path, compare_paths,
+    rank_files, rank_functions,
+};
 use software_evaluation::repo::{
     GitChangeShapeProgram, RepoProfileConfig, StaticRepoShapeProgram, snapshot_git_repo,
 };
@@ -73,6 +78,54 @@ enum Command {
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
         format: OutputFormat,
     },
+    /// Analyze source files and print aggregate AST metrics.
+    Metrics {
+        /// File or directory to analyze.
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Compare two source trees or files without assigning a winner.
+    MetricsCompare {
+        /// File or directory used as the left baseline.
+        left: PathBuf,
+        /// File or directory used as the right candidate.
+        right: PathBuf,
+        /// Maximum matched-file difference rows to show; zero shows none.
+        #[arg(long, default_value_t = 30)]
+        top_files: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Rank functions by one AST metric.
+    Functions {
+        /// File or directory to analyze.
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Metric used to rank rows (maintainability ranks lowest first).
+        #[arg(long, value_enum, default_value_t = MetricSortArg::Cognitive)]
+        sort: MetricSortArg,
+        /// Maximum rows to show; zero shows no rows.
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Rank files by one AST metric.
+    Files {
+        /// File or directory to analyze.
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Metric used to rank rows (maintainability ranks lowest first).
+        #[arg(long, value_enum, default_value_t = MetricSortArg::Cognitive)]
+        sort: MetricSortArg,
+        /// Maximum rows to show; zero shows no rows.
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -87,6 +140,79 @@ struct RepoComparisonReport {
 enum OutputFormat {
     Text,
     Json,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum MetricSortArg {
+    Cognitive,
+    Cyclomatic,
+    Sloc,
+    Arguments,
+    Exits,
+    Maintainability,
+    HalsteadEffort,
+}
+
+impl MetricSortArg {
+    fn library(self) -> MetricSort {
+        match self {
+            Self::Cognitive => MetricSort::Cognitive,
+            Self::Cyclomatic => MetricSort::Cyclomatic,
+            Self::Sloc => MetricSort::Sloc,
+            Self::Arguments => MetricSort::Arguments,
+            Self::Exits => MetricSort::Exits,
+            Self::Maintainability => MetricSort::Maintainability,
+            Self::HalsteadEffort => MetricSort::HalsteadEffort,
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Cognitive => "cognitive",
+            Self::Cyclomatic => "cyclomatic",
+            Self::Sloc => "sloc",
+            Self::Arguments => "arguments",
+            Self::Exits => "exits",
+            Self::Maintainability => "maintainability",
+            Self::HalsteadEffort => "halstead-effort",
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+struct RankedFunctions<'a> {
+    root: &'a str,
+    analyzer: &'a str,
+    sort: MetricSortArg,
+    shown: usize,
+    total: usize,
+    rows: Vec<&'a FunctionMetric>,
+    limitations: &'a [String],
+}
+
+#[derive(serde::Serialize)]
+struct RankedFiles<'a> {
+    root: &'a str,
+    analyzer: &'a str,
+    sort: MetricSortArg,
+    shown: usize,
+    total: usize,
+    rows: Vec<&'a FileMetric>,
+    limitations: &'a [String],
+}
+
+#[derive(serde::Serialize)]
+struct MetricsComparisonOutput<'a> {
+    left: &'a MetricsComparisonSide,
+    right: &'a MetricsComparisonSide,
+    differences: &'a [NumericDifference],
+    matched_files_shown: usize,
+    matched_files_total: usize,
+    matched_files: Vec<&'a MatchedFileDifference>,
+    only_left: &'a [FileIdentity],
+    only_right: &'a [FileIdentity],
+    limitations: &'a [String],
 }
 
 fn main() -> ExitCode {
@@ -181,6 +307,73 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             } else {
                 ExitCode::from(1)
             })
+        }
+        Command::Metrics { path, format } => {
+            let report = analyze_path(&path).map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_metrics(&report),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::MetricsCompare {
+            left,
+            right,
+            top_files,
+            format,
+        } => {
+            let comparison = compare_paths(&left, &right).map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => {
+                    print_json(&metrics_comparison_output(&comparison, top_files))?
+                }
+                OutputFormat::Text => print_metrics_comparison(&comparison, top_files),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Functions {
+            path,
+            sort,
+            top,
+            format,
+        } => {
+            let report = analyze_path(&path).map_err(|error| error.to_string())?;
+            let functions = rank_functions(&report, sort.library(), top);
+            match format {
+                OutputFormat::Json => print_json(&RankedFunctions {
+                    root: &report.root,
+                    analyzer: &report.analyzer,
+                    sort,
+                    shown: functions.len(),
+                    total: report.functions.len(),
+                    rows: functions,
+                    limitations: &report.limitations,
+                })?,
+                OutputFormat::Text => print_functions(&report, sort, top),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Files {
+            path,
+            sort,
+            top,
+            format,
+        } => {
+            let report = analyze_path(&path).map_err(|error| error.to_string())?;
+            let files = rank_files(&report, sort.library(), top);
+            match format {
+                OutputFormat::Json => print_json(&RankedFiles {
+                    root: &report.root,
+                    analyzer: &report.analyzer,
+                    sort,
+                    shown: files.len(),
+                    total: report.files.len(),
+                    rows: files,
+                    limitations: &report.limitations,
+                })?,
+                OutputFormat::Text => print_files(&report, sort, top),
+            }
+            Ok(ExitCode::SUCCESS)
         }
     }
 }
@@ -364,5 +557,319 @@ fn print_plan(report: &PlanReport) {
     println!("stop: {}", report.stopped_reason);
     for assumption in &report.assumptions {
         println!("assumption: {assumption}");
+    }
+}
+
+fn optional(value: Option<f64>) -> String {
+    value
+        .map(|number| format!("{number:.2}"))
+        .unwrap_or_else(|| "n/a".to_owned())
+}
+
+fn print_metrics(report: &MetricsReport) {
+    println!("analyzer: {}", report.analyzer);
+    println!("root: {}", report.root);
+    println!(
+        "coverage: {} analyzed / {} enumerated, {} skipped ({}ms)",
+        report.coverage.analyzed,
+        report.coverage.enumerated,
+        report.coverage.skipped,
+        report.coverage.elapsed_ms
+    );
+    println!(
+        "totals: {} files, {} functions, {} lines, {} SLOC, {} PLOC, {} LLOC, {} CLOC, {} blank",
+        report.summary.files,
+        report.summary.functions,
+        report.summary.lines,
+        report.summary.sloc,
+        report.summary.ploc,
+        report.summary.lloc,
+        report.summary.cloc,
+        report.summary.blank
+    );
+    println!(
+        "complexity: cognitive={:.2} cyclomatic={:.2} modified={:.2} arguments={} exits={}",
+        report.summary.cognitive,
+        report.summary.cyclomatic,
+        report.summary.modified_cyclomatic,
+        report.summary.arguments,
+        report.summary.exits
+    );
+    println!(
+        "file means: maintainability={} halstead-volume={} halstead-difficulty={} halstead-effort={} | aggregate ABC={:.2}/{:.2}/{:.2} magnitude={:.2}",
+        optional(report.summary.mean_maintainability),
+        optional(report.summary.mean_halstead_volume),
+        optional(report.summary.mean_halstead_difficulty),
+        optional(report.summary.mean_halstead_effort),
+        report.summary.abc_assignments,
+        report.summary.abc_branches,
+        report.summary.abc_conditions,
+        report.summary.abc_magnitude
+    );
+    println!(
+        "rates: functions/kSLOC={} cognitive/kSLOC={} cyclomatic/kSLOC={} arguments/function={} exits/function={} comments={} blanks={}",
+        optional(report.rates.functions_per_ksloc),
+        optional(report.rates.cognitive_per_ksloc),
+        optional(report.rates.cyclomatic_per_ksloc),
+        optional(report.rates.arguments_per_function),
+        optional(report.rates.exits_per_function),
+        optional(report.rates.comment_fraction),
+        optional(report.rates.blank_fraction),
+    );
+    println!("function distributions (nearest-rank):");
+    println!(
+        "  {:<12} {:>8} {:>8} {:>8} {:>8} {:>8}",
+        "METRIC", "MEAN", "P50", "P90", "P99", "MAX"
+    );
+    for (name, distribution) in [
+        ("cognitive", &report.distributions.cognitive),
+        ("cyclomatic", &report.distributions.cyclomatic),
+        ("sloc", &report.distributions.sloc),
+        ("arguments", &report.distributions.arguments),
+        ("exits", &report.distributions.exits),
+    ] {
+        println!(
+            "  {:<12} {:>8} {:>8} {:>8} {:>8} {:>8}",
+            name,
+            optional(distribution.mean),
+            optional(distribution.p50),
+            optional(distribution.p90),
+            optional(distribution.p99),
+            optional(distribution.max),
+        );
+    }
+    println!("languages:");
+    println!(
+        "  {:<16} {:>7} {:>9} {:>9} {:>9} {:>11} {:>11}",
+        "LANGUAGE", "FILES", "FUNCTIONS", "LINES", "SLOC", "COGNITIVE", "CYCLOMATIC"
+    );
+    for language in &report.languages {
+        println!(
+            "  {:<16} {:>7} {:>9} {:>9} {:>9} {:>11.2} {:>11.2}",
+            language.language,
+            language.files,
+            language.functions,
+            language.lines,
+            language.sloc,
+            language.cognitive,
+            language.cyclomatic
+        );
+    }
+    println!("top cognitive functions:");
+    print_function_rows(&rank_functions(report, MetricSort::Cognitive, 10));
+    print_limitations(&report.limitations);
+}
+
+fn metrics_comparison_output(
+    comparison: &MetricsComparison,
+    top_files: usize,
+) -> MetricsComparisonOutput<'_> {
+    let matched_files = comparison
+        .matched_files
+        .iter()
+        .take(top_files)
+        .collect::<Vec<_>>();
+    MetricsComparisonOutput {
+        left: &comparison.left,
+        right: &comparison.right,
+        differences: &comparison.differences,
+        matched_files_shown: matched_files.len(),
+        matched_files_total: comparison.matched_files.len(),
+        matched_files,
+        only_left: &comparison.only_left,
+        only_right: &comparison.only_right,
+        limitations: &comparison.limitations,
+    }
+}
+
+fn print_metrics_comparison(comparison: &MetricsComparison, top_files: usize) {
+    println!("left: {}", comparison.left.root);
+    println!("right: {}", comparison.right.root);
+    println!(
+        "coverage: left={}/{} right={}/{} analyzed/enumerated",
+        comparison.left.coverage.analyzed,
+        comparison.left.coverage.enumerated,
+        comparison.right.coverage.analyzed,
+        comparison.right.coverage.enumerated,
+    );
+    println!("differences (right - left; no quality direction):");
+    println!(
+        "  {:<32} {:>14} {:>14} {:>14} {:>12}",
+        "METRIC", "LEFT", "RIGHT", "DELTA", "RELATIVE"
+    );
+    for difference in &comparison.differences {
+        let relative = difference
+            .relative_change_from_left
+            .map(|value| format!("{:+.2}%", value * 100.0))
+            .unwrap_or_else(|| "n/a".to_owned());
+        println!(
+            "  {:<32} {:>14.4} {:>14.4} {:>+14.4} {:>12}",
+            difference.metric,
+            difference.left,
+            difference.right,
+            difference.right_minus_left,
+            relative,
+        );
+    }
+    let shown = comparison.matched_files.len().min(top_files);
+    println!(
+        "matched file deltas: {} / {} shown; only-left={} only-right={}",
+        shown,
+        comparison.matched_files.len(),
+        comparison.only_left.len(),
+        comparison.only_right.len(),
+    );
+    println!(
+        "  {:<48} {:<12} {:>8} {:>8} {:>8} {:>8} {:>8}",
+        "PATH", "LANGUAGE", "SLOC", "COG", "CYC", "ARGS", "EXITS"
+    );
+    for file in comparison.matched_files.iter().take(top_files) {
+        println!(
+            "  {:<48} {:<12} {:>+8} {:>+8.2} {:>+8.2} {:>+8} {:>+8}",
+            file.path,
+            file.language,
+            file.right_minus_left.sloc,
+            file.right_minus_left.cognitive,
+            file.right_minus_left.cyclomatic,
+            file.right_minus_left.arguments,
+            file.right_minus_left.exits,
+        );
+    }
+    print_file_identities("only left", &comparison.only_left, 10);
+    print_file_identities("only right", &comparison.only_right, 10);
+    print_limitations(&comparison.limitations);
+}
+
+fn print_file_identities(label: &str, files: &[FileIdentity], top: usize) {
+    if files.is_empty() {
+        return;
+    }
+    let shown = files.len().min(top);
+    println!("{label}: {shown} / {} shown", files.len());
+    for file in files.iter().take(top) {
+        println!("  {} ({})", file.path, file.language);
+    }
+}
+
+fn print_functions(report: &MetricsReport, sort: MetricSortArg, top: usize) {
+    let rows = rank_functions(report, sort.library(), top);
+    println!("analyzer: {}", report.analyzer);
+    println!("root: {}", report.root);
+    println!("sort: {}", sort.name());
+    println!(
+        "shown: {} / {} functions",
+        rows.len(),
+        report.functions.len()
+    );
+    print_function_rows(&rows);
+    print_limitations(&report.limitations);
+}
+
+fn print_function_rows(rows: &[&FunctionMetric]) {
+    let location_width = rows
+        .iter()
+        .map(|row| row.path.len() + 1 + row.start_line.to_string().len())
+        .max()
+        .unwrap_or(8)
+        .max("LOCATION".len());
+    let name_width = rows
+        .iter()
+        .map(|row| row.name.len())
+        .max()
+        .unwrap_or(8)
+        .max("FUNCTION".len());
+    println!(
+        "{:<location_width$}  {:<name_width$}  {:<12} {:>5} {:>5} {:>7} {:>7} {:>7} {:>5} {:>5} {:>8} {:>12} {:>8}",
+        "LOCATION",
+        "FUNCTION",
+        "LANGUAGE",
+        "LINES",
+        "SLOC",
+        "COG",
+        "CYC",
+        "MOD",
+        "ARGS",
+        "EXITS",
+        "MI",
+        "H-EFFORT",
+        "ABC"
+    );
+    for row in rows {
+        let location = format!("{}:{}", row.path, row.start_line);
+        println!(
+            "{location:<location_width$}  {:<name_width$}  {:<12} {:>5} {:>5} {:>7.2} {:>7.2} {:>7.2} {:>5} {:>5} {:>8} {:>12} {:>8.2}",
+            row.name,
+            row.language,
+            row.lines,
+            row.sloc,
+            row.cognitive,
+            row.cyclomatic,
+            row.modified_cyclomatic,
+            row.arguments,
+            row.exits,
+            optional(row.maintainability),
+            optional(row.halstead_effort),
+            row.abc_magnitude
+        );
+    }
+}
+
+fn print_files(report: &MetricsReport, sort: MetricSortArg, top: usize) {
+    let rows = rank_files(report, sort.library(), top);
+    println!("analyzer: {}", report.analyzer);
+    println!("root: {}", report.root);
+    println!("sort: {}", sort.name());
+    println!("shown: {} / {} files", rows.len(), report.files.len());
+    let path_width = rows
+        .iter()
+        .map(|row| row.path.len())
+        .max()
+        .unwrap_or(4)
+        .max("PATH".len());
+    println!(
+        "{:<path_width$}  {:<12} {:>5} {:>5} {:>5} {:>7} {:>7} {:>7} {:>5} {:>5} {:>8} {:>12} {:>8}",
+        "PATH",
+        "LANGUAGE",
+        "FUNCS",
+        "LINES",
+        "SLOC",
+        "COG",
+        "CYC",
+        "MOD",
+        "ARGS",
+        "EXITS",
+        "MI",
+        "H-EFFORT",
+        "ABC"
+    );
+    for row in rows {
+        println!(
+            "{:<path_width$}  {:<12} {:>5} {:>5} {:>5} {:>7.2} {:>7.2} {:>7.2} {:>5} {:>5} {:>8} {:>12} {:>8.2}",
+            row.path,
+            row.language,
+            row.functions,
+            row.lines,
+            row.sloc,
+            row.cognitive,
+            row.cyclomatic,
+            row.modified_cyclomatic,
+            row.arguments,
+            row.exits,
+            optional(row.maintainability),
+            optional(row.halstead_effort),
+            row.abc_magnitude
+        );
+    }
+    print_limitations(&report.limitations);
+}
+
+fn print_limitations(limitations: &[String]) {
+    if limitations.is_empty() {
+        println!("limitations: none");
+    } else {
+        println!("limitations:");
+        for limitation in limitations {
+            println!("  - {limitation}");
+        }
     }
 }
