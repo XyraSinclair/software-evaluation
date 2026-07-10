@@ -30,7 +30,7 @@ Built on three refusals:
 
 ## Executable core
 
-`seval` currently closes two foundational loops:
+`seval` now closes four loops:
 
 1. **Archive integrity:** prove that an evaluation has nonempty records, safe
    and existing evidence/procedure paths, literal report-to-record references,
@@ -38,16 +38,41 @@ Built on three refusals:
 2. **Audit planning:** choose probes under hard dollar, time, and count budgets
    using Shannon information gain, expected Bayes-risk reduction, decision-flip
    probability, redundancy-aware conditional information, and Pareto frontiers.
+3. **Criterion execution:** run independently shaped programs through
+   `evaluate(artifact, program, evidence, decision, resources)` and retain the
+   typed observation, evidence, receipt, posterior state, and continuation.
+4. **Repository profiling and comparison:** run two fast, deterministic proxy
+   programs against committed Git snapshots, then derive matched numeric deltas
+   without assigning a winner or an overall quality score.
 
 ```console
 $ cargo run -- audit evaluations/forward-cycle1-20260709
 $ cargo run -- plan examples/audit-plan.json
+$ cargo run -- repo-profile /path/to/clean/repo --format json
+$ cargo run -- repo-compare /path/to/left /path/to/right --format json
 ```
 
-The first command is expected to fail: the resident evaluation is deliberately
-the auditor's first negative fixture. It exposes missing evidence, ambiguous
-comparison identities, unproven exact prompts, and unresolved report aliases.
-A failed audit exits 1; an audit harness/input failure exits 2.
+`repo-profile` composes two versioned programs:
+
+- `repo.static-shape@1`: tracked blob bytes and paths, lexical source/test/docs/
+  configuration/generated classification, source-size concentration, effective
+  file/component counts, test/docs-to-source ratios, and path depth;
+- `repo.git-change-shape@1`: bounded non-merge history, files-per-commit tails,
+  change-mass concentration and hotspots, cross-top-level cochange, broad-commit
+  rate, and source/test/docs cochange rates.
+
+Both programs run at committed `HEAD` and reject tracked uncommitted changes;
+untracked files are ignored because they are outside the measured snapshot.
+Every observation carries its classifier, Git command, Git version, raw-output
+SHA-256 digest, resource vector, limitations, and a kernel-measured receipt.
+`repo-compare` applies the same program versions and budgets independently to
+both repositories, rejects incomplete or structurally incompatible results,
+and reports `right - left` at matched JSON Pointer paths. Delta direction is
+not quality direction.
+
+The archive command is expected to fail on the resident evaluation: that bundle
+is deliberately the auditor's first negative fixture. A failed audit or an
+incomplete repository profile exits 1; a CLI/input failure exits 2.
 
 The planner's sensitivity and specificity values are **calibrated inputs, not
 facts inferred by the planner**. Joint information is computed only when the

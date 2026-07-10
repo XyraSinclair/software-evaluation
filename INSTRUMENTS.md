@@ -36,6 +36,22 @@ Rules: pin tool versions in the record; report distributions and tails, not
 means; a metric only enters a report attached to the claim it supports —
 naked numbers invite Goodhart.
 
+### Implemented repository proxies
+
+`seval repo-profile` runs two mechanical criterion programs over a clean,
+commit-pinned Git snapshot. They are deliberately **proxy**, not exact:
+
+| Program | Observation denominator | What it can establish | What it cannot establish |
+|---|---|---|---|
+| `repo.static-shape@1` | blobs in the committed tree, classified by `repo-lexical-v1` | byte/path concentration, category ratios, effective source files and top-level components, largest-file and top-decile shares | correctness, semantic complexity, architecture quality, security, maintainability, or user value |
+| `repo.git-change-shape@1` | up to N non-merge commits ending at the pinned revision | change-mass concentration, files-per-commit tails, cross-layout cochange, broad commits, source/test/docs cochange | causal coupling, modularity, work hidden by squash/rebase/merges, rename identity, or history outside the window |
+
+Each produces a separate observation and receipt: exact Git argv, Git version,
+SHA-256 of raw stdout, measured bytes and wall time, classifier/protocol version,
+and explicit limitations. `seval repo-compare` compares only numeric leaves at
+identical JSON Pointer paths from matched program versions. It preserves each
+dimension and attaches no good/bad direction to a delta.
+
 ## 2. Empirical — exercised behavior
 
 Run the thing and observe. Provenance: the transcript (commands + output),

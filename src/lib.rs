@@ -4,4 +4,7 @@
 //! and elapsed time separate. It does not define a composite quality score.
 
 pub mod audit;
+pub mod compare;
 pub mod info;
+pub mod kernel;
+pub mod repo;
