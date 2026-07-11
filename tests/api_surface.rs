@@ -211,15 +211,6 @@ const EXPECTED: &[ExpectedSymbol] = &[
     },
     ExpectedSymbol {
         path: "src/api.rs",
-        symbol: "rust_restricted",
-        kind: ApiSymbolKind::Function,
-        basis: "Rust explicit visibility: pub(crate)",
-        parameters: 0,
-        generics: 0,
-        documented: false,
-    },
-    ExpectedSymbol {
-        path: "src/api.rs",
         symbol: "RUST_DETACHED",
         kind: ApiSymbolKind::Constant,
         basis: "Rust explicit visibility: pub",
@@ -563,6 +554,7 @@ const EXPECTED: &[ExpectedSymbol] = &[
 ];
 
 const EXCLUDED: &[(&str, &str)] = &[
+    ("src/api.rs", "rust_restricted"),
     ("src/api.rs", "rust_private"),
     ("src/api.rs", "private"),
     ("src/api.rs", "private_method"),
@@ -817,10 +809,91 @@ fn cli_json_preserves_full_observations_and_text_honors_top() {
         "first deterministic row must be rendered"
     );
     assert!(
-        !text.contains("rust_restricted"),
+        !text.contains("RUST_DETACHED"),
         "--top 1 must suppress later symbol rows"
     );
     assert!(text.contains("basis: Rust explicit visibility: pub"));
     assert!(text.contains("syntax-error-files=1"));
     assert!(text.contains(&format!("symbols/kSLOC={expected_density:.3}")));
+}
+
+#[test]
+fn rust_report_inventories_only_externally_reachable_api() {
+    let directory = TempDir::new().expect("temporary Rust API fixture");
+    write_file(
+        directory.path(),
+        "src/lib.rs",
+        r#"pub(crate) fn crate_only() {}
+pub fn root_public() {}
+
+mod private_module {
+    pub fn hidden_by_parent() {}
+}
+
+pub mod public_module {
+    pub fn reachable() {}
+    pub(crate) fn module_crate_only() {}
+
+    pub trait PublicTrait {
+        fn required(&self, input: usize) -> bool;
+        fn provided(&self) -> usize { 0 }
+    }
+}
+"#,
+    );
+
+    let output = run_cli(directory.path(), &["--format", "json"]);
+    assert!(
+        output.status.success(),
+        "JSON CLI failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let json: Value = serde_json::from_slice(&output.stdout).unwrap_or_else(|error| {
+        panic!(
+            "API CLI emitted invalid JSON: {error}; stdout={:?}",
+            String::from_utf8_lossy(&output.stdout)
+        )
+    });
+    let actual = json
+        .get("symbols")
+        .and_then(Value::as_array)
+        .expect("JSON symbols array")
+        .iter()
+        .map(|symbol| {
+            (
+                symbol
+                    .get("symbol")
+                    .and_then(Value::as_str)
+                    .expect("symbol name"),
+                symbol
+                    .get("kind")
+                    .and_then(Value::as_str)
+                    .expect("symbol kind"),
+            )
+        })
+        .collect::<BTreeSet<_>>();
+    let expected = BTreeSet::from([
+        ("root_public", "function"),
+        ("public_module", "other"),
+        ("reachable", "function"),
+        ("PublicTrait", "type"),
+        ("required", "method"),
+        ("provided", "method"),
+    ]);
+
+    assert_eq!(
+        actual, expected,
+        "the serialized Rust inventory must include every and only externally reachable public item"
+    );
+    assert_eq!(
+        json.pointer("/counts/public_symbols")
+            .and_then(Value::as_u64),
+        Some(expected.len() as u64),
+        "serialized aggregate count must agree with externally reachable symbol evidence"
+    );
+    assert_eq!(
+        json.pointer("/counts/methods").and_then(Value::as_u64),
+        Some(2),
+        "required and provided methods are both part of a public trait's API"
+    );
 }

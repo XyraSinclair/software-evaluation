@@ -27,12 +27,15 @@ object per measurement or judgment:
 
 Field discipline:
 
-- **artifact** is always `name@commit` (or `name@commit:path` for a
-  sub-artifact). Evaluations of uncommitted state are invalid — commit first.
+- **artifact** is either `name@commit` (or `name@commit:path` for a
+  sub-artifact) or exactly two such identities joined by ` vs ` for a pairwise
+  record. Commit pins use at least seven hexadecimal digits. Evaluations of
+  uncommitted state are invalid — commit first.
 - **instrument** ∈ `mechanical | empirical | judged`.
-- **agent**: tool+version for mechanical; runner + environment for
-  empirical; model id + reasoning effort for judged. Judges are named, so
-  correlated judges (same model family) can be detected downstream.
+- **agent**: a nonempty object with string `kind` and `id`, plus tool version
+  for mechanical work, runner/environment for empirical work, or model and
+  reasoning effort for judged work. Judges are named so correlated reads can
+  be detected downstream.
 - **procedure**: pointer to the exact command or the exact prompt file. A
   judged record whose prompt was not preserved is void.
 - **evidence**: pointer into the raw output archived alongside

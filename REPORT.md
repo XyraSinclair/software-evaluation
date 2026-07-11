@@ -66,4 +66,3 @@ evaluation did NOT cover.
 7. **Reports are versioned facts.** A report evaluates artifacts at
    commits; it is never edited to track the artifacts' later evolution —
    a new evaluation supersedes it, linked both ways.
-```

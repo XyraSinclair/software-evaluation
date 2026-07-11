@@ -310,6 +310,33 @@ fn unsupported_single_file_returns_a_valid_zero_source_report() {
 }
 
 #[test]
+fn aggregate_json_reports_expose_syntax_error_coverage() {
+    let directory = TempDir::new().expect("temporary syntax-error metrics repository");
+    write_file(
+        directory.path(),
+        "src/valid.rs",
+        "pub fn valid() -> usize { 1 }\n",
+    );
+    write_file(directory.path(), "src/malformed.rs", "fn broken( {\n");
+
+    let api = report_value(directory.path());
+    let cli = successful_json(directory.path(), "metrics", &["--format", "json"]);
+
+    for (surface, report) in [("Rust API", api), ("metrics CLI", cli)] {
+        assert_eq!(
+            integer_field(&report["coverage"], "analyzed"),
+            2,
+            "{surface} must retain both supported files in the coverage denominator"
+        );
+        assert_eq!(
+            integer_field(&report["coverage"], "syntax_error_files"),
+            1,
+            "{surface} must disclose that one analyzed file has an error-tolerant, potentially partial parse"
+        );
+    }
+}
+
+#[test]
 fn cli_json_reports_are_parseable_ranked_and_honor_top_including_zero() {
     let fixture = PolyglotFixture::new();
     let root = fixture.path();

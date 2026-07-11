@@ -495,3 +495,50 @@ fn cli_json_preserves_denominators_and_text_labels_observations_without_a_verdic
         "text report must not present a verdict"
     );
 }
+
+#[test]
+fn skipped_javascript_suites_mark_all_descendant_cases_ignored() {
+    let directory = TempDir::new().expect("temporary skipped-suite fixture");
+    write_file(
+        directory.path(),
+        "web/nested.test.ts",
+        "describe.skip(\"disabled parent\", () => {\n  test(\"direct child\", () => { expect(1).toBe(1); });\n  describe(\"nested child suite\", () => {\n    it(\"deep descendant\", () => { expect(2).toBe(2); });\n  });\n});\n\nxdescribe(\"ignored parent\", () => {\n  test(\"xdescribe child\", () => { expect(3).toBe(3); });\n});\n\ndescribe(\"active parent\", () => {\n  test(\"active child\", () => { expect(4).toBe(4); });\n});\n",
+    );
+
+    let report = analyze_tests(directory.path()).expect("analyze skipped-suite fixture");
+    let row = report
+        .files
+        .iter()
+        .find(|row| row.path == "web/nested.test.ts")
+        .expect("nested test file observation");
+
+    assert_eq!(row.discovered_test_cases, 4);
+    assert_eq!(
+        row.ignored_test_cases, 3,
+        "cases inherit skipped status from every ignored suite ancestor"
+    );
+    assert_eq!(report.coverage.ignored_test_cases, 3);
+    assert_eq!(report.coverage.non_ignored_test_cases, 1);
+}
+
+#[test]
+fn same_stem_matching_uses_module_relative_paths_not_basenames() {
+    let directory = TempDir::new().expect("temporary path-aware matching fixture");
+    for (path, contents) in [
+        ("packages/alpha/widget.ts", "export const alpha = 1;\n"),
+        (
+            "packages/alpha/widget.test.ts",
+            "test(\"alpha widget\", () => { expect(1).toBe(1); });\n",
+        ),
+        ("packages/beta/widget.ts", "export const beta = 2;\n"),
+    ] {
+        write_file(directory.path(), path, contents);
+    }
+
+    let report = analyze_tests(directory.path()).expect("analyze path-aware matching fixture");
+
+    assert_eq!(report.coverage.source_modules_considered, 2);
+    assert_eq!(report.coverage.source_modules_with_same_stem_test, 1);
+    assert_eq!(report.unmatched_source_modules, ["packages/beta/widget.ts"]);
+    assert!(report.unmatched_test_files.is_empty());
+}

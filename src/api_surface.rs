@@ -182,8 +182,35 @@ fn collect_file(file: &SourceFile, root: Node<'_>, out: &mut Vec<ApiSymbol>) {
 }
 
 fn walk_rust(file: &SourceFile, node: Node<'_>, out: &mut Vec<ApiSymbol>) {
+    walk_rust_reachable(file, node, true, false, out);
+}
+
+fn walk_rust_reachable(
+    file: &SourceFile,
+    node: Node<'_>,
+    publicly_reachable: bool,
+    in_public_trait: bool,
+    out: &mut Vec<ApiSymbol>,
+) {
     let kind = node.kind();
-    if matches!(
+    let visibility = rust_visibility(file, node);
+    let is_public = visibility.as_deref() == Some("pub");
+    let mut child_reachable = publicly_reachable;
+    let mut child_in_public_trait = in_public_trait;
+
+    if kind == "mod_item" {
+        if publicly_reachable && is_public {
+            push_decl(
+                file,
+                node,
+                ApiSymbolKind::Other,
+                "Rust explicit visibility: pub".to_owned(),
+                out,
+            );
+        }
+        child_reachable = publicly_reachable && is_public;
+        child_in_public_trait = false;
+    } else if matches!(
         kind,
         "function_item"
             | "struct_item"
@@ -193,59 +220,65 @@ fn walk_rust(file: &SourceFile, node: Node<'_>, out: &mut Vec<ApiSymbol>) {
             | "type_item"
             | "const_item"
             | "static_item"
-            | "mod_item"
     ) {
-        if let Some(visibility) = node
-            .child_by_field_name("visibility")
-            .or_else(|| named_child_of_kind(node, "visibility_modifier"))
-        {
-            let visibility_text = text(file, visibility);
-            if visibility_text.starts_with("pub") {
-                push_decl(
-                    file,
-                    node,
-                    rust_kind(node),
-                    format!("Rust explicit visibility: {visibility_text}"),
-                    out,
-                );
-                if kind == "struct_item" || kind == "union_item" {
-                    collect_rust_fields(file, node, out);
-                }
+        if in_public_trait && kind == "function_item" && is_direct_trait_member(node) {
+            push_decl(
+                file,
+                node,
+                ApiSymbolKind::Method,
+                "Rust public trait member; containing trait is publicly reachable".to_owned(),
+                out,
+            );
+        } else if publicly_reachable && is_public {
+            push_decl(
+                file,
+                node,
+                rust_kind(node),
+                "Rust explicit visibility: pub".to_owned(),
+                out,
+            );
+            if kind == "struct_item" || kind == "union_item" {
+                collect_rust_fields(file, node, out);
             }
+        }
+        if kind == "trait_item" {
+            child_in_public_trait = publicly_reachable && is_public;
         }
     } else if kind == "use_declaration" {
-        if let Some(visibility) = node
-            .child_by_field_name("visibility")
-            .or_else(|| named_child_of_kind(node, "visibility_modifier"))
-        {
-            let visibility_text = text(file, visibility);
-            if visibility_text.starts_with("pub") {
-                collect_rust_reexports(file, node, &visibility_text, out);
-            }
+        if publicly_reachable && is_public {
+            collect_rust_reexports(file, node, "pub", out);
         }
     } else if kind == "function_signature_item" {
-        if let Some(visibility) = node
-            .child_by_field_name("visibility")
-            .or_else(|| named_child_of_kind(node, "visibility_modifier"))
-        {
-            let visibility_text = text(file, visibility);
-            if visibility_text.starts_with("pub") {
-                push_decl(
-                    file,
-                    node,
-                    ApiSymbolKind::Method,
-                    format!("Rust explicit visibility: {visibility_text}"),
-                    out,
-                );
-            }
+        if in_public_trait && is_direct_trait_member(node) {
+            push_decl(
+                file,
+                node,
+                ApiSymbolKind::Method,
+                "Rust public trait member; containing trait is publicly reachable".to_owned(),
+                out,
+            );
         }
     } else if kind == "field_declaration" {
         // Fields are collected with their public containing type to avoid duplicates.
     }
+
     let mut cursor = node.walk();
     for child in node.named_children(&mut cursor) {
-        walk_rust(file, child, out);
+        walk_rust_reachable(file, child, child_reachable, child_in_public_trait, out);
     }
+}
+
+fn rust_visibility(file: &SourceFile, node: Node<'_>) -> Option<String> {
+    node.child_by_field_name("visibility")
+        .or_else(|| named_child_of_kind(node, "visibility_modifier"))
+        .map(|visibility| text(file, visibility).trim().to_owned())
+}
+
+fn is_direct_trait_member(node: Node<'_>) -> bool {
+    node.parent()
+        .filter(|parent| parent.kind() == "declaration_list")
+        .and_then(|parent| parent.parent())
+        .is_some_and(|parent| parent.kind() == "trait_item")
 }
 
 fn collect_rust_reexports(
@@ -323,20 +356,14 @@ fn collect_rust_fields(file: &SourceFile, declaration: Node<'_>, out: &mut Vec<A
     let mut stack = vec![declaration];
     while let Some(node) = stack.pop() {
         if node != declaration && node.kind() == "field_declaration" {
-            if let Some(vis) = node
-                .child_by_field_name("visibility")
-                .or_else(|| named_child_of_kind(node, "visibility_modifier"))
-            {
-                let value = text(file, vis);
-                if value.starts_with("pub") {
-                    push_decl(
-                        file,
-                        node,
-                        ApiSymbolKind::Field,
-                        format!("Rust explicit visibility: {value}"),
-                        out,
-                    );
-                }
+            if rust_visibility(file, node).as_deref() == Some("pub") {
+                push_decl(
+                    file,
+                    node,
+                    ApiSymbolKind::Field,
+                    "Rust explicit visibility: pub".to_owned(),
+                    out,
+                );
             }
             continue;
         }

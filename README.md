@@ -1,18 +1,19 @@
 # software-evaluation
 
-Deep, provenanced software evaluation: ordinal comparisons of software
-artifacts along **nine timeless, orthogonal axes**, measured by the
-strongest available instrument, with every verdict resolving to a committed
-receipt. The output is a report that says which artifact is stronger, how
-the two differ *in kind*, and exactly where the genuine open judgments live.
+Evidence-first primitives for comparing software artifacts along nine declared
+axes. `seval` computes bounded mechanical observations, plans audits, executes
+criterion programs through library APIs, and checks hand-authored evaluation
+bundles. It does not yet orchestrate a complete nine-axis evaluation or choose
+a winner; empirical probes, judged axes, and report synthesis remain explicit
+operator work.
 
 Built on three refusals:
 
 - **No composite score.** Quality is a shape, not a scalar. Axis weights are
   the owner's values; a weighted average would launder them.
-- **No unprovenance'd verdicts.** Every number and every judgment resolves,
-  in two hops, to a replayable command, a transcript, or a judge receipt —
-  see [PROVENANCE.md](PROVENANCE.md).
+- **No unsupported verdicts.** In a conforming evaluation, every number and
+  judgment resolves in two hops to a replayable command, transcript, or judge
+  receipt — see [PROVENANCE.md](PROVENANCE.md).
 - **No manufactured oracles.** Axes with no computable truth (fitness-to-
   intent, conceptual parsimony) are triangulated across ≥2 independent
   judges; agreement compresses, disagreement is reported as the finding and
@@ -23,31 +24,33 @@ Built on three refusals:
 | Doc | What it holds |
 |---|---|
 | [TAXONOMY.md](TAXONOMY.md) | The nine axes — Form (parsimony, consistency, interface sharpness), Assurance (correctness machinery, robustness, documentation truth), Life (evolvability, operational legibility, fitness-to-intent) — with applicability gates: not all software must honor all nine, but every waiver is declared. |
-| [INSTRUMENTS.md](INSTRUMENTS.md) | Mechanical, empirical, and judged instruments, selected by target binding and oracle coverage before reproducibility or cost. AST-level complexity/clone/dependency metrics, git co-change mining, mutation testing; cold-start and claim audits; triangulated judgment via [cardinal-harness](https://github.com/XyraSinclair/cardinal-harness). |
+| [INSTRUMENTS.md](INSTRUMENTS.md) | Implemented mechanical instruments plus external empirical and judged methods. AST-level complexity/clone/dependency metrics and git co-change mining are built in; mutation testing, cold-start/claim audits, and [cardinal-harness](https://github.com/XyraSinclair/cardinal-harness) judgment are operator-run methods. |
 | [PROVENANCE.md](PROVENANCE.md) | The record schema: artifact@commit, instrument, agent, procedure, evidence, verdict, integrity caveats. Honest nulls over neat fictions. |
 | [REPORT.md](REPORT.md) | The report template and its rules: spread never mean, adversarial symmetry, denominators always, verdicts carry record ids. |
-| `evaluations/` | Actual runs: one directory per evaluation — report, records.jsonl, raw judge outputs and metric dumps. |
+| `evaluations/` | Archived runs and fixtures. Each complete run contains a report, records.jsonl, procedures, and raw evidence; deliberately invalid fixtures are labeled. |
 
 ## Executable core
 
-`seval` now closes five loops:
+The crate implements five bounded pieces; the CLI exposes the commands listed
+below, while generic criterion execution is currently a library API:
 
-1. **Archive integrity:** prove that an evaluation has nonempty records, safe
-   and existing evidence/procedure paths, literal report-to-record references,
-   commit-pinned artifact identities, and non-vacuous inputs.
+1. **Archive integrity:** reject empty or malformed records, unsafe or escaping
+   evidence/procedure paths, dangling literal report references, invalid
+   instrument classes, and malformed commit-pin identities.
 2. **Audit planning:** choose probes under hard dollar, time, and count budgets
-   using Shannon information gain, expected Bayes-risk reduction, decision-flip
+   using information gain, expected Bayes-risk reduction, decision-flip
    probability, redundancy-aware conditional information, and Pareto frontiers.
 3. **Criterion execution:** run independently shaped programs through
    `evaluate(artifact, program, evidence, decision, resources)` and retain the
    typed observation, evidence, receipt, posterior state, and continuation.
-4. **Repository profiling and comparison:** run two fast, deterministic proxy
+4. **Repository profiling and comparison:** run two deterministic proxy
    programs against committed Git snapshots, then derive matched numeric deltas
    without assigning a winner or an overall quality score.
 5. **One-off source and execution measurement:** tabulate AST complexity,
-   dependency topology, normalized clones, public API surface, test machinery,
-   and direct-argv benchmark receipts; compare source trees as explicit
-   `right - left` differences without manufacturing a global score.
+   dependency topology, normalized clones, externally reachable Rust API plus
+   documented lexical proxies for other languages, test machinery, and
+   direct-argv benchmark receipts; source-tree comparisons remain explicit
+   `right - left` differences without a global score.
 
 ```console
 $ cargo run -- audit evaluations/forward-cycle1-20260709
@@ -91,9 +94,11 @@ and `files` rank hotspots; `metrics-compare` preserves both sides and reports
 matched `right - left` differences. `deps` extracts import evidence, direct
 manifest dependencies, fan-in/out, SCCs, cycles, weak components, and
 condensation depth. `duplicates` finds maximal non-overlapping clone groups
-after AST-token normalization. `api` inventories language-native explicit or
-documented proxy publicness. `tests` measures cases, ignored cases,
-assertion-like calls, source/test lines, and conservative same-stem coverage.
+after AST-token normalization. `api` inventories externally reachable Rust
+declarations and documented lexical publicness proxies for the other supported
+languages. `tests` measures cases, inherited ignored-suite state,
+assertion-like calls, source/test lines, and conservative path-aware same-stem
+coverage.
 `bench` executes exact argv without a shell, retains successful, failed, and
 timed-out samples, separates the first measured run from warmed distributions,
 and optionally reports units/s and bytes/s. These are bounded observations:
@@ -114,12 +119,12 @@ greedy heuristic.
 
 ## Uses
 
-- **A vs B**: which of two libraries/services/repos is stronger, and where
-  each wins.
-- **Before vs after**: did a refactor, a rewrite, or an autonomous-agent
-  campaign actually improve the artifact? (First resident evaluation:
-  a before/after of a self-improvement cycle —
-  `evaluations/forward-cycle1-20260709/`.)
+- **A vs B**: expose the artifacts' difference shape and the evidence needed
+  for a policy or owner to decide where either is stronger.
+- **Before vs after**: test whether a refactor, rewrite, or autonomous-agent
+  campaign improved the artifact. The resident
+  `evaluations/forward-cycle1-20260709/` bundle is deliberately invalid and is
+  retained as an archive-audit negative fixture, not as a canonical verdict.
 - **Periodic**: the same artifact on the same axes over time; the trend is
   the health curve.
 

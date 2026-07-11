@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Component, Path, PathBuf};
 use std::time::Instant;
 
-use big_code_analysis::{LANG, Metric, MetricsOptions, Source, SpaceKind, analyze, get_from_ext};
+use big_code_analysis::{Ast, LANG, Metric, MetricsOptions, Source, SpaceKind, get_from_ext};
 use ignore::WalkBuilder;
 use rayon::prelude::*;
 use serde::Serialize;
@@ -55,6 +55,7 @@ pub struct Coverage {
     pub enumerated: usize,
     pub analyzed: usize,
     pub skipped: usize,
+    pub syntax_error_files: usize,
     pub elapsed_ms: u128,
 }
 
@@ -350,10 +351,17 @@ pub fn analyze_path(input: &Path) -> Result<MetricsReport, MetricsError> {
                 Metric::Nargs,
                 Metric::Nexits,
             ]);
-            let space = analyze(source, options).map_err(|error| MetricsError::Analyze {
+            let ast = Ast::parse(source).map_err(|error| MetricsError::Analyze {
                 path: path.clone(),
                 message: error.to_string(),
             })?;
+            let has_syntax_errors = ast.as_tree_sitter().root_node().has_error();
+            let space = ast
+                .metrics(options)
+                .map_err(|error| MetricsError::Analyze {
+                    path: path.clone(),
+                    message: error.to_string(),
+                })?;
             let wire = space.to_wire();
             let language_name = if *language == LANG::Tsx {
                 "typescript"
@@ -363,16 +371,22 @@ pub fn analyze_path(input: &Path) -> Result<MetricsReport, MetricsError> {
             .to_owned();
             let mut functions = Vec::new();
             collect_functions(&wire.spaces, &relative, &language_name, &mut functions);
-            Ok((file_metric(&wire, relative, language_name), functions))
+            Ok((
+                file_metric(&wire, relative, language_name),
+                functions,
+                has_syntax_errors,
+            ))
         })
-        .collect::<Vec<Result<(FileMetric, Vec<FunctionMetric>), MetricsError>>>();
+        .collect::<Vec<Result<(FileMetric, Vec<FunctionMetric>, bool), MetricsError>>>();
 
     let mut files = Vec::with_capacity(analyzed.len());
     let mut functions = Vec::new();
+    let mut syntax_error_files = 0;
     for result in analyzed {
-        let (file, mut file_functions) = result?;
+        let (file, mut file_functions, has_syntax_errors) = result?;
         files.push(file);
         functions.append(&mut file_functions);
+        syntax_error_files += usize::from(has_syntax_errors);
     }
 
     files.sort_by(|a, b| a.path.cmp(&b.path));
@@ -388,6 +402,7 @@ pub fn analyze_path(input: &Path) -> Result<MetricsReport, MetricsError> {
             enumerated,
             analyzed: files.len(),
             skipped,
+            syntax_error_files,
             elapsed_ms: started.elapsed().as_millis(),
         },
         summary,

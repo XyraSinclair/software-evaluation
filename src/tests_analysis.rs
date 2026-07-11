@@ -281,24 +281,44 @@ fn canonical_stem(file: &SourceFile, test: bool) -> String {
     stem
 }
 
+fn direct_directory_stem(file: &SourceFile, test: bool) -> (String, String) {
+    let directory = file
+        .path
+        .rsplit_once('/')
+        .map_or("", |(directory, _)| directory)
+        .to_ascii_lowercase();
+    (directory, canonical_stem(file, test))
+}
+
 fn same_stem_matches(
     source: &[&SourceFile],
     tests: &[&SourceFile],
 ) -> (BTreeSet<String>, BTreeSet<String>) {
     let mut by_stem: BTreeMap<String, Vec<&SourceFile>> = BTreeMap::new();
+    let mut by_location: BTreeMap<(String, String), Vec<&SourceFile>> = BTreeMap::new();
     for file in source {
         by_stem
             .entry(canonical_stem(file, false))
+            .or_default()
+            .push(file);
+        by_location
+            .entry(direct_directory_stem(file, false))
             .or_default()
             .push(file);
     }
     let mut matched_sources = BTreeSet::new();
     let mut matched_tests = BTreeSet::new();
     for test in tests {
-        if let Some(candidates) = by_stem.get(&canonical_stem(test, true))
-            && candidates.len() == 1
-        {
-            matched_sources.insert(candidates[0].path.clone());
+        let direct = by_location
+            .get(&direct_directory_stem(test, true))
+            .and_then(|candidates| (candidates.len() == 1).then(|| candidates[0]));
+        let candidate = direct.or_else(|| {
+            by_stem
+                .get(&canonical_stem(test, true))
+                .and_then(|candidates| (candidates.len() == 1).then(|| candidates[0]))
+        });
+        if let Some(candidate) = candidate {
+            matched_sources.insert(candidate.path.clone());
             matched_tests.insert(test.path.clone());
         }
     }
@@ -308,7 +328,7 @@ fn same_stem_matches(
 fn inspect(file: &SourceFile, root: Node<'_>) -> Observations {
     let mut observations = Observations::default();
     let mut ranges = Vec::new();
-    discover_cases(file, root, &mut observations, &mut ranges);
+    discover_cases(file, root, false, &mut observations, &mut ranges);
     discover_assertions(file, root, &mut observations);
     if file.language == SourceLanguage::Go {
         for range in &mut ranges {
@@ -324,6 +344,7 @@ fn inspect(file: &SourceFile, root: Node<'_>) -> Observations {
 fn discover_cases(
     file: &SourceFile,
     node: Node<'_>,
+    ignored_suite_ancestor: bool,
     out: &mut Observations,
     ranges: &mut Vec<CaseRange>,
 ) {
@@ -370,7 +391,8 @@ fn discover_cases(
                 if matches!(base, "test" | "it" | "xtest" | "xit") {
                     out.cases += 1;
                     out.ignored += u64::from(
-                        matches!(base, "xtest" | "xit")
+                        ignored_suite_ancestor
+                            || matches!(base, "xtest" | "xit")
                             || callee.contains(".skip")
                             || callee.contains(".todo")
                             || callee.contains(".disable"),
@@ -396,10 +418,31 @@ fn discover_cases(
         }
         _ => {}
     }
+    let ignored_suite_ancestor = ignored_suite_ancestor || ignored_javascript_suite(file, node);
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
-        discover_cases(file, child, out, ranges);
+        discover_cases(file, child, ignored_suite_ancestor, out, ranges);
     }
+}
+
+fn ignored_javascript_suite(file: &SourceFile, node: Node<'_>) -> bool {
+    if !matches!(
+        file.language,
+        SourceLanguage::JavaScript | SourceLanguage::TypeScript | SourceLanguage::Tsx
+    ) || node.kind() != "call_expression"
+    {
+        return false;
+    }
+    node.child_by_field_name("function")
+        .is_some_and(|function| {
+            let callee = compact(text(file, function));
+            let base = callee.split('.').next().unwrap_or("");
+            matches!(base, "xdescribe")
+                || (base == "describe"
+                    && [".skip", ".todo", ".disable"]
+                        .iter()
+                        .any(|marker| callee.contains(marker)))
+        })
 }
 
 fn discover_assertions(file: &SourceFile, node: Node<'_>, out: &mut Observations) {

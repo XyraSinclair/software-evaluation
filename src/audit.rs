@@ -10,7 +10,7 @@ use serde::Serialize;
 use serde_json::{Map, Value};
 use thiserror::Error;
 
-const REQUIRED_FIELDS: [&str; 8] = [
+const REQUIRED_STRING_FIELDS: [&str; 8] = [
     "id",
     "artifact",
     "axis",
@@ -92,6 +92,10 @@ enum ReferenceProbe {
 pub fn audit_evaluation_dir(path: &Path) -> Result<AuditReport, AuditError> {
     validate_root(path)?;
 
+    let canonical_evaluation_dir = fs::canonicalize(path).map_err(|source| AuditError::Io {
+        path: path.to_path_buf(),
+        source,
+    })?;
     let evaluation_dir = path.display().to_string();
     let report_path = path.join("report.md");
     let records_path = path.join("records.jsonl");
@@ -108,6 +112,7 @@ pub fn audit_evaluation_dir(path: &Path) -> Result<AuditReport, AuditError> {
     if let Some(records_bytes) = records_bytes {
         audit_records(
             path,
+            &canonical_evaluation_dir,
             &records_path,
             &records_bytes,
             &mut records_total,
@@ -246,6 +251,7 @@ fn read_required_file(
 #[allow(clippy::too_many_arguments)]
 fn audit_records(
     evaluation_dir: &Path,
+    canonical_evaluation_dir: &Path,
     records_path: &Path,
     records_bytes: &[u8],
     records_total: &mut usize,
@@ -291,6 +297,7 @@ fn audit_records(
         *records_total += 1;
         audit_record_object(
             evaluation_dir,
+            canonical_evaluation_dir,
             records_path,
             line_number,
             object,
@@ -307,6 +314,7 @@ fn audit_records(
 #[allow(clippy::too_many_arguments)]
 fn audit_record_object(
     evaluation_dir: &Path,
+    canonical_evaluation_dir: &Path,
     records_path: &Path,
     line_number: usize,
     object: &Map<String, Value>,
@@ -316,7 +324,7 @@ fn audit_record_object(
     issues: &mut Vec<AuditIssue>,
 ) -> Result<(), AuditError> {
     let mut fields = HashMap::new();
-    for field in REQUIRED_FIELDS {
+    for field in REQUIRED_STRING_FIELDS {
         match nonempty_string(object, field) {
             Some(value) => {
                 fields.insert(field, value);
@@ -338,6 +346,9 @@ fn audit_record_object(
         }
     }
 
+    validate_agent(object, records_path, line_number, issues);
+    validate_timestamp(object, records_path, line_number, issues);
+
     let record_id = fields.get("id").copied();
     if let Some(record_id) = record_id
         && !record_ids.insert(record_id.to_owned())
@@ -352,37 +363,40 @@ fn audit_record_object(
     }
 
     if let Some(instrument) = fields.get("instrument") {
+        if !matches!(*instrument, "mechanical" | "empirical" | "judged") {
+            issues.push(record_issue(
+                "invalid_instrument",
+                Severity::Error,
+                records_path,
+                line_number,
+                format!(
+                    "instrument {instrument:?} is invalid; use mechanical, empirical, or judged"
+                ),
+            ));
+        }
         *instrument_counts
             .entry((*instrument).to_owned())
             .or_insert(0) += 1;
     }
 
-    if let Some(artifact) = fields.get("artifact") {
-        if !artifact.contains('@') {
-            issues.push(record_issue(
-                "invalid_artifact_identity",
-                Severity::Error,
-                records_path,
-                line_number,
-                format!("artifact {artifact:?} is not commit-pinned; use one name@commit identity"),
-            ));
-        }
-        if artifact.contains(" vs ") {
-            issues.push(record_issue(
-                "ambiguous_comparison_identity",
-                Severity::Error,
-                records_path,
-                line_number,
-                format!(
-                    "artifact {artifact:?} contains a comparison; store one commit-pinned artifact per field"
-                ),
-            ));
-        }
+    if let Some(artifact) = fields.get("artifact")
+        && !valid_artifact_identity(artifact)
+    {
+        issues.push(record_issue(
+            "invalid_artifact_identity",
+            Severity::Error,
+            records_path,
+            line_number,
+            format!(
+                "artifact {artifact:?} must be one or two ` vs `-separated name@commit identities with hexadecimal commits of at least seven digits"
+            ),
+        ));
     }
 
     let procedure_probe = match fields.get("procedure") {
         Some(reference) => audit_reference(
             evaluation_dir,
+            canonical_evaluation_dir,
             records_path,
             line_number,
             record_id,
@@ -418,6 +432,7 @@ fn audit_record_object(
     if let Some(reference) = fields.get("evidence") {
         audit_reference(
             evaluation_dir,
+            canonical_evaluation_dir,
             records_path,
             line_number,
             record_id,
@@ -434,6 +449,7 @@ fn audit_record_object(
 #[allow(clippy::too_many_arguments)]
 fn audit_reference(
     evaluation_dir: &Path,
+    canonical_evaluation_dir: &Path,
     records_path: &Path,
     line_number: usize,
     record_id: Option<&str>,
@@ -468,6 +484,34 @@ fn audit_reference(
     }
 
     let resolved_path = evaluation_dir.join(relative_path);
+    let canonical_path = match fs::canonicalize(&resolved_path) {
+        Ok(path) => Some(path),
+        Err(source) if source.kind() == io::ErrorKind::NotFound => resolved_path
+            .parent()
+            .and_then(|parent| fs::canonicalize(parent).ok()),
+        Err(source) => {
+            return Err(AuditError::Io {
+                path: resolved_path,
+                source,
+            });
+        }
+    };
+    if canonical_path
+        .as_ref()
+        .is_some_and(|path| !path.starts_with(canonical_evaluation_dir))
+    {
+        issues.push(record_issue(
+            "unsafe_reference",
+            Severity::Error,
+            records_path,
+            line_number,
+            format!(
+                "record {} has {kind} path {reference:?} whose canonical target escapes the evaluation root",
+                display_record_id(record_id)
+            ),
+        ));
+        return Ok(None);
+    }
     let probe = probe_reference(&resolved_path, reference_cache)?;
     match &probe {
         ReferenceProbe::Missing => issues.push(record_issue(
@@ -594,6 +638,126 @@ fn nonempty_string<'a>(object: &'a Map<String, Value>, field: &str) -> Option<&'
         .get(field)
         .and_then(Value::as_str)
         .filter(|value| !value.trim().is_empty())
+}
+
+fn valid_artifact_identity(artifact: &str) -> bool {
+    let mut identities = artifact.split(" vs ");
+    let Some(first) = identities.next() else {
+        return false;
+    };
+    if !valid_pinned_identity(first) {
+        return false;
+    }
+    match (identities.next(), identities.next()) {
+        (None, None) => true,
+        (Some(second), None) => valid_pinned_identity(second),
+        _ => false,
+    }
+}
+
+fn valid_pinned_identity(identity: &str) -> bool {
+    let Some((name, commit)) = identity.split_once('@') else {
+        return false;
+    };
+    !name.is_empty()
+        && !name.chars().any(char::is_whitespace)
+        && !name.contains('@')
+        && commit.len() >= 7
+        && commit.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn validate_agent(
+    object: &Map<String, Value>,
+    records_path: &Path,
+    line_number: usize,
+    issues: &mut Vec<AuditIssue>,
+) {
+    let valid = object
+        .get("agent")
+        .and_then(Value::as_object)
+        .is_some_and(|agent| {
+            nonempty_string(agent, "kind").is_some() && nonempty_string(agent, "id").is_some()
+        });
+    if !valid {
+        issues.push(record_issue(
+            "invalid_agent",
+            Severity::Error,
+            records_path,
+            line_number,
+            "record field \"agent\" must be an object with nonempty string fields \"kind\" and \"id\"".to_owned(),
+        ));
+    }
+}
+
+fn validate_timestamp(
+    object: &Map<String, Value>,
+    records_path: &Path,
+    line_number: usize,
+    issues: &mut Vec<AuditIssue>,
+) {
+    let valid = match object.get("ts") {
+        Some(Value::Null) => true,
+        Some(Value::String(timestamp)) => plausible_rfc3339(timestamp),
+        _ => false,
+    };
+    if !valid {
+        issues.push(record_issue(
+            "invalid_timestamp",
+            Severity::Error,
+            records_path,
+            line_number,
+            "record field \"ts\" must be null or a nonempty RFC3339 timestamp string".to_owned(),
+        ));
+    }
+}
+
+fn plausible_rfc3339(timestamp: &str) -> bool {
+    let bytes = timestamp.as_bytes();
+    if bytes.len() < 20
+        || bytes.get(4) != Some(&b'-')
+        || bytes.get(7) != Some(&b'-')
+        || bytes.get(10) != Some(&b'T')
+        || bytes.get(13) != Some(&b':')
+        || bytes.get(16) != Some(&b':')
+    {
+        return false;
+    }
+    let digit_ranges = [0..4, 5..7, 8..10, 11..13, 14..16, 17..19];
+    if digit_ranges
+        .into_iter()
+        .any(|range| !bytes[range].iter().all(u8::is_ascii_digit))
+    {
+        return false;
+    }
+    let parse_two = |offset: usize| (bytes[offset] - b'0') * 10 + bytes[offset + 1] - b'0';
+    if !(1..=12).contains(&parse_two(5))
+        || !(1..=31).contains(&parse_two(8))
+        || parse_two(11) > 23
+        || parse_two(14) > 59
+        || parse_two(17) > 60
+    {
+        return false;
+    }
+
+    let mut suffix = &bytes[19..];
+    if suffix.first() == Some(&b'.') {
+        let fraction_len = suffix[1..]
+            .iter()
+            .take_while(|byte| byte.is_ascii_digit())
+            .count();
+        if fraction_len == 0 {
+            return false;
+        }
+        suffix = &suffix[fraction_len + 1..];
+    }
+    suffix == b"Z"
+        || (suffix.len() == 6
+            && matches!(suffix[0], b'+' | b'-')
+            && suffix[1..3].iter().all(u8::is_ascii_digit)
+            && suffix[3] == b':'
+            && suffix[4..6].iter().all(u8::is_ascii_digit)
+            && ((suffix[1] - b'0') * 10 + suffix[2] - b'0') <= 23
+            && ((suffix[4] - b'0') * 10 + suffix[5] - b'0') <= 59)
 }
 
 fn record_issue(
