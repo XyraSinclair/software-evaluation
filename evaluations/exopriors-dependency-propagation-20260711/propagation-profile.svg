@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760">
+<rect x="0" y="0" width="1280" height="760" fill="#FAFBFC"/>
+<text x="56" y="58" font-family="ui-sans-serif,system-ui" font-size="28" font-weight="700" fill="#172033">ExoPriors dependency propagation profile</text>
+<text x="56" y="86" font-family="ui-sans-serif,system-ui" font-size="14" fill="#667085">Observed internal file graph · exact bounded reachability · direction-neutral</text>
+<circle cx="58" cy="118" r="6" fill="#2563EB"/><text x="72" y="123" font-family="ui-sans-serif,system-ui" font-size="14" fill="#172033">main</text>
+<circle cx="140" cy="118" r="6" fill="#D97706"/><text x="154" y="123" font-family="ui-sans-serif,system-ui" font-size="14" fill="#172033">nucleus</text>
+<text x="56" y="190" font-family="ui-sans-serif,system-ui" font-size="16" font-weight="600" fill="#172033">Non-self propagation</text>
+<line x1="300" y1="185" x2="760" y2="185" stroke="#D8DEE9" stroke-width="3"/>
+<text x="300" y="213" font-family="ui-monospace,monospace" font-size="12" fill="#667085">0%</text>
+<text x="726" y="213" font-family="ui-monospace,monospace" font-size="12" fill="#667085">20%</text>
+<line x1="309.19419314117397" y1="185" x2="325.50038144889214" y2="185" stroke="#AAB2C0" stroke-width="2"/>
+<circle cx="325.5" cy="185" r="8" fill="#2563EB"/><text x="337.5" y="173" font-family="ui-monospace,monospace" font-size="13" fill="#2563EB">1.11%</text>
+<circle cx="309.2" cy="185" r="8" fill="#D97706"/><text x="321.2" y="207" font-family="ui-monospace,monospace" font-size="13" fill="#D97706">0.40%</text>
+<text x="56" y="310" font-family="ui-sans-serif,system-ui" font-size="16" font-weight="600" fill="#172033">Cyclic source files</text>
+<line x1="300" y1="305" x2="760" y2="305" stroke="#D8DEE9" stroke-width="3"/>
+<text x="300" y="333" font-family="ui-monospace,monospace" font-size="12" fill="#667085">0%</text>
+<text x="726" y="333" font-family="ui-monospace,monospace" font-size="12" fill="#667085">20%</text>
+<line x1="300.0" y1="305" x2="743.4891485809683" y2="305" stroke="#AAB2C0" stroke-width="2"/>
+<circle cx="743.5" cy="305" r="8" fill="#2563EB"/><text x="755.5" y="293" font-family="ui-monospace,monospace" font-size="13" fill="#2563EB">19.28%</text>
+<circle cx="300.0" cy="305" r="8" fill="#D97706"/><text x="312.0" y="327" font-family="ui-monospace,monospace" font-size="13" fill="#D97706">0.00%</text>
+<text x="56" y="430" font-family="ui-sans-serif,system-ui" font-size="16" font-weight="600" fill="#172033">Largest cyclic SCC</text>
+<line x1="300" y1="425" x2="760" y2="425" stroke="#D8DEE9" stroke-width="3"/>
+<text x="300" y="453" font-family="ui-monospace,monospace" font-size="12" fill="#667085">0%</text>
+<text x="726" y="453" font-family="ui-monospace,monospace" font-size="12" fill="#667085">20%</text>
+<line x1="300.0" y1="425" x2="449.74958263772953" y2="425" stroke="#AAB2C0" stroke-width="2"/>
+<circle cx="449.7" cy="425" r="8" fill="#2563EB"/><text x="461.7" y="413" font-family="ui-monospace,monospace" font-size="13" fill="#2563EB">6.51%</text>
+<circle cx="300.0" cy="425" r="8" fill="#D97706"/><text x="312.0" y="447" font-family="ui-monospace,monospace" font-size="13" fill="#D97706">0.00%</text>
+<line x1="820" y1="150" x2="820" y2="690" stroke="#D8DEE9"/>
+<text x="860" y="174" font-family="ui-sans-serif,system-ui" font-size="17" font-weight="700" fill="#172033">Highest transitive out-count</text>
+<text x="860" y="198" font-family="ui-sans-serif,system-ui" font-size="13" fill="#667085">Static dependencies reachable from each file</text>
+<text x="860" y="235" font-family="ui-sans-serif,system-ui" font-size="14" font-weight="700" fill="#2563EB">main</text>
+<text x="860" y="261" font-family="ui-monospace,monospace" font-size="12" fill="#172033">continual_scraping/src/lib.rs</text>
+<text x="1215" y="261" text-anchor="end" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#2563EB">102</text>
+<text x="860" y="283" font-family="ui-monospace,monospace" font-size="12" fill="#172033">tools/checks/src/main.rs</text>
+<text x="1215" y="283" text-anchor="end" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#2563EB">81</text>
+<text x="860" y="305" font-family="ui-monospace,monospace" font-size="12" fill="#172033">…ls/checks/src/checks/blast_radius_audit.rs</text>
+<text x="1215" y="305" text-anchor="end" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#2563EB">79</text>
+<text x="860" y="327" font-family="ui-monospace,monospace" font-size="12" fill="#172033">tools/checks/src/checks/bundle.rs</text>
+<text x="1215" y="327" text-anchor="end" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#2563EB">79</text>
+<text x="860" y="349" font-family="ui-monospace,monospace" font-size="12" fill="#172033">tools/checks/src/checks/checkout_sync.rs</text>
+<text x="1215" y="349" text-anchor="end" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#2563EB">79</text>
+<text x="860" y="391" font-family="ui-sans-serif,system-ui" font-size="14" font-weight="700" fill="#D97706">nucleus</text>
+<text x="860" y="417" font-family="ui-monospace,monospace" font-size="12" fill="#172033">crates/serve/src/lib.rs</text>
+<text x="1215" y="417" text-anchor="end" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#D97706">16</text>
+<text x="860" y="439" font-family="ui-monospace,monospace" font-size="12" fill="#172033">crates/opsctl/src/lib.rs</text>
+<text x="1215" y="439" text-anchor="end" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#D97706">8</text>
+<text x="860" y="461" font-family="ui-monospace,monospace" font-size="12" fill="#172033">crates/checks/src/lib.rs</text>
+<text x="1215" y="461" text-anchor="end" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#D97706">5</text>
+<text x="860" y="483" font-family="ui-monospace,monospace" font-size="12" fill="#172033">crates/ingest/src/lib.rs</text>
+<text x="1215" y="483" text-anchor="end" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#D97706">4</text>
+<text x="860" y="505" font-family="ui-monospace,monospace" font-size="12" fill="#172033">crates/serve/src/billing/wire.rs</text>
+<text x="1215" y="505" text-anchor="end" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#D97706">1</text>
+<text x="56" y="712" font-family="ui-sans-serif,system-ui" font-size="12" fill="#667085">Fractions share a percent unit but remain separate constructs. No aggregate score, quality direction, or causal claim.</text>
+</svg>

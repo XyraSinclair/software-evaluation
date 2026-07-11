@@ -1,0 +1,163 @@
+{
+  "artifacts": {
+    "main": {
+      "propagation": {
+        "source_files": 1198,
+        "reachability_status": "computed",
+        "reachability_node_limit": 10000,
+        "reachability_work_limit": 100000000,
+        "reachability_work_upper_bound": 1213574,
+        "reachable_nonself_pairs": 15899,
+        "possible_nonself_pairs": 1434006,
+        "nonself_propagation_fraction": 0.011087122369083532,
+        "cyclic_components": 18,
+        "cyclic_source_files": 231,
+        "cyclic_source_file_fraction": 0.19282136894824708,
+        "largest_cyclic_component_files": 78,
+        "largest_cyclic_component_fraction": 0.0651085141903172
+      },
+      "top_transitive_out": [
+        {
+          "path": "continual_scraping/src/lib.rs",
+          "count": 102,
+          "direct": 56
+        },
+        {
+          "path": "tools/checks/src/main.rs",
+          "count": 81,
+          "direct": 2
+        },
+        {
+          "path": "tools/checks/src/checks/blast_radius_audit.rs",
+          "count": 79,
+          "direct": 1
+        },
+        {
+          "path": "tools/checks/src/checks/bundle.rs",
+          "count": 79,
+          "direct": 1
+        },
+        {
+          "path": "tools/checks/src/checks/checkout_sync.rs",
+          "count": 79,
+          "direct": 1
+        }
+      ],
+      "top_transitive_in": [
+        {
+          "path": "src/api/src/routes/scry/olap/ch_deny.rs",
+          "count": 190,
+          "direct": 1
+        },
+        {
+          "path": "src/api/src/routes/mod.rs",
+          "count": 189,
+          "direct": 84
+        },
+        {
+          "path": "src/api/src/routes/scry/clickhouse_exec.rs",
+          "count": 189,
+          "direct": 1
+        },
+        {
+          "path": "src/api/src/routes/scry/clickhouse_mode.rs",
+          "count": 189,
+          "direct": 1
+        },
+        {
+          "path": "src/api/src/routes/scry/clickhouse_mode_tests.rs",
+          "count": 189,
+          "direct": 1
+        }
+      ]
+    },
+    "nucleus": {
+      "propagation": {
+        "source_files": 98,
+        "reachability_status": "computed",
+        "reachability_node_limit": 10000,
+        "reachability_work_limit": 100000000,
+        "reachability_work_upper_bound": 3822,
+        "reachable_nonself_pairs": 38,
+        "possible_nonself_pairs": 9506,
+        "nonself_propagation_fraction": 0.003997475278771302,
+        "cyclic_components": 0,
+        "cyclic_source_files": 0,
+        "cyclic_source_file_fraction": 0.0,
+        "largest_cyclic_component_files": 0,
+        "largest_cyclic_component_fraction": 0.0
+      },
+      "top_transitive_out": [
+        {
+          "path": "crates/serve/src/lib.rs",
+          "count": 16,
+          "direct": 16
+        },
+        {
+          "path": "crates/opsctl/src/lib.rs",
+          "count": 8,
+          "direct": 8
+        },
+        {
+          "path": "crates/checks/src/lib.rs",
+          "count": 5,
+          "direct": 5
+        },
+        {
+          "path": "crates/ingest/src/lib.rs",
+          "count": 4,
+          "direct": 4
+        },
+        {
+          "path": "crates/serve/src/billing/wire.rs",
+          "count": 1,
+          "direct": 1
+        }
+      ],
+      "top_transitive_in": [
+        {
+          "path": "crates/serve/src/billing.rs",
+          "count": 2,
+          "direct": 2
+        },
+        {
+          "path": "crates/serve/src/routes.rs",
+          "count": 2,
+          "direct": 2
+        },
+        {
+          "path": "web/src/routes/[collection]/collections.ts",
+          "count": 2,
+          "direct": 2
+        },
+        {
+          "path": "crates/checks/src/baseline_routes.rs",
+          "count": 1,
+          "direct": 1
+        },
+        {
+          "path": "crates/checks/src/capabilities.rs",
+          "count": 1,
+          "direct": 1
+        }
+      ]
+    }
+  },
+  "comparison": {
+    "nonself_propagation_fraction": {
+      "main": 0.011087122369083532,
+      "nucleus": 0.003997475278771302,
+      "nucleus_minus_main": -0.00708964709031223
+    },
+    "cyclic_source_file_fraction": {
+      "main": 0.19282136894824708,
+      "nucleus": 0.0,
+      "nucleus_minus_main": -0.19282136894824708
+    },
+    "largest_cyclic_component_fraction": {
+      "main": 0.0651085141903172,
+      "nucleus": 0.0,
+      "nucleus_minus_main": -0.0651085141903172
+    }
+  }
+}

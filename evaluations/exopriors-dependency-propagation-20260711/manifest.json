@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "evaluation": "exopriors-dependency-propagation-20260711",
+  "generated_at": "2026-07-11T09:31:17.404064Z",
+  "artifacts": [
+    {
+      "name": "exopriors-main",
+      "revision": "c95daa69575c141e645c1f7d09df0e89cf62fe40",
+      "tree_digest": "842137570bbb9072f35bd0ea88208ed287cd8a6d",
+      "snapshot_path": "/private/tmp/seval-metrics-main-20260711"
+    },
+    {
+      "name": "exopriors-nucleus",
+      "revision": "80c973da663b03977aa61aba5ed77d1ecbf8d0a2",
+      "tree_digest": "dcb792ec7bb5682c121d3cebaa01a0ac66c10033",
+      "snapshot_path": "/private/tmp/seval-metrics-nucleus-20260711"
+    }
+  ],
+  "evaluator": {
+    "name": "software-evaluation",
+    "revision": "4e4161c6336c91dcc4bb7d4dfe14220d01201a3c",
+    "version": "seval 0.1.0",
+    "binary": "/Users/xyra/projects/software-evaluation/target/release/seval",
+    "binary_sha256": "a6d65fc86747d9f12763c8c3a73d0a0a02cd090660e5291b1e524f08973b559f"
+  },
+  "commands": [
+    {
+      "output": "deps-main.json",
+      "stderr": "deps-main.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "deps",
+        "/private/tmp/seval-metrics-main-20260711",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 2.117778,
+      "completed_at": "2026-07-11T09:31:17.355917Z",
+      "stdout_bytes": 5443030,
+      "stdout_sha256": "e1b876fd04986a2b14ff3d0cfccb2f2cc51dea7d5497d550625bf781df4388ad",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "deps-nucleus.json",
+      "stderr": "deps-nucleus.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "deps",
+        "/private/tmp/seval-metrics-nucleus-20260711",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.307173,
+      "completed_at": "2026-07-11T09:31:15.547436Z",
+      "stdout_bytes": 316598,
+      "stdout_sha256": "b06168d6234732bf7bc94837206e2f8610fd584d8e1223fbd4e8c4088df6ced7",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "interpretation": {
+    "instrument_class": "mechanical static dependency-graph proxy",
+    "direction": "neutral",
+    "comparison_scope": "unrelated fixed artifact snapshots; not a before/after lineage",
+    "certifies": "exact direct degrees, SCC cycle participation, and bounded transitive reachability for the analyzer-observed resolved internal file graph",
+    "does_not_certify": [
+      "resolver completeness",
+      "runtime dependencies",
+      "causal change impact",
+      "maintainability",
+      "quality",
+      "fitness to intent"
+    ]
+  }
+}
