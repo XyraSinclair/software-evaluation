@@ -56,10 +56,10 @@ overall-quality claim.
 
 | Property | State | Evidence or gap |
 | Evaluation reports pin artifact commits and remain immutable historical facts | named-gap | Audit now enforces hexadecimal pin syntax, but not commit existence, report immutability, or evidence-to-commit binding. |
-| Accepted and rejected review findings retain reasons and receipts | named-gap | The present drive has no committed findings ledger yet. |
+| Accepted and rejected review findings retain reasons and receipts | covered | `evaluations/exopriors-main-vs-nucleus-20260710/findings.md` records fixed, accepted-open, and ruled-out findings with closure conditions. |
 | A full adversarial round returns zero must-fix findings before “canonical” is claimed | named-gap | No dry round has occurred. |
 | A final cold-clone smoke test passes at the reviewed commit | named-gap | Not yet run. |
-| Remaining limitations are named in the artifact rather than hidden in session prose | named-gap | This denominator names the current residue; the exopriors evaluation report remains to be written. |
+| Remaining limitations are named in the artifact rather than hidden in session prose | covered | The ExoPriors report, procedure, manifest, canonicality denominator, and findings ledger carry the current residue. |
 
 ## Ruled out
 

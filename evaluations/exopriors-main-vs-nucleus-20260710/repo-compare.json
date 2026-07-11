@@ -1,0 +1,807 @@
+{
+  "left": {
+    "artifact": {
+      "id": "seval-exopriors-main@c95daa69575c",
+      "root": "/private/tmp/seval-exopriors-main",
+      "revision": "c95daa69575c141e645c1f7d09df0e89cf62fe40",
+      "tree_digest": "842137570bbb9072f35bd0ea88208ed287cd8a6d",
+      "kind": "git-repository"
+    },
+    "decision": {
+      "id": "repository-review-routing",
+      "description": "Decide which deeper repository evaluations to run next from deterministic shape proxies",
+      "claim_ids": [
+        "source-size-concentration",
+        "change-mass-concentration",
+        "cross-boundary-cochange"
+      ]
+    },
+    "steps": [
+      {
+        "observation": {
+          "category_bytes": {
+            "configuration": 2279069,
+            "documentation": 6980160,
+            "generated_or_vendor": 405079,
+            "other": 12035487,
+            "source": 26645820,
+            "test": 2555861
+          },
+          "category_files": {
+            "configuration": 109,
+            "documentation": 283,
+            "generated_or_vendor": 39,
+            "other": 293,
+            "source": 1152,
+            "test": 292
+          },
+          "classifier_version": "repo-lexical-v1",
+          "documentation_to_source_bytes": 0.26196078784589855,
+          "effective_source_files": 651.5411253548152,
+          "effective_top_level_components": 3.786383921865803,
+          "generated_or_vendor_byte_share": 0.007958099289694468,
+          "largest_source_file_bytes": 341687,
+          "largest_source_file_path": "continual_scraping/src/bin/voyage_embed.rs",
+          "largest_source_file_share": 0.012823287104694095,
+          "limitations": [
+            "Byte and path structure is a proxy for repository shape, not an overall quality measure.",
+            "The versioned lexical classifier can misclassify unusual layouts, languages, generated files, documentation, configuration, and tests.",
+            "Blob sizes and paths do not measure correctness, complexity, maintainability, security, or user value.",
+            "Symlink entries are measured as committed blobs; worktree symlink targets are never read or followed.",
+            "Tracked file and byte totals count blob entries; Git submodule/gitlink entries are excluded.",
+            "Nearest-rank quantiles sort integer byte sizes and use rank ceil(p*N), with the first rank numbered one.",
+            "Git is an external dependency (git version 2.50.1 (Apple Git-155)); deterministic replay is scoped to the commit, classifier version, command, and Git behavior, not claimed byte-for-byte across Git versions."
+          ],
+          "max_path_depth": 9,
+          "normalized_source_size_entropy": 0.9191525437210577,
+          "normalized_top_level_source_entropy": 0.5190790412460116,
+          "source_file_size_median": 14341,
+          "source_file_size_p90": 50362,
+          "test_to_source_bytes": 0.09591977278237263,
+          "top_decile_source_byte_share": 0.3887792907105129,
+          "tracked_bytes": 50901476,
+          "tracked_files": 2168
+        },
+        "evidence": [
+          {
+            "kind": "git-command-stdout",
+            "locator": "\"git\" \"-C\" \"/private/tmp/seval-exopriors-main\" \"ls-tree\" \"-r\" \"-z\" \"--long\" \"c95daa69575c141e645c1f7d09df0e89cf62fe40\"",
+            "digest": "40dc07b6d1ea1bc61e5ac11c6c524c3f71921d497a9a858366dec41b80e132c6",
+            "description": "Raw NUL-delimited Git tree listing used for committed blob sizes and paths; executable reported git version 2.50.1 (Apple Git-155)"
+          }
+        ],
+        "receipt": {
+          "program": {
+            "id": "repo.static-shape",
+            "version": "1",
+            "criterion": "repository-shape",
+            "epistemic_class": "proxy",
+            "deterministic": true,
+            "description": "Deterministic committed-tree byte, path, and lexical-category shape; no overall quality score"
+          },
+          "artifact_id": "seval-exopriors-main@c95daa69575c",
+          "artifact_tree_digest": "842137570bbb9072f35bd0ea88208ed287cd8a6d",
+          "started_unix_ms": 1783744975401,
+          "elapsed_ms": 65,
+          "estimated_resources": {
+            "usd": 0.0,
+            "wall_time_ms": 2000,
+            "cpu_time_ms": null,
+            "peak_memory_bytes": null,
+            "bytes_read": 0,
+            "bytes_written": 0,
+            "programs": 1
+          },
+          "actual_resources": {
+            "usd": 0.0,
+            "wall_time_ms": 65,
+            "cpu_time_ms": null,
+            "peak_memory_bytes": null,
+            "bytes_read": 228711,
+            "bytes_written": 0,
+            "programs": 1
+          },
+          "observation_digest": "a9a7c412ed8df24fb471ff32d446924c57cdb6f95827e524235bc37da3d4bec2",
+          "status": "completed",
+          "message": "limitations: Byte and path structure is a proxy for repository shape, not an overall quality measure.; The versioned lexical classifier can misclassify unusual layouts, languages, generated files, documentation, configuration, and tests.; Blob sizes and paths do not measure correctness, complexity, maintainability, security, or user value.; Symlink entries are measured as committed blobs; worktree symlink targets are never read or followed.; Tracked file and byte totals count blob entries; Git submodule/gitlink entries are excluded.; Nearest-rank quantiles sort integer byte sizes and use rank ceil(p*N), with the first rank numbered one.; Git is an external dependency (git version 2.50.1 (Apple Git-155)); deterministic replay is scoped to the commit, classifier version, command, and Git behavior, not claimed byte-for-byte across Git versions."
+        },
+        "posterior": {
+          "probabilities": {},
+          "observation_digests": [
+            "a9a7c412ed8df24fb471ff32d446924c57cdb6f95827e524235bc37da3d4bec2"
+          ]
+        },
+        "continuation": {
+          "action": "continue",
+          "remaining": {
+            "usd": 0.0,
+            "wall_time_ms": 9935,
+            "programs": 1
+          },
+          "hints": []
+        }
+      },
+      {
+        "observation": {
+          "broad_commit_rate": 0.11,
+          "commits_analyzed": 200,
+          "commits_with_binary_changes": 0,
+          "cross_top_level_pair_ratio": 0.11396672345670061,
+          "effective_hotspot_files": 229.91211263652062,
+          "files_changed_max": 180,
+          "files_changed_mean": 4.545,
+          "files_changed_median": 2,
+          "files_changed_p90": 5,
+          "largest_hotspot_mass": 9879,
+          "largest_hotspot_path": "artifacts/scihub_md_bench/report.json",
+          "limitations": [
+            "History is truncated to at most 200 non-merge commits, so older change patterns are not represented.",
+            "Merge commits are excluded; squash merges, rebases, and other history rewriting can substantially change the observed topology.",
+            "Rename detection is disabled, so renames and file-identity continuity are not recovered; identity and attribution across paths have gaps.",
+            "Binary changes are counted by commit and path but excluded from line-change mass because Git numstat supplies no line counts.",
+            "Files-changed quantiles use nearest-rank over sorted integer counts: rank ceil(p*N), with the first rank numbered one.",
+            "Top-level layout boundaries are a leakage proxy only; cochange across them is not proof of modularity, coupling, or architecture quality.",
+            "The versioned lexical classifier and path-based source/test/documentation interpretation can misclassify unusual repository layouts.",
+            "Commit topology and line counts do not measure correctness, complexity, maintainability, security, or user value.",
+            "Git is an external dependency (git version 2.50.1 (Apple Git-155)); deterministic replay is scoped to the commit, requested history, classifier, command, and Git behavior, not claimed byte-for-byte across Git versions."
+          ],
+          "normalized_change_mass_entropy": 0.8457129639167111,
+          "requested_commits": 200,
+          "source_commits": 116,
+          "source_documentation_cochange_rate": 0.16379310344827586,
+          "source_test_cochange_rate": 0.43103448275862066,
+          "top_decile_change_mass_share": 0.5053559681489264,
+          "total_line_change_mass": 203698,
+          "unique_changed_files": 620
+        },
+        "evidence": [
+          {
+            "kind": "git-command-stdout",
+            "locator": "\"git\" \"-C\" \"/private/tmp/seval-exopriors-main\" \"log\" \"--no-merges\" \"--no-renames\" \"--format=%x1e%H\" \"--numstat\" \"-n\" \"200\" \"c95daa69575c141e645c1f7d09df0e89cf62fe40\" \"--\"",
+            "digest": "a011688431d76bbed005f37a6f072a4e3f734b172ffaae47e88fa1f7e1b258d2",
+            "description": "Raw commit-separated Git numstat history used for change-shape metrics; executable reported git version 2.50.1 (Apple Git-155)"
+          }
+        ],
+        "receipt": {
+          "program": {
+            "id": "repo.git-change-shape",
+            "version": "1",
+            "criterion": "evolvability.change-topology",
+            "epistemic_class": "proxy",
+            "deterministic": true,
+            "description": "Deterministic bounded Git change-mass and layout-cochange proxies; no overall quality score"
+          },
+          "artifact_id": "seval-exopriors-main@c95daa69575c",
+          "artifact_tree_digest": "842137570bbb9072f35bd0ea88208ed287cd8a6d",
+          "started_unix_ms": 1783744975467,
+          "elapsed_ms": 1555,
+          "estimated_resources": {
+            "usd": 0.0,
+            "wall_time_ms": 5000,
+            "cpu_time_ms": null,
+            "peak_memory_bytes": null,
+            "bytes_read": 0,
+            "bytes_written": 0,
+            "programs": 1
+          },
+          "actual_resources": {
+            "usd": 0.0,
+            "wall_time_ms": 1555,
+            "cpu_time_ms": null,
+            "peak_memory_bytes": null,
+            "bytes_read": 51447,
+            "bytes_written": 0,
+            "programs": 1
+          },
+          "observation_digest": "97a6d6c50b985e9a71704030b26585952c6ea25bdeb33f569b6b5989ab459189",
+          "status": "completed",
+          "message": "limitations: History is truncated to at most 200 non-merge commits, so older change patterns are not represented.; Merge commits are excluded; squash merges, rebases, and other history rewriting can substantially change the observed topology.; Rename detection is disabled, so renames and file-identity continuity are not recovered; identity and attribution across paths have gaps.; Binary changes are counted by commit and path but excluded from line-change mass because Git numstat supplies no line counts.; Files-changed quantiles use nearest-rank over sorted integer counts: rank ceil(p*N), with the first rank numbered one.; Top-level layout boundaries are a leakage proxy only; cochange across them is not proof of modularity, coupling, or architecture quality.; The versioned lexical classifier and path-based source/test/documentation interpretation can misclassify unusual repository layouts.; Commit topology and line counts do not measure correctness, complexity, maintainability, security, or user value.; Git is an external dependency (git version 2.50.1 (Apple Git-155)); deterministic replay is scoped to the commit, requested history, classifier, command, and Git behavior, not claimed byte-for-byte across Git versions."
+        },
+        "posterior": {
+          "probabilities": {},
+          "observation_digests": [
+            "a9a7c412ed8df24fb471ff32d446924c57cdb6f95827e524235bc37da3d4bec2",
+            "97a6d6c50b985e9a71704030b26585952c6ea25bdeb33f569b6b5989ab459189"
+          ]
+        },
+        "continuation": {
+          "action": "stop",
+          "remaining": {
+            "usd": 0.0,
+            "wall_time_ms": 8380,
+            "programs": 0
+          },
+          "reason": "complete",
+          "message": "all criterion programs completed"
+        }
+      }
+    ],
+    "posterior": {
+      "probabilities": {},
+      "observation_digests": [
+        "a9a7c412ed8df24fb471ff32d446924c57cdb6f95827e524235bc37da3d4bec2",
+        "97a6d6c50b985e9a71704030b26585952c6ea25bdeb33f569b6b5989ab459189"
+      ]
+    },
+    "remaining": {
+      "usd": 0.0,
+      "wall_time_ms": 8380,
+      "programs": 0
+    },
+    "stopped_reason": "complete"
+  },
+  "right": {
+    "artifact": {
+      "id": "seval-exopriors-nucleus@80c973da663b",
+      "root": "/private/tmp/seval-exopriors-nucleus",
+      "revision": "80c973da663b03977aa61aba5ed77d1ecbf8d0a2",
+      "tree_digest": "dcb792ec7bb5682c121d3cebaa01a0ac66c10033",
+      "kind": "git-repository"
+    },
+    "decision": {
+      "id": "repository-review-routing",
+      "description": "Decide which deeper repository evaluations to run next from deterministic shape proxies",
+      "claim_ids": [
+        "source-size-concentration",
+        "change-mass-concentration",
+        "cross-boundary-cochange"
+      ]
+    },
+    "steps": [
+      {
+        "observation": {
+          "category_bytes": {
+            "configuration": 1300418,
+            "documentation": 133783,
+            "generated_or_vendor": 41210,
+            "other": 5512834,
+            "source": 3760502,
+            "test": 127577
+          },
+          "category_files": {
+            "configuration": 21,
+            "documentation": 6,
+            "generated_or_vendor": 1,
+            "other": 65,
+            "source": 95,
+            "test": 3
+          },
+          "classifier_version": "repo-lexical-v1",
+          "documentation_to_source_bytes": 0.0355758353538969,
+          "effective_source_files": 35.30272650402606,
+          "effective_top_level_components": 1.2776000923632753,
+          "generated_or_vendor_byte_share": 0.0037889639918781384,
+          "largest_source_file_bytes": 249641,
+          "largest_source_file_path": "crates/serve/src/ch_executor.rs",
+          "largest_source_file_share": 0.06638501987234684,
+          "limitations": [
+            "Byte and path structure is a proxy for repository shape, not an overall quality measure.",
+            "The versioned lexical classifier can misclassify unusual layouts, languages, generated files, documentation, configuration, and tests.",
+            "Blob sizes and paths do not measure correctness, complexity, maintainability, security, or user value.",
+            "Symlink entries are measured as committed blobs; worktree symlink targets are never read or followed.",
+            "Tracked file and byte totals count blob entries; Git submodule/gitlink entries are excluded.",
+            "Nearest-rank quantiles sort integer byte sizes and use rank ceil(p*N), with the first rank numbered one.",
+            "Git is an external dependency (git version 2.50.1 (Apple Git-155)); deterministic replay is scoped to the commit, classifier version, command, and Git behavior, not claimed byte-for-byte across Git versions."
+          ],
+          "max_path_depth": 7,
+          "normalized_source_size_entropy": 0.7826211124864907,
+          "normalized_top_level_source_entropy": 0.22299349164392349,
+          "source_file_size_median": 5938,
+          "source_file_size_p90": 133426,
+          "test_to_source_bytes": 0.033925523773155816,
+          "top_decile_source_byte_share": 0.503923944196812,
+          "tracked_bytes": 10876324,
+          "tracked_files": 191
+        },
+        "evidence": [
+          {
+            "kind": "git-command-stdout",
+            "locator": "\"git\" \"-C\" \"/private/tmp/seval-exopriors-nucleus\" \"ls-tree\" \"-r\" \"-z\" \"--long\" \"80c973da663b03977aa61aba5ed77d1ecbf8d0a2\"",
+            "digest": "3e8171bb2c601223dc875f48e63c9ad1179f384c805d74fb6d431c041bd25185",
+            "description": "Raw NUL-delimited Git tree listing used for committed blob sizes and paths; executable reported git version 2.50.1 (Apple Git-155)"
+          }
+        ],
+        "receipt": {
+          "program": {
+            "id": "repo.static-shape",
+            "version": "1",
+            "criterion": "repository-shape",
+            "epistemic_class": "proxy",
+            "deterministic": true,
+            "description": "Deterministic committed-tree byte, path, and lexical-category shape; no overall quality score"
+          },
+          "artifact_id": "seval-exopriors-nucleus@80c973da663b",
+          "artifact_tree_digest": "dcb792ec7bb5682c121d3cebaa01a0ac66c10033",
+          "started_unix_ms": 1783744977116,
+          "elapsed_ms": 57,
+          "estimated_resources": {
+            "usd": 0.0,
+            "wall_time_ms": 2000,
+            "cpu_time_ms": null,
+            "peak_memory_bytes": null,
+            "bytes_read": 0,
+            "bytes_written": 0,
+            "programs": 1
+          },
+          "actual_resources": {
+            "usd": 0.0,
+            "wall_time_ms": 57,
+            "cpu_time_ms": null,
+            "peak_memory_bytes": null,
+            "bytes_read": 17914,
+            "bytes_written": 0,
+            "programs": 1
+          },
+          "observation_digest": "65f56eee7428a43dda512f108ae259ce884c3d833624989c4a2a5a132305f0af",
+          "status": "completed",
+          "message": "limitations: Byte and path structure is a proxy for repository shape, not an overall quality measure.; The versioned lexical classifier can misclassify unusual layouts, languages, generated files, documentation, configuration, and tests.; Blob sizes and paths do not measure correctness, complexity, maintainability, security, or user value.; Symlink entries are measured as committed blobs; worktree symlink targets are never read or followed.; Tracked file and byte totals count blob entries; Git submodule/gitlink entries are excluded.; Nearest-rank quantiles sort integer byte sizes and use rank ceil(p*N), with the first rank numbered one.; Git is an external dependency (git version 2.50.1 (Apple Git-155)); deterministic replay is scoped to the commit, classifier version, command, and Git behavior, not claimed byte-for-byte across Git versions."
+        },
+        "posterior": {
+          "probabilities": {},
+          "observation_digests": [
+            "65f56eee7428a43dda512f108ae259ce884c3d833624989c4a2a5a132305f0af"
+          ]
+        },
+        "continuation": {
+          "action": "continue",
+          "remaining": {
+            "usd": 0.0,
+            "wall_time_ms": 9943,
+            "programs": 1
+          },
+          "hints": []
+        }
+      },
+      {
+        "observation": {
+          "broad_commit_rate": 0.025,
+          "commits_analyzed": 200,
+          "commits_with_binary_changes": 0,
+          "cross_top_level_pair_ratio": 0.3926174496644295,
+          "effective_hotspot_files": 35.10573955502778,
+          "files_changed_max": 17,
+          "files_changed_mean": 2.46,
+          "files_changed_median": 2,
+          "files_changed_p90": 5,
+          "largest_hotspot_mass": 18096,
+          "largest_hotspot_path": "capabilities.toml",
+          "limitations": [
+            "History is truncated to at most 200 non-merge commits, so older change patterns are not represented.",
+            "Merge commits are excluded; squash merges, rebases, and other history rewriting can substantially change the observed topology.",
+            "Rename detection is disabled, so renames and file-identity continuity are not recovered; identity and attribution across paths have gaps.",
+            "Binary changes are counted by commit and path but excluded from line-change mass because Git numstat supplies no line counts.",
+            "Files-changed quantiles use nearest-rank over sorted integer counts: rank ceil(p*N), with the first rank numbered one.",
+            "Top-level layout boundaries are a leakage proxy only; cochange across them is not proof of modularity, coupling, or architecture quality.",
+            "The versioned lexical classifier and path-based source/test/documentation interpretation can misclassify unusual repository layouts.",
+            "Commit topology and line counts do not measure correctness, complexity, maintainability, security, or user value.",
+            "Git is an external dependency (git version 2.50.1 (Apple Git-155)); deterministic replay is scoped to the commit, requested history, classifier, command, and Git behavior, not claimed byte-for-byte across Git versions."
+          ],
+          "normalized_change_mass_entropy": 0.8052711000509397,
+          "requested_commits": 200,
+          "source_commits": 149,
+          "source_documentation_cochange_rate": 0.18791946308724833,
+          "source_test_cochange_rate": 0.11409395973154363,
+          "top_decile_change_mass_share": 0.489591930863718,
+          "total_line_change_mass": 164776,
+          "unique_changed_files": 83
+        },
+        "evidence": [
+          {
+            "kind": "git-command-stdout",
+            "locator": "\"git\" \"-C\" \"/private/tmp/seval-exopriors-nucleus\" \"log\" \"--no-merges\" \"--no-renames\" \"--format=%x1e%H\" \"--numstat\" \"-n\" \"200\" \"80c973da663b03977aa61aba5ed77d1ecbf8d0a2\" \"--\"",
+            "digest": "868045d9d6c254a046b1c34906d68f61d4cc0745e11c9feba409fb86e0717184",
+            "description": "Raw commit-separated Git numstat history used for change-shape metrics; executable reported git version 2.50.1 (Apple Git-155)"
+          }
+        ],
+        "receipt": {
+          "program": {
+            "id": "repo.git-change-shape",
+            "version": "1",
+            "criterion": "evolvability.change-topology",
+            "epistemic_class": "proxy",
+            "deterministic": true,
+            "description": "Deterministic bounded Git change-mass and layout-cochange proxies; no overall quality score"
+          },
+          "artifact_id": "seval-exopriors-nucleus@80c973da663b",
+          "artifact_tree_digest": "dcb792ec7bb5682c121d3cebaa01a0ac66c10033",
+          "started_unix_ms": 1783744977174,
+          "elapsed_ms": 807,
+          "estimated_resources": {
+            "usd": 0.0,
+            "wall_time_ms": 5000,
+            "cpu_time_ms": null,
+            "peak_memory_bytes": null,
+            "bytes_read": 0,
+            "bytes_written": 0,
+            "programs": 1
+          },
+          "actual_resources": {
+            "usd": 0.0,
+            "wall_time_ms": 807,
+            "cpu_time_ms": null,
+            "peak_memory_bytes": null,
+            "bytes_read": 23334,
+            "bytes_written": 0,
+            "programs": 1
+          },
+          "observation_digest": "18b582f03ab9c203b0174c35d750297dd4a3e2b0bd4430ac74875ea36db0d938",
+          "status": "completed",
+          "message": "limitations: History is truncated to at most 200 non-merge commits, so older change patterns are not represented.; Merge commits are excluded; squash merges, rebases, and other history rewriting can substantially change the observed topology.; Rename detection is disabled, so renames and file-identity continuity are not recovered; identity and attribution across paths have gaps.; Binary changes are counted by commit and path but excluded from line-change mass because Git numstat supplies no line counts.; Files-changed quantiles use nearest-rank over sorted integer counts: rank ceil(p*N), with the first rank numbered one.; Top-level layout boundaries are a leakage proxy only; cochange across them is not proof of modularity, coupling, or architecture quality.; The versioned lexical classifier and path-based source/test/documentation interpretation can misclassify unusual repository layouts.; Commit topology and line counts do not measure correctness, complexity, maintainability, security, or user value.; Git is an external dependency (git version 2.50.1 (Apple Git-155)); deterministic replay is scoped to the commit, requested history, classifier, command, and Git behavior, not claimed byte-for-byte across Git versions."
+        },
+        "posterior": {
+          "probabilities": {},
+          "observation_digests": [
+            "65f56eee7428a43dda512f108ae259ce884c3d833624989c4a2a5a132305f0af",
+            "18b582f03ab9c203b0174c35d750297dd4a3e2b0bd4430ac74875ea36db0d938"
+          ]
+        },
+        "continuation": {
+          "action": "stop",
+          "remaining": {
+            "usd": 0.0,
+            "wall_time_ms": 9136,
+            "programs": 0
+          },
+          "reason": "complete",
+          "message": "all criterion programs completed"
+        }
+      }
+    ],
+    "posterior": {
+      "probabilities": {},
+      "observation_digests": [
+        "65f56eee7428a43dda512f108ae259ce884c3d833624989c4a2a5a132305f0af",
+        "18b582f03ab9c203b0174c35d750297dd4a3e2b0bd4430ac74875ea36db0d938"
+      ]
+    },
+    "remaining": {
+      "usd": 0.0,
+      "wall_time_ms": 9136,
+      "programs": 0
+    },
+    "stopped_reason": "complete"
+  },
+  "comparison": {
+    "left_artifact_id": "seval-exopriors-main@c95daa69575c",
+    "right_artifact_id": "seval-exopriors-nucleus@80c973da663b",
+    "programs": [
+      {
+        "program_id": "repo.static-shape",
+        "program_version": "1",
+        "criterion": "repository-shape",
+        "differences": [
+          {
+            "path": "/category_bytes/configuration",
+            "left": 2279069.0,
+            "right": 1300418.0,
+            "right_minus_left": -978651.0,
+            "relative_change_from_left": -0.4294082364333857
+          },
+          {
+            "path": "/category_bytes/documentation",
+            "left": 6980160.0,
+            "right": 133783.0,
+            "right_minus_left": -6846377.0,
+            "relative_change_from_left": -0.980833820428185
+          },
+          {
+            "path": "/category_bytes/generated_or_vendor",
+            "left": 405079.0,
+            "right": 41210.0,
+            "right_minus_left": -363869.0,
+            "relative_change_from_left": -0.8982667578422975
+          },
+          {
+            "path": "/category_bytes/other",
+            "left": 12035487.0,
+            "right": 5512834.0,
+            "right_minus_left": -6522653.0,
+            "relative_change_from_left": -0.5419517299133804
+          },
+          {
+            "path": "/category_bytes/source",
+            "left": 26645820.0,
+            "right": 3760502.0,
+            "right_minus_left": -22885318.0,
+            "relative_change_from_left": -0.858870847284865
+          },
+          {
+            "path": "/category_bytes/test",
+            "left": 2555861.0,
+            "right": 127577.0,
+            "right_minus_left": -2428284.0,
+            "relative_change_from_left": -0.9500845312010316
+          },
+          {
+            "path": "/category_files/configuration",
+            "left": 109.0,
+            "right": 21.0,
+            "right_minus_left": -88.0,
+            "relative_change_from_left": -0.8073394495412844
+          },
+          {
+            "path": "/category_files/documentation",
+            "left": 283.0,
+            "right": 6.0,
+            "right_minus_left": -277.0,
+            "relative_change_from_left": -0.9787985865724381
+          },
+          {
+            "path": "/category_files/generated_or_vendor",
+            "left": 39.0,
+            "right": 1.0,
+            "right_minus_left": -38.0,
+            "relative_change_from_left": -0.9743589743589743
+          },
+          {
+            "path": "/category_files/other",
+            "left": 293.0,
+            "right": 65.0,
+            "right_minus_left": -228.0,
+            "relative_change_from_left": -0.7781569965870307
+          },
+          {
+            "path": "/category_files/source",
+            "left": 1152.0,
+            "right": 95.0,
+            "right_minus_left": -1057.0,
+            "relative_change_from_left": -0.9175347222222222
+          },
+          {
+            "path": "/category_files/test",
+            "left": 292.0,
+            "right": 3.0,
+            "right_minus_left": -289.0,
+            "relative_change_from_left": -0.9897260273972602
+          },
+          {
+            "path": "/documentation_to_source_bytes",
+            "left": 0.26196078784589855,
+            "right": 0.0355758353538969,
+            "right_minus_left": -0.22638495249200163,
+            "relative_change_from_left": -0.8641940435191209
+          },
+          {
+            "path": "/effective_source_files",
+            "left": 651.5411253548152,
+            "right": 35.30272650402606,
+            "right_minus_left": -616.2383988507892,
+            "relative_change_from_left": -0.9458165799053729
+          },
+          {
+            "path": "/effective_top_level_components",
+            "left": 3.786383921865803,
+            "right": 1.2776000923632753,
+            "right_minus_left": -2.5087838295025278,
+            "relative_change_from_left": -0.6625804147896031
+          },
+          {
+            "path": "/generated_or_vendor_byte_share",
+            "left": 0.007958099289694468,
+            "right": 0.0037889639918781384,
+            "right_minus_left": -0.00416913529781633,
+            "relative_change_from_left": -0.5238858106753269
+          },
+          {
+            "path": "/largest_source_file_bytes",
+            "left": 341687.0,
+            "right": 249641.0,
+            "right_minus_left": -92046.0,
+            "relative_change_from_left": -0.26938689502380836
+          },
+          {
+            "path": "/largest_source_file_share",
+            "left": 0.012823287104694095,
+            "right": 0.06638501987234684,
+            "right_minus_left": 0.05356173276765274,
+            "relative_change_from_left": 4.176911296639839
+          },
+          {
+            "path": "/max_path_depth",
+            "left": 9.0,
+            "right": 7.0,
+            "right_minus_left": -2.0,
+            "relative_change_from_left": -0.2222222222222222
+          },
+          {
+            "path": "/normalized_source_size_entropy",
+            "left": 0.9191525437210577,
+            "right": 0.7826211124864907,
+            "right_minus_left": -0.136531431234567,
+            "relative_change_from_left": -0.14854055745941694
+          },
+          {
+            "path": "/normalized_top_level_source_entropy",
+            "left": 0.5190790412460116,
+            "right": 0.22299349164392349,
+            "right_minus_left": -0.2960855496020881,
+            "relative_change_from_left": -0.5704055183799296
+          },
+          {
+            "path": "/source_file_size_median",
+            "left": 14341.0,
+            "right": 5938.0,
+            "right_minus_left": -8403.0,
+            "relative_change_from_left": -0.585942402900774
+          },
+          {
+            "path": "/source_file_size_p90",
+            "left": 50362.0,
+            "right": 133426.0,
+            "right_minus_left": 83064.0,
+            "relative_change_from_left": 1.649338787180811
+          },
+          {
+            "path": "/test_to_source_bytes",
+            "left": 0.09591977278237263,
+            "right": 0.033925523773155816,
+            "right_minus_left": -0.06199424900921681,
+            "relative_change_from_left": -0.646313551533033
+          },
+          {
+            "path": "/top_decile_source_byte_share",
+            "left": 0.3887792907105129,
+            "right": 0.503923944196812,
+            "right_minus_left": 0.11514465348629904,
+            "relative_change_from_left": 0.2961697195235544
+          },
+          {
+            "path": "/tracked_bytes",
+            "left": 50901476.0,
+            "right": 10876324.0,
+            "right_minus_left": -40025152.0,
+            "relative_change_from_left": -0.7863259603709724
+          },
+          {
+            "path": "/tracked_files",
+            "left": 2168.0,
+            "right": 191.0,
+            "right_minus_left": -1977.0,
+            "relative_change_from_left": -0.9119003690036901
+          }
+        ]
+      },
+      {
+        "program_id": "repo.git-change-shape",
+        "program_version": "1",
+        "criterion": "evolvability.change-topology",
+        "differences": [
+          {
+            "path": "/broad_commit_rate",
+            "left": 0.11,
+            "right": 0.025,
+            "right_minus_left": -0.08499999999999999,
+            "relative_change_from_left": -0.7727272727272727
+          },
+          {
+            "path": "/commits_analyzed",
+            "left": 200.0,
+            "right": 200.0,
+            "right_minus_left": 0.0,
+            "relative_change_from_left": 0.0
+          },
+          {
+            "path": "/commits_with_binary_changes",
+            "left": 0.0,
+            "right": 0.0,
+            "right_minus_left": 0.0,
+            "relative_change_from_left": null
+          },
+          {
+            "path": "/cross_top_level_pair_ratio",
+            "left": 0.11396672345670061,
+            "right": 0.3926174496644295,
+            "right_minus_left": 0.2786507262077289,
+            "relative_change_from_left": 2.4450183154874736
+          },
+          {
+            "path": "/effective_hotspot_files",
+            "left": 229.91211263652062,
+            "right": 35.10573955502778,
+            "right_minus_left": -194.80637308149284,
+            "relative_change_from_left": -0.8473080032519723
+          },
+          {
+            "path": "/files_changed_max",
+            "left": 180.0,
+            "right": 17.0,
+            "right_minus_left": -163.0,
+            "relative_change_from_left": -0.9055555555555556
+          },
+          {
+            "path": "/files_changed_mean",
+            "left": 4.545,
+            "right": 2.46,
+            "right_minus_left": -2.085,
+            "relative_change_from_left": -0.45874587458745875
+          },
+          {
+            "path": "/files_changed_median",
+            "left": 2.0,
+            "right": 2.0,
+            "right_minus_left": 0.0,
+            "relative_change_from_left": 0.0
+          },
+          {
+            "path": "/files_changed_p90",
+            "left": 5.0,
+            "right": 5.0,
+            "right_minus_left": 0.0,
+            "relative_change_from_left": 0.0
+          },
+          {
+            "path": "/largest_hotspot_mass",
+            "left": 9879.0,
+            "right": 18096.0,
+            "right_minus_left": 8217.0,
+            "relative_change_from_left": 0.8317643486182812
+          },
+          {
+            "path": "/normalized_change_mass_entropy",
+            "left": 0.8457129639167111,
+            "right": 0.8052711000509397,
+            "right_minus_left": -0.04044186386577142,
+            "relative_change_from_left": -0.04781984620227991
+          },
+          {
+            "path": "/requested_commits",
+            "left": 200.0,
+            "right": 200.0,
+            "right_minus_left": 0.0,
+            "relative_change_from_left": 0.0
+          },
+          {
+            "path": "/source_commits",
+            "left": 116.0,
+            "right": 149.0,
+            "right_minus_left": 33.0,
+            "relative_change_from_left": 0.28448275862068967
+          },
+          {
+            "path": "/source_documentation_cochange_rate",
+            "left": 0.16379310344827586,
+            "right": 0.18791946308724833,
+            "right_minus_left": 0.024126359638972472,
+            "relative_change_from_left": 0.1472977746379372
+          },
+          {
+            "path": "/source_test_cochange_rate",
+            "left": 0.43103448275862066,
+            "right": 0.11409395973154363,
+            "right_minus_left": -0.31694052302707704,
+            "relative_change_from_left": -0.7353020134228188
+          },
+          {
+            "path": "/top_decile_change_mass_share",
+            "left": 0.5053559681489264,
+            "right": 0.489591930863718,
+            "right_minus_left": -0.015764037285208365,
+            "relative_change_from_left": -0.031193927209271163
+          },
+          {
+            "path": "/total_line_change_mass",
+            "left": 203698.0,
+            "right": 164776.0,
+            "right_minus_left": -38922.0,
+            "relative_change_from_left": -0.1910769865192589
+          },
+          {
+            "path": "/unique_changed_files",
+            "left": 620.0,
+            "right": 83.0,
+            "right_minus_left": -537.0,
+            "relative_change_from_left": -0.8661290322580645
+          }
+        ]
+      }
+    ],
+    "limitations": [
+      "Numeric deltas have no intrinsic good/bad direction.",
+      "Values inherit each program's proxy/oracle limits.",
+      "Matched program versions do not prove matched external tool/environment versions.",
+      "Only numeric leaves are compared; they must exist at identical JSON Pointer paths.",
+      "Uncertainty is not synthesized."
+    ]
+  },
+  "comparison_error": null
+}

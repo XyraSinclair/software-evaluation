@@ -1,0 +1,26 @@
+{
+  "left_ref": "origin/main",
+  "left_revision": "c95daa69575c141e645c1f7d09df0e89cf62fe40",
+  "right_ref": "origin/nucleus",
+  "right_revision": "80c973da663b03977aa61aba5ed77d1ecbf8d0a2",
+  "merge_base": null,
+  "merge_base_exit": 1,
+  "left_only_commits": 5682,
+  "right_only_commits": 231,
+  "commands": [
+    [
+      "/usr/bin/git",
+      "merge-base",
+      "c95daa69575c141e645c1f7d09df0e89cf62fe40",
+      "80c973da663b03977aa61aba5ed77d1ecbf8d0a2"
+    ],
+    [
+      "/usr/bin/git",
+      "rev-list",
+      "--left-right",
+      "--count",
+      "c95daa69575c141e645c1f7d09df0e89cf62fe40...80c973da663b03977aa61aba5ed77d1ecbf8d0a2"
+    ]
+  ],
+  "interpretation": "No merge base was found; these snapshots are unrelated histories, so deltas compare artifact shapes rather than a before/after lineage."
+}

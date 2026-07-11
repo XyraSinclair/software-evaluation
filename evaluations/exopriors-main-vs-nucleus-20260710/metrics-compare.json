@@ -1,0 +1,5559 @@
+{
+  "left": {
+    "root": "/private/tmp/seval-exopriors-main",
+    "analyzer": "big-code-analysis 2.0.0",
+    "coverage": {
+      "enumerated": 2126,
+      "analyzed": 1198,
+      "skipped": 928,
+      "syntax_error_files": 0,
+      "elapsed_ms": 4830
+    },
+    "summary": {
+      "files": 1198,
+      "functions": 42145,
+      "lines": 775004,
+      "sloc": 775003,
+      "ploc": 681735,
+      "lloc": 193226,
+      "cloc": 27334,
+      "blank": 66728,
+      "cognitive": 81734.0,
+      "cyclomatic": 122664.0,
+      "modified_cyclomatic": 114220.0,
+      "arguments": 48082,
+      "exits": 29199,
+      "mean_maintainability": 4.948374648262606,
+      "mean_maintainability_sei": -49.2033623115966,
+      "mean_maintainability_visual_studio": 13.579922804412485,
+      "mean_halstead_volume": 25560.590352457933,
+      "mean_halstead_difficulty": 65.96971345053895,
+      "mean_halstead_effort": 3049736.7096051956,
+      "abc_assignments": 77111.0,
+      "abc_branches": 268805.0,
+      "abc_conditions": 63714.0,
+      "abc_magnitude": 286813.01947784727
+    },
+    "rates": {
+      "functions_per_ksloc": 54.38043465638197,
+      "cognitive_per_ksloc": 105.46281756328685,
+      "cyclomatic_per_ksloc": 158.27551635283993,
+      "arguments_per_function": 1.1408708031794994,
+      "exits_per_function": 0.6928223988610749,
+      "comment_fraction": 0.03526949538324964,
+      "blank_fraction": 0.0861002007731573
+    },
+    "distributions": {
+      "cognitive": {
+        "count": 42145,
+        "min": 0.0,
+        "p50": 0.0,
+        "p90": 5.0,
+        "p99": 28.0,
+        "max": 226.0,
+        "mean": 1.9264206904733658
+      },
+      "cyclomatic": {
+        "count": 42145,
+        "min": 1.0,
+        "p50": 1.0,
+        "p90": 6.0,
+        "p99": 23.0,
+        "max": 199.0,
+        "mean": 2.8139043777435044
+      },
+      "sloc": {
+        "count": 42145,
+        "min": 1.0,
+        "p50": 6.0,
+        "p90": 38.0,
+        "p99": 150.0,
+        "max": 1356.0,
+        "mean": 15.393308814806026
+      },
+      "arguments": {
+        "count": 42145,
+        "min": 0.0,
+        "p50": 1.0,
+        "p90": 3.0,
+        "p99": 10.0,
+        "max": 83.0,
+        "mean": 1.489500533871159
+      },
+      "exits": {
+        "count": 42145,
+        "min": 0.0,
+        "p50": 0.0,
+        "p90": 2.0,
+        "p99": 9.0,
+        "max": 90.0,
+        "mean": 0.7086249851702456
+      }
+    }
+  },
+  "right": {
+    "root": "/private/tmp/seval-exopriors-nucleus",
+    "analyzer": "big-code-analysis 2.0.0",
+    "coverage": {
+      "enumerated": 189,
+      "analyzed": 98,
+      "skipped": 91,
+      "syntax_error_files": 0,
+      "elapsed_ms": 4742
+    },
+    "summary": {
+      "files": 98,
+      "functions": 5771,
+      "lines": 101486,
+      "sloc": 101486,
+      "ploc": 85562,
+      "lloc": 19690,
+      "cloc": 8786,
+      "blank": 7213,
+      "cognitive": 6672.0,
+      "cyclomatic": 14713.0,
+      "modified_cyclomatic": 13166.0,
+      "arguments": 5991,
+      "exits": 2834,
+      "mean_maintainability": 6.259560257264972,
+      "mean_maintainability_sei": -57.4898431614583,
+      "mean_maintainability_visual_studio": 24.90044915154869,
+      "mean_halstead_volume": 47795.83215714224,
+      "mean_halstead_difficulty": 68.61623187410814,
+      "mean_halstead_effort": 7779081.520932624,
+      "abc_assignments": 7856.0,
+      "abc_branches": 29404.0,
+      "abc_conditions": 7213.0,
+      "abc_magnitude": 31278.41621629842
+    },
+    "rates": {
+      "functions_per_ksloc": 56.86498630352955,
+      "cognitive_per_ksloc": 65.74305815580475,
+      "cyclomatic_per_ksloc": 144.9756616676192,
+      "arguments_per_function": 1.0381216426962399,
+      "exits_per_function": 0.49107607000519843,
+      "comment_fraction": 0.08657351752951147,
+      "blank_fraction": 0.07107384269751493
+    },
+    "distributions": {
+      "cognitive": {
+        "count": 5771,
+        "min": 0.0,
+        "p50": 0.0,
+        "p90": 3.0,
+        "p99": 17.0,
+        "max": 108.0,
+        "mean": 1.1500606480679259
+      },
+      "cyclomatic": {
+        "count": 5771,
+        "min": 1.0,
+        "p50": 1.0,
+        "p90": 5.0,
+        "p99": 17.0,
+        "max": 77.0,
+        "mean": 2.3921330791890485
+      },
+      "sloc": {
+        "count": 5771,
+        "min": 1.0,
+        "p50": 6.0,
+        "p90": 31.0,
+        "p99": 102.0,
+        "max": 465.0,
+        "mean": 13.085427135678392
+      },
+      "arguments": {
+        "count": 5771,
+        "min": 0.0,
+        "p50": 1.0,
+        "p90": 3.0,
+        "p99": 8.0,
+        "max": 25.0,
+        "mean": 1.3834690694853577
+      },
+      "exits": {
+        "count": 5771,
+        "min": 0.0,
+        "p50": 0.0,
+        "p90": 2.0,
+        "p99": 8.0,
+        "max": 37.0,
+        "mean": 0.5018194420377751
+      }
+    }
+  },
+  "differences": [
+    {
+      "metric": "files",
+      "left": 1198.0,
+      "right": 98.0,
+      "right_minus_left": -1100.0,
+      "relative_change_from_left": -0.9181969949916527
+    },
+    {
+      "metric": "functions",
+      "left": 42145.0,
+      "right": 5771.0,
+      "right_minus_left": -36374.0,
+      "relative_change_from_left": -0.863067979594258
+    },
+    {
+      "metric": "sloc",
+      "left": 775003.0,
+      "right": 101486.0,
+      "right_minus_left": -673517.0,
+      "relative_change_from_left": -0.86905082948066
+    },
+    {
+      "metric": "ploc",
+      "left": 681735.0,
+      "right": 85562.0,
+      "right_minus_left": -596173.0,
+      "relative_change_from_left": -0.874493754904765
+    },
+    {
+      "metric": "lloc",
+      "left": 193226.0,
+      "right": 19690.0,
+      "right_minus_left": -173536.0,
+      "relative_change_from_left": -0.8980985995673461
+    },
+    {
+      "metric": "cloc",
+      "left": 27334.0,
+      "right": 8786.0,
+      "right_minus_left": -18548.0,
+      "relative_change_from_left": -0.6785688153947464
+    },
+    {
+      "metric": "cognitive",
+      "left": 81734.0,
+      "right": 6672.0,
+      "right_minus_left": -75062.0,
+      "relative_change_from_left": -0.9183693444588543
+    },
+    {
+      "metric": "cyclomatic",
+      "left": 122664.0,
+      "right": 14713.0,
+      "right_minus_left": -107951.0,
+      "relative_change_from_left": -0.8800544577056023
+    },
+    {
+      "metric": "modified_cyclomatic",
+      "left": 114220.0,
+      "right": 13166.0,
+      "right_minus_left": -101054.0,
+      "relative_change_from_left": -0.8847312204517598
+    },
+    {
+      "metric": "arguments",
+      "left": 48082.0,
+      "right": 5991.0,
+      "right_minus_left": -42091.0,
+      "relative_change_from_left": -0.8754003577222246
+    },
+    {
+      "metric": "exits",
+      "left": 29199.0,
+      "right": 2834.0,
+      "right_minus_left": -26365.0,
+      "relative_change_from_left": -0.9029418815712867
+    },
+    {
+      "metric": "mean_maintainability",
+      "left": 4.948374648262606,
+      "right": 6.259560257264972,
+      "right_minus_left": 1.311185609002366,
+      "relative_change_from_left": 0.2649729865265413
+    },
+    {
+      "metric": "mean_halstead_effort",
+      "left": 3049736.7096051956,
+      "right": 7779081.520932624,
+      "right_minus_left": 4729344.811327429,
+      "relative_change_from_left": 1.550738723258398
+    },
+    {
+      "metric": "functions_per_ksloc",
+      "left": 54.38043465638197,
+      "right": 56.86498630352955,
+      "right_minus_left": 2.484551647147576,
+      "relative_change_from_left": 0.04568833741118313
+    },
+    {
+      "metric": "cognitive_per_ksloc",
+      "left": 105.46281756328685,
+      "right": 65.74305815580475,
+      "right_minus_left": -39.7197594074821,
+      "relative_change_from_left": -0.37662334768978456
+    },
+    {
+      "metric": "cyclomatic_per_ksloc",
+      "left": 158.27551635283993,
+      "right": 144.9756616676192,
+      "right_minus_left": -13.299854685220737,
+      "relative_change_from_left": -0.08402976652163736
+    },
+    {
+      "metric": "arguments_per_function",
+      "left": 1.1408708031794994,
+      "right": 1.0381216426962399,
+      "right_minus_left": -0.10274916048325955,
+      "relative_change_from_left": -0.09006204751397558
+    },
+    {
+      "metric": "exits_per_function",
+      "left": 0.6928223988610749,
+      "right": 0.49107607000519843,
+      "right_minus_left": -0.20174632885587646,
+      "relative_change_from_left": -0.2911948707021101
+    },
+    {
+      "metric": "comment_fraction",
+      "left": 0.03526949538324964,
+      "right": 0.08657351752951147,
+      "right_minus_left": 0.05130402214626183,
+      "relative_change_from_left": 1.454628754644088
+    },
+    {
+      "metric": "function_cognitive_p50",
+      "left": 0.0,
+      "right": 0.0,
+      "right_minus_left": 0.0,
+      "relative_change_from_left": null
+    },
+    {
+      "metric": "function_cognitive_p90",
+      "left": 5.0,
+      "right": 3.0,
+      "right_minus_left": -2.0,
+      "relative_change_from_left": -0.4
+    },
+    {
+      "metric": "function_cognitive_p99",
+      "left": 28.0,
+      "right": 17.0,
+      "right_minus_left": -11.0,
+      "relative_change_from_left": -0.39285714285714285
+    },
+    {
+      "metric": "function_cognitive_max",
+      "left": 226.0,
+      "right": 108.0,
+      "right_minus_left": -118.0,
+      "relative_change_from_left": -0.5221238938053098
+    },
+    {
+      "metric": "function_cyclomatic_p90",
+      "left": 6.0,
+      "right": 5.0,
+      "right_minus_left": -1.0,
+      "relative_change_from_left": -0.16666666666666666
+    },
+    {
+      "metric": "function_sloc_p90",
+      "left": 38.0,
+      "right": 31.0,
+      "right_minus_left": -7.0,
+      "relative_change_from_left": -0.18421052631578946
+    }
+  ],
+  "matched_files_shown": 0,
+  "matched_files_total": 0,
+  "matched_files": [],
+  "only_left": [
+    {
+      "path": "artifacts/github_lane_check.py",
+      "language": "python"
+    },
+    {
+      "path": "conftest.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/__init__.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/adapter_registry.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/browser_crawler.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/browser_crawler_content.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/browser_crawler_persistence.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/browser_crawler_pipeline.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/cryonet_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/debian_mbox_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/epstein_search_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/google_groups_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/hypermail_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/ietf_rsync_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/mail_archive_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/mailing_list_frontier_runner.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/mailing_list_frontier_status.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/mailing_list_link_discovery.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/mailing_list_manifests.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/manifund_browser_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/postgresql_mbox_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/public_inbox_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/source_adapter_runtime.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_browser_crawler.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_browser_crawler_content.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_browser_crawler_persistence.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_browser_crawler_pipeline.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_cryonet_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_debian_mbox_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_epstein_search_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_google_groups_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_hypermail_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_ietf_rsync_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_mail_archive_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_mailing_list_frontier_runner.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_mailing_list_frontier_status.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_mailing_list_link_discovery.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_mailing_list_manifests.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_manifund_browser_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_postgresql_mbox_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_public_inbox_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_source_adapter_contracts.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_adapters/test_source_adapter_runtime.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/bsky_roster_build.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/bsky_roster_plc_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/bsky_roster_shard.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/discover_blog_seeds.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/discover_substack_publications.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/http_fetch.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/reddit_ingest.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/test_bsky_roster_build.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/test_bsky_roster_plc_export.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/test_bsky_roster_shard.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/test_discover_blog_seeds.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/test_discover_substack_publications.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/test_http_fetch.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/test_reddit_ingest.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/test_uspto_bulk_manifest.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/test_uspto_grant_download.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/test_uspto_grant_extract.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/uspto_bulk_manifest.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/uspto_grant_download.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/source_ops/uspto_grant_extract.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/src/abstracts.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/archive_import.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/arxiv.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/agent_web_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/agent_web_probe.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/apisguru_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/arxiv_fulltext_runner.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/arxiv_html_fetch.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/arxiv_pdf_fetch.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/biorxiv_html_fetch.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/bsky_backfill.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/bsky_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/cap_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/ckan_harvest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/cnpj_brazil_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/cocoapods_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/codeberg_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/common_corpus_curate.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/common_corpus_lab.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/conda_forge_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/crates_io_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/crawl_bench.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/crawl_snapshot.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/crawler.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/crs_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/discourse_registry_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/discourse_registry_sync/records.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/discourse_topic_pump.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/discussion_frontier_report.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/docdb_cn_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/eagrants_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/ecb_sdw_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/ecfr_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/edp_harvest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/epoch_ai_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/epstein_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/eurostat_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/external_duckdb_smoke.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/fec_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/feed_emit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/flarum_registry_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/forem_devto_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/forum_crawl_whole.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/forum_dominate.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/forum_shape_scout.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/fossil_forum_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/foursquare_places_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/fred_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/gbooks_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/gdelt_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/geonames_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/github_archive_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/gleif_lei_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/go_modules_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/grants_raw_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/hackernews_freshness_proof.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/hex_pm_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/hf_datasets_registry_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/hf_denominator_sweep.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/hf_models_registry_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/homebrew_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/houjin_bangou_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/huggingface_hub_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/imf_sdmx_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/inaturalist_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/ingest_urls.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/ingestion_backlog_sample_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/ingestion_scheduler_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/jsonl_text_estimate.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/jsr_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/kled_datasets_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/libraries_io_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/liferay_ia_message_board_export.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/liferay_rss_message_export.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/linkedin_profile_crm_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/mailing_list_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/maven_central_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/moltbook_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/nasa_ntrs_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/nhtsa_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/npm_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/nuget_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/oecd_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/offshoreleaks_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/openalex_graph_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/osm_planet_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/overture_places_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/packagist_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/patent_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/patentsview_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/pg_clickhouse_export.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/philpapers_pdf_fetch.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/phpbb_registry_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/pmc_oa_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/pub_dev_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/pubchem_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/public_discussion_frontier_report.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/publish_dataset_snapshot.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/published_dataset_resolve.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/published_dataset_validate.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/pubmed_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/pypi_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/repec_fulltext_fetch.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/repec_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/rubygems_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/samgov_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/scry_tweets_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/sirene_france_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/site_closure.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/smf_registry_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/socrata_harvest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/source_authority_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/source_freshness_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/source_shape_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/spool_drain.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/sporc_turns_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/twitter_gpu_embedding_feeder.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/twitter_likes_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/uncomtrade_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/usaspending_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/uscode_house_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/uspto_assignments_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/vbulletin_registry_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/voyage_embed.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/watchlist_capture.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/web_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/wikipedia_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/wikipedia_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bin/xenforo_registry_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/biorxiv.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/bluesky_substrate.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/catalog_http.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/chinarxiv.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/chunking.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/clickhouse_pg_export.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/conservation.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/crawl_land.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/crawl_promote.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/crawler.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/cursors.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/db.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/discourse.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/forum_crawl_whole.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/forum_dominate.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/framework.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/framework/artifact_sink.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/framework/bulk_upsert.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/frontier_access.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/github.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/graphql.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/heavy_writer_gate.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/hf_fleet.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/hn_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/html.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/kalshi.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/main.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/manifold.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/manifund.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/mastodon_crawl.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/metaculus.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/models.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/opendata_harvest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/ops_gates.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/philarchive.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/polymarket.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/proxy_pool.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/published_datasets.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/pubmed_substrate.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/quality.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/repec_substrate.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/scihub_embed.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/scihub_embed/tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sdmx_helpers.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/site_closure.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/smf.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/source_ledger.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/arxiv_s3.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/biorxiv.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/catalog_denominators.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/cdc_birdflu.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/cfpb_complaints.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/china_judgments.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/chinarxiv.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/clinicaltrials.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/common_corpus.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/congress.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/congressional_record.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/courtlistener.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/crossref.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/dailymed.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/datacite.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/doaj.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/dpla.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/eric.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/ethereum_longform.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/ethereum_longform/discovery.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/ethereum_longform/fetching.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/ethereum_longform/mirror_full.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/ethereum_longform/parsing.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/ethereum_longform/tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/europeana.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/europepmc.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/federal_register.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/github_repos.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/github_skills.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/govinfo_bulk.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/gutenberg.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/hal.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/inspire_hep.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/kl3m.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/nasa_ads.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/nih_reporter.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/noaa_swpc.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/nsf_awards.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/openalex.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/openlibrary.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/opensecrets.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/osti.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/osv.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/philpapers.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/sec_edgar.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/sporc.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/stackexchange.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/who_iris.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/wikidata.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/youtube.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sources/zenodo.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/spool.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/stylometry.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/substack_refresh.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/twitter.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/twitter_gpu_embeddings.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/voyage.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/web_parser.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/web_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/src/wikipedia.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/tests/ca_sync_test.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/tests/d3_declaration_parity.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/tools/scihub_md_bench.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/tools/scihub_pdf_text_pilot.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/tools/test_scihub_pdf_text_pilot.py",
+      "language": "python"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/pmctl/src/main.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-bandwidth/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-bandwidth/src/target.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-bandwidth/src/window.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/access.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/account.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/binding.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/clock.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/error.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/health.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/ids.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/load.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/policy.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/proxy.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/record.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/target.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-core/src/usage.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-reqwest/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-store/src/date.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-store/src/error.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-store/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-store/src/schema.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager-store/src/tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager/examples/quickstart.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager/src/error.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "continual_scraping/vendor/proxy-manager/crates/proxy-manager/src/tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/scry-error/src/api_error.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/scry-error/src/config.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/scry-error/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/scry-error/src/sink.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/scry-runtime-contracts/src/disk.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/scry-runtime-contracts/src/gates.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/scry-runtime-contracts/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "extensions/x-scry-ingest/background.js",
+      "language": "javascript"
+    },
+    {
+      "path": "extensions/x-scry-ingest/content.js",
+      "language": "javascript"
+    },
+    {
+      "path": "extensions/x-scry-ingest/popup.js",
+      "language": "javascript"
+    },
+    {
+      "path": "mcp/scry-mcp/src/server.js",
+      "language": "javascript"
+    },
+    {
+      "path": "ops/audit-exopriors-restore-preflight.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/audit-sharded-embeddings-remote.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/author-closure/src/bin/author-graph.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/src/bin/mention-extract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/src/chunking.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/src/concurrent_set.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/src/copytext.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/src/dsu.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/src/fuzzy.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/src/graph.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/src/interner.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/src/keygroups.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/src/main.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/src/nodes.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/src/normalize.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/author-closure/tools/compare_outputs.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/deploy/scry-proxy-pool-status.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/deploy/token-proxy-lane-audit.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/dev-argus-health.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/embeddings-sidecar-query.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/forum_frontier/discourse_topic_seed_wave.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/forum_frontier/forum_bulk_writer.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/forum_frontier/forum_frontier_leases.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/forum_frontier/forum_parallel_budget.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/forum_frontier/forum_topic_frontier_leases.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/forum_frontier/test_forum_bulk_writer.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/forum_frontier/test_forum_frontier_leases.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/forum_frontier/test_forum_parallel_budget.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/forum_frontier/test_forum_topic_frontier_leases.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/opsctl/src/alert_state.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/db/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/db_session_budget.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/deploy.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/evidence/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/evidence/runtime.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/guardrails.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/main.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_guards/crawl_snapshot_guard.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_guards/disk_floor_guard.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_guards/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_guards/watchdog/checks_core.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_guards/watchdog/checks_reports.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_guards/watchdog/checks_scry.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_guards/watchdog/identity.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_guards/watchdog/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_guards/watchdog/runtime.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/crossref_snapshot_walk.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/db_blocker.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/disk_headroom_check.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/live_prod_status.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/openalex_status.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/philanthropy_check.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/safe_ingestion_snapshot.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/shadow_scheduler_compare.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/shadow_scheduler_mismatch_report.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/shadow_scheduler_snapshot.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/shadow_scheduler_soak_readiness.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/sporc_scry_examples.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/sporc_scry_status.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/worrydream_refs_status.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/ops_probes/write_contention.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/src/unit_resource_sample.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/tests/cli.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/tests/db_golden.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/tests/db_plan.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/tests/deploy.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/opsctl/tests/evidence_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "ops/pysyntax_check.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/scry_embed_fallback_local.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/tests/test_append_monitoring_event.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/tests/test_embedding_staging_load_sql.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/tests/test_refresh_ingestion_health_sql.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/tests/test_restore_embeddings_bucket_contract.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/tests/test_restore_preflight.py",
+      "language": "python"
+    },
+    {
+      "path": "ops/watchdog/append-monitoring-event.py",
+      "language": "python"
+    },
+    {
+      "path": "src/api/src/agent/bin_support.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/credits.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/prompts.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/protocol.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/research.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/research_engine.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/research_engine_phases.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/research_engine_specify.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/research_engine_specify_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/research_engine_support.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/research_engine_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/research_substrate.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/research_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/runtime.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/sprites.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/agent/tools.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/backup/b2_delta_backup.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/backup/backup_coordinator.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/backup/estate_coverage_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/commerce/billing-worker.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/identity/actor-identity-hydrate.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/identity/author-identity-fingerprint.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/identity/author-identity-projector.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/identity/author-linker.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/identity/counterpart-coverage.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/ingestion/corpus-acl-projector.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/ingestion/extension-twitter-projector.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/ingestion/fieldtheory-shadow-import.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/ops/docs-audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/ops/mention-watcher.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/ops/migrate-api-key-secrets.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/ops/v4nano-ops-watchdog.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/ops/watchdog-alert-state.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/scry/agent-experience-e2e.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/scry/agent-marketing-sim.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/scry/cardinal-replay.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/scry/rerank-eval.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/scry/scry-contract-audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/scry/scry-machine-key.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/bin/wasm/exo-slicer-host.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/api_key_secrets.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/auth.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/backup_catalog.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/backup_catalog_helpers.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/backup_policy.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/billing_worker.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/blob_storage.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/pool.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/access/acl.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/access/auth.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/access/identity.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/access/ip_intelligence.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/commerce/billing_state.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/commerce/credits.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/commerce/payments.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/commerce/wallet_core.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/commerce/wallet_grants.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/commerce/wallet_reservations.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/entity/attributes.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/entity/entities.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/entity/entity_lists.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/entity/entity_slices.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/research/comparisons.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/research/feedback.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/research/operator_intake.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/research/private_twitter_bookmarks.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/research/prompt_templates.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/research/raters.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/research/rerank_operations.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/research/research_runs.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/research/scry_judgements.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/research/scry_shares.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/research/slice_generators.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/research/source_recommendations.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/wallet/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/queries/wallet/tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/scoped.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_executor/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_executor/sql_executor_columns.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_executor/sql_executor_columns_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_executor/sql_executor_errors.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_executor/sql_executor_response.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_executor/sql_executor_runtime.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_executor/sql_executor_runtime_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_executor/sql_executor_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_executor/sql_executor_types.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_validation/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_validation/sql_validation_bypass_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_validation/sql_validation_catalog.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_validation/sql_validation_escape_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_validation/sql_validation_row.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/sql_validation/sql_validation_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/db/user_context.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/adapters/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/adapters/openai.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/adapters/openrouter.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/core/chat_provider.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/core/error.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/core/gateway.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/core/pricing.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/core/rate_limiter.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/core/types.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/core/usage.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/http/client_ip.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/http/email.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/http/feedback_transcription.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/http/ip_intelligence.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/ops/abuse_detection.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/ops/alerting.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/ops/alerting_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/ops/mention_watch.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/ops/mention_watch_state.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/ops/operator_notifications.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/ops/page_views.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/gateway/ops/watchdog_state.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/main.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/analysis/ahp.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/analysis/author_identity_fingerprints.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/analysis/cardinal.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/analysis/cardinal_models.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/analysis/cardinal_posterior.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/analysis/dangerous_sources.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/analysis/marketing_sim.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/analysis/nanodollars.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/analysis/rating_engine.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/analysis/rating_engine_parity_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/analysis/score_refresh.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/analysis/slice_validator.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/analysis/trait_search.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/credits.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/entities.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/research_runs.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/models/slice_generators.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/rerank/comparison.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/rerank/cross_encoder.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/rerank/gates.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/rerank/hooks.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/rerank/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/rerank/multi.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/rerank/multi_fixtures.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/rerank/persistence.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/rerank/simple.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/rerank/types.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/rerank/worker.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/billing.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/billing_auto_topup.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/billing_checkout.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/billing_credit_policy.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/billing_crypto.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/billing_crypto_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/billing_ledger.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/billing_payment_control.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/billing_saved_method.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/billing_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/billing_topups.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/billing_webhook.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/credits.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/dataset_extents.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/dataset_files.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/dataset_files_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/dataset_order_derivation.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/dataset_orders.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/dataset_orders_support.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/dataset_orders_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/dataset_payment_watcher.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/dataset_payment_watcher_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/dataset_receipts.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/commerce/embedding_billing.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/control/auth.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/control/dmarc.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/control/dmarc/helpers.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/control/health.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/control/internal.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/control/internal_ingestion_stats.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/control/internal_summary.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/control/internal_summary_claims.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/control/internal_summary_sources.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/control/internal_summary_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/control/internal_vitals.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/control/oauth.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/control/test_support.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/corpus/ahp.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/corpus/attributes.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/corpus/comparisons.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/corpus/corpus_stats_authority.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/corpus/embeddings.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/corpus/entities.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/corpus/entity_lists.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/corpus/entity_slices.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/ingestion/conversion.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/ingestion/conversion_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/ingestion/extension_ingest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/ingestion/extension_ingest_logic.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/ingestion/extension_ingest_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/ingestion/feedback.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/ingestion/feedback_metadata_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/ingestion/feedback_source_recommendations.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/ingestion/feedback_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/account.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/account_funding_summary_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/account_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/anonymous_access.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/anonymous_access_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/auth_context.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/bootstrap.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/credentials.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/history.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/keys.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/limits.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/preferences.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/request_access.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/session.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/x402_claim.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/access/x402_claim_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/billing/bandwidth.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/billing/price_oracle.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/billing/price_oracle_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/billing/pricing.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/billing/spend.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/billing/spend_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/billing/x402.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/billing/x402_events.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/clickhouse_exec.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/clickhouse_mode.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/clickhouse_mode_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/clickhouse_registry.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/clickhouse_shadow.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/corpus/datasets.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/corpus/object_operations.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/corpus/object_operations_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/corpus/object_status.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/corpus/object_status_federation.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/corpus/object_status_summary.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/corpus/object_status_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/corpus/schema.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/corpus/shadow.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_admission.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_admission_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_deny.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_exec.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_exec_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_expr.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_mode.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_mode_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_registry.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_registry_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_route_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_settlement.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_settlement_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_validation.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_validation_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_watchdog.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/ch_watchdog_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/olap/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/admission/access/query_access_gate.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/admission/access/query_access_gate_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/admission/analysis/query_analysis.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/admission/queue/query_admission.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/admission/queue/query_admission_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/cost/query_billing.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/cost/query_billing_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/cost/query_cost_model.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/cost/query_cost_model_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/cost/query_estimate.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/execution/query_execute.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/execution/query_execute_error.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/execution/query_receipts.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/execution/query_receipts_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/execution/query_result_replay.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/execution/query_result_replay_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/query/execution/query_transport.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/retrieval/search.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/retrieval/search_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/retrieval/search_contract_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/retrieval/search_federated_ch.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/retrieval/search_records.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/retrieval/search_records_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/retrieval/search_refinement.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/retrieval/search_refinement_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/retrieval/search_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/syntax/handle_dsl.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/syntax/handle_dsl_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/syntax/lexical_status.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/syntax/lexical_status_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/table/table_router.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/search/table/table_router_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/surface_registry.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tests/clickhouse_shadow_integration_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tests/endpoint_flow_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tests/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tests/schema_contract_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/time_bounds.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/changes.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/context.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/context_skill.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/context_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/deep_research.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/duckdb_exec.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/duckdb_mode.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/duckdb_mode_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/duckdb_registry.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/duckdb_shadow.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/load.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/load_stats.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/load_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/load_timeouts.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/rerank.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/rerank_cross_encoder.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/rerank_judgements.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/rerank_setup.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/rerank_types.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry/tools/rerank_types_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_contract_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_contract_audit_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_request_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/prompt_templates.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/raters.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/rerank.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/rerank_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/scores.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/scry_agent.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/scry_agent_access.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/scry_agent_runtime_openai.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/scry_judgements.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/scry_prompt_setup.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/scry_prompts.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/scry_prompts_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/scry_receipts.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/scry_research_executor.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/scry_research_executor_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/scry_research_runs.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/scry_shares.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/slice_generators.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/stats.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/stats_sources.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/stats_sources_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/scry_surface/stats_tests.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/routes/surface_context.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/shadow_corpora.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/token_efficientizing/converters.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/token_efficientizing/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/token_efficientizing/models.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/token_efficientizing/processing.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/token_efficientizing/text_chunking.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/src/token_efficientizing/wasm_runner.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/api/tests/ntfy_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "src/converters/containers/docling/ocr_helpers.py",
+      "language": "python"
+    },
+    {
+      "path": "src/converters/containers/docling/server.py",
+      "language": "python"
+    },
+    {
+      "path": "src/converters/containers/docling/test_server.py",
+      "language": "python"
+    },
+    {
+      "path": "src/web/postcss.config.js",
+      "language": "javascript"
+    },
+    {
+      "path": "src/web/scripts/builder_doctor.mjs",
+      "language": "javascript"
+    },
+    {
+      "path": "src/web/scripts/check_ast_grep_rules.mjs",
+      "language": "javascript"
+    },
+    {
+      "path": "src/web/scripts/check_console_account_invariants.mjs",
+      "language": "javascript"
+    },
+    {
+      "path": "src/web/scripts/check_exopriors_copy_invariants.mjs",
+      "language": "javascript"
+    },
+    {
+      "path": "src/web/scripts/check_scry_landing_accessibility.mjs",
+      "language": "javascript"
+    },
+    {
+      "path": "src/web/scripts/refresh_landing_stats_snapshot.mjs",
+      "language": "javascript"
+    },
+    {
+      "path": "src/web/src/hooks.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/attribution.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/auth/session_hash.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/console/actions.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/console/clipboard.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/console/format.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/console/navigation.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/generated/scry_surface_context.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/json_ld.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/markdown.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/products/brand.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/products/scry.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/products/tweets.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/products/types.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/scry/answers.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/scry/api.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/scry/nanodollars.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/scry/seo.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/scry/share_export.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/scry/stats.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/scry/stats_snapshot.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/scry/surface.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/server/scry_stats.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/stores/dev.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/stores/theme.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/stores/user.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/tweets/api.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/tweets/api.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/tweets/copy.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/tweets/format.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/lib/tweets/order_cache.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/+layout.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/agent/corpus/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/agents/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/agents/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/billing/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/billing/cancel/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/billing/success/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/chambers/+server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/console/+layout.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/console/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/console/terminal/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/corpus/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/corpus/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/d/[dataset_id]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/docs/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/docs/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/order/[order_id]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/queries/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/queries/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/r/[receipt_id]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/rerank/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/schema/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/schema/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/scry/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/scry/answers/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/scry/answers/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/scry/share/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/search/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/search/record/[...record_ref]/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/sitemap.xml/+server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/sources/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/sources/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/terms/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/terms/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/workflows/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/src/routes/workflows/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/web/svelte.config.js",
+      "language": "javascript"
+    },
+    {
+      "path": "src/web/tailwind.config.js",
+      "language": "javascript"
+    },
+    {
+      "path": "src/web/vite.config.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "testing/codex-scry/src/main.rs",
+      "language": "rust"
+    },
+    {
+      "path": "testing/config.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/harness/core.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/harness/scry.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/runner.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/scry-live/config.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/scry-live/config.test.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/scry-live/http_client.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/scry-live/http_client.test.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/scry-live/redaction.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/scry-live/redaction.test.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/scry-live/runner.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/scry-live/sql.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/scry-live/sql.test.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/scry-live/state.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/scry-live/state.test.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/suites/api.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/suites/auth.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/suites/consumer.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/suites/flows.js",
+      "language": "javascript"
+    },
+    {
+      "path": "testing/suites/receipts.js",
+      "language": "javascript"
+    },
+    {
+      "path": "tools/__init__.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ai_philanthropy_reddit_arctic_shift_comment_search.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ai_philanthropy_reddit_arctic_shift_refresh.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ai_philanthropy_reddit_arctic_shift_thread_comments.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ai_philanthropy_reddit_public_json_refresh.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ai_philanthropy_reddit_public_json_thread_comments.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ai_philanthropy_reddit_seeded_subreddit_feed_refresh.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/build_frontier_url_manifests.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/build_scraping_index.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/checks/src/checks/blast_radius_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/bundle.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/checkout_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/clone_scan.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/conservation_receipts.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/corpus_enum_drift.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/crawled_pages_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/critical_unit_presence.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/curation_lens_sql.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/dataset_catalog_seed.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/db_url_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/dead_tool_scan.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/decision_register.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/deploy_payload_coverage.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/disk_floor_unit_conditions.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/docs_crud.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/docs_metadata_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/docs_path_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/embedding_stats_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/embedding_vault_readiness.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/europepmc_query_surface.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/execplan_lifecycle.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/fable_digest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/fable_liveness.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/failed_ingestion_units.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/feedback_retest_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/heal_canary.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/health.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/ingest_bin_parsimony.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/ingest_run_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/ingestion_health_truth_fields.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/ingestion_manifest_parsers.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/ingestion_scheduler_truth_surface.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/ingestion_throughput_readiness.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/ingestion_tranche_handoff_verify.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/landing_lane.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/maintenance_unit_resolution.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/migration_ledger.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/mod.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/module_shape.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/mover_conservation.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/operational_index_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/operational_pain.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/operator_prompts.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/polymarket_split_bundle_manifest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/private_compute_spine_schema.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/proxy_egress_reachability.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/proxycheap_pool.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/public_context_review_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/pyjson.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/quality_ratchet.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/remote_probe.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/repo_closure.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/repo_closure_check.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/repo_closure_manifest.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/repo_secret_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/schema_authority_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/scry_context_sync.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/scry_corpus_db_authority.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/scry_public_changes.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/scry_query_result_cache_readiness.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/scry_surface_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/sec_edgar_accession_gap_audit.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/sec_edgar_ingest_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/sec_edgar_status.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/skill_surfaces.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/source_frontier_registry.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/source_table_invariants.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/spec_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/split_db_env_contract.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/systemd_bundle.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/systemd_inventory.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/unit_registry.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/unit_registry_authority.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/unit_resource_accounting_flags.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/watchdog_parity.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/worktree_integrity.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/worktree_status.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/worktree_ttl.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/checks/write_bench.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/main.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/checks/src/repo_root.rs",
+      "language": "rust"
+    },
+    {
+      "path": "tools/claude_code_minimal.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/clickhouse/bulk_pg_move.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/clickhouse/clickhouse_reddit_arctic_load.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/clickhouse/scihub_artifact_load.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/clickhouse/test_twitter_artifact_load.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/clickhouse/twitter_artifact_load.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/clickhouse/twitter_real_benchmark.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/clickhouse/validate_twitter_parity.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/codebase_complexity.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/codex_cyber_flag_watchdog.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/codex_prompt_wrapper.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/codex_resume_sessions.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/compute_infra_adapters/__init__.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/compute_infra_adapters/energy_stats.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/compute_infra_adapters/global_power.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/compute_infra_adapters/gpu_specs.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/compute_infra_adapters/green500.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/compute_infra_adapters/mlperf.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/compute_infra_adapters/top500.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/compute_infra_adapters/uk_queues.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/compute_infra_adapters/us_power.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/compute_infra_ingest.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/deploy_manifest.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/discussion_bulk_writer.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/__init__.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/check_embedding_budget_ledger.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/reddit/reddit_depth_first_frontier.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/reddit/reddit_embedding_queue_fill.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/reddit/reddit_subreddits.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/reddit/reddit_voyage4_lite_embed_worker.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/reddit/test_reddit_depth_first_frontier.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/reddit/test_reddit_embedding_queue_fill.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/test_check_embedding_budget_ledger.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/test_voyage_lane_units.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/reddit_embedding_contract.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/reddit_embedding_spool.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/reddit_voyage4_nano_broker_backfill.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/reddit_voyage4_nano_embed_worker.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_reddit_embedding_contract.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_reddit_embedding_spool.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_reddit_voyage4_nano_broker_backfill.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_reddit_voyage4_nano_embed_worker.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_bind_supervisor_session.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_blank_waiter_classifier.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_blocker_bundle.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_broker_protocol.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_index_build_watch.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_loader_guard_status.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_non_cluster_reconciler.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_remote_worker_lib.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_stale_backend_targets.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_supervision_snapshot.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_supervisor_merge_context.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_supervisor_status.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_tmp_cache_salvage_plan.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_tmp_cache_scan.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_v4nano_tmp_cache_validator.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_voyage4_nano_broker.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_voyage4_nano_broker_worker.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_voyage4_nano_embed_server.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_voyage4_nano_local_bench.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_voyage4_nano_max_bench.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/test_voyage4_nano_worker_maintainer.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_bind_supervisor_session.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_blank_waiter_classifier.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_blocker_bundle.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_broker_protocol.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_index_build_watch.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_loader_guard_status.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_non_cluster_reconciler.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_remote_worker_lib.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_stale_backend_targets.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_supervision_snapshot.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_supervisor_merge_context.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_supervisor_status.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_tmp_cache_salvage_plan.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_tmp_cache_scan.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/v4nano_tmp_cache_validator.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/voyage4_nano_broker.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/voyage4_nano_broker_worker.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/voyage4_nano_embed_server.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/voyage4_nano_local_bench.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/voyage4_nano_max_bench.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/v4nano/voyage4_nano_worker_maintainer.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/embedding/voyage_lane_units.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ensure_zero_downtime_caddy.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/execplan_lifecycle.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/expand_community_platforms.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/expand_frontier_manifests.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/expand_wikipedia_links.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/export_critical_app_state_sqlite.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/fetch_ckan_datasets_multi.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/fetch_creative_industry_orgs.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/fetch_youtube_transcripts.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/finance_public_data_frontier_queue.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/fleet.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/forum_blitz_runner.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/forum_closure_campaign.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/forum_host_miner.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/fourchan_official_json_snapshot.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/frontier_prioritization/__init__.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/frontier_prioritization/persist_round.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/frontier_prioritization/prioritize.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/frontier_prioritization/seed_live.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ghostty_session_restore/restore.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ghostty_session_restore/test_restore.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/github_archive_artifact_probe.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/import_diamond_judgements.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/import_url_manifest_to_crawl_seed.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/derive_feed_endpoint_manifest.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/epstein/epstein_ooda_heartbeat.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/ideonomy_manifest.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/ingroup_blog_denominator.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/mariven_github_repo_manifest.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/mariven_substack_manifest.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/n_cohomology_group_manifest.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/nyt_archive_api_manifest.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/nyt_archive_api_sync.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/nyt_article_search_sync.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/nyt_books_sync.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/nyt_current_tail_sync_common.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/nyt_most_popular_sync.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/nyt_rss_sync.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/nyt_times_wire_sync.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/nyt_top_stories_sync.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/nyt_wayback_manifest.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ingestion/worrydream_refs_ingest.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/jsonl_artifact_receipt.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/judge_confidence_weight_eval.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/judge_eval_lib.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/judge_gold_eval.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/judge_model_hcr_eval.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/judge_promotion_gate.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/judge_repeat_stability_eval.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/linkedin_authenticated_profile_spool.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/linkedin_profile_artifact_promote.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/linkedin_profile_extract.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/linkedin_profile_frontier_expand.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/linkedin_session_harvest.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/linkedin_session_harvest_browser.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/materialize_duckdb_snapshot.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/ntfy_phone_mirror.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/openrouter_prompt_improver.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/operator_prompt_intake.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/paper_source_proof.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/polymarket_artifact_preflight.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/polymarket_artifact_split.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/polymarket_central_staging_copy.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/reddit_authenticated_feed.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/render_scry_surface_context.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/repo_event_log.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/require_scry_colo1_corpus_db.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/rerank/quality_probe2.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/rerank/qwen_rerank.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/rerank/rerank_bench2.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/scraping_status.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/scry-share-cli/index.mjs",
+      "language": "javascript"
+    },
+    {
+      "path": "tools/scry_colo1_admission.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/scry_corpus_db.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/scry_ingestion_rate.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/scry_live.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/scry_pricing_shadow_report.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/scry_search_proof.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/scry_wallet_credit_classifier.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/seed_codebase_autophagy_lens.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/seed_industry_lens.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/server_capacity.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/smoke_judge_models.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/source_assurance.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/source_commander.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/source_compiler_promotion_proof.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/source_frontier_workqueue.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/task_queue.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_ai_philanthropy_reddit_arctic_shift_comment_search.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_ai_philanthropy_reddit_arctic_shift_refresh.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_ai_philanthropy_reddit_arctic_shift_thread_comments.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_ai_philanthropy_reddit_public_json_refresh.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_ai_philanthropy_reddit_public_json_thread_comments.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_ai_philanthropy_reddit_seeded_subreddit_feed_refresh.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_build_frontier_url_manifests.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_claude_code_minimal.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_codebase_complexity.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_codex_cyber_flag_watchdog.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_codex_prompt_wrapper.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_codex_resume_sessions.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_deploy_manifest.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_discussion_bulk_writer.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_ensure_zero_downtime_caddy.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_execplan_lifecycle.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_expand_community_platforms.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_expand_frontier_manifests.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_fetch_ckan_datasets_multi.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_finance_public_data_frontier_queue.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_fourchan_official_json_snapshot.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_github_archive_artifact_probe.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_import_url_manifest_to_crawl_seed.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_jsonl_artifact_receipt.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_linkedin_profile_artifact_promote.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_linkedin_profile_extract.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_linkedin_profile_frontier_expand.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_ntfy_phone_mirror.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_nyt_wayback_manifest.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_openrouter_prompt_improver.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_operational_shell_entrypoints.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_paper_source_proof.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_polymarket_artifact_preflight.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_polymarket_artifact_split.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_polymarket_central_staging_copy.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_repo_event_log.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_require_scry_colo1_corpus_db.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_scihub_artifact_load.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_scraping_status_registry.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_scry_colo1_admission.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_scry_ingestion_rate.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_scry_live.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_scry_search_proof.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_server_capacity.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_source_assurance.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_source_compiler_promotion_proof.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_source_frontier_workqueue.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/test_task_queue.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/touchdb.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/url_mention_extract.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/webshare_pool.py",
+      "language": "python"
+    },
+    {
+      "path": "tools/wikidata_enumerate.py",
+      "language": "python"
+    }
+  ],
+  "only_right": [
+    {
+      "path": "crates/checks/src/baseline_routes.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/checks/src/capabilities.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/checks/src/closure.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/checks/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/checks/src/main.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/checks/src/orphan.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/checks/src/proofs.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/ingest/src/engine.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/ingest/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/ingest/src/load.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/ingest/src/spool.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/ingest/src/watermark.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/opsctl/examples/render_corpus.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/opsctl/src/bin/oracle.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/opsctl/src/bin/watchdog.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/opsctl/src/bodies.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/opsctl/src/conformance.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/opsctl/src/db.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/opsctl/src/deploy.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/opsctl/src/drift.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/opsctl/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/opsctl/src/units.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/opsctl/src/veto.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/opsctl/src/watchdog.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/opsctl/tests/parity.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/admission.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/agent_surface.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/auth.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/billing.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/billing/wire.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/ch_executor.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/context.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/datasets.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/gateway.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/lib.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/main.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/pg_executor.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/pricing.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/query.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/routes.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/routes/registry.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/search.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/shares.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/sql_validation.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/src/table_router.rs",
+      "language": "rust"
+    },
+    {
+      "path": "crates/serve/tests/journey.rs",
+      "language": "rust"
+    },
+    {
+      "path": "web/postcss.config.js",
+      "language": "javascript"
+    },
+    {
+      "path": "web/scripts/check_ast_grep_rules.mjs",
+      "language": "javascript"
+    },
+    {
+      "path": "web/scripts/check_console_account_invariants.mjs",
+      "language": "javascript"
+    },
+    {
+      "path": "web/scripts/check_exopriors_copy_invariants.mjs",
+      "language": "javascript"
+    },
+    {
+      "path": "web/scripts/check_scry_landing_accessibility.mjs",
+      "language": "javascript"
+    },
+    {
+      "path": "web/scripts/refresh_landing_stats_snapshot.mjs",
+      "language": "javascript"
+    },
+    {
+      "path": "web/src/hooks.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/attribution.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/auth/session_hash.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/console.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/generated/scry_surface_context.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/json_ld.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/markdown.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/products.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/scry.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/scry/stats_snapshot.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/server/scry_stats.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/stores.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/tweets.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/tweets/api.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/untrusted-query.test.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/lib/untrusted-query.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/+layout.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/[collection]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/[collection]/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/[collection]/collections.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/agent/corpus/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/billing/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/billing/cancel/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/billing/success/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/console/+layout.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/console/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/console/terminal/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/corpus/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/corpus/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/d/[dataset_id]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/order/[order_id]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/r/[receipt_id]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/scry/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/scry/answers/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/scry/answers/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/scry/share/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/search/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/search/record/[...record_ref]/+page.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/sitemap.xml/+server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/sources/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/src/routes/sources/[slug]/+page.server.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "web/svelte.config.js",
+      "language": "javascript"
+    },
+    {
+      "path": "web/tailwind.config.js",
+      "language": "javascript"
+    },
+    {
+      "path": "web/vite.config.ts",
+      "language": "typescript"
+    }
+  ],
+  "limitations": [
+    "Differences are right minus left and have no intrinsic good/bad direction.",
+    "Matched-file differences require identical root-relative paths and detected languages.",
+    "AST metrics are structural proxies; compare executable behavior and fitness-to-intent separately."
+  ]
+}

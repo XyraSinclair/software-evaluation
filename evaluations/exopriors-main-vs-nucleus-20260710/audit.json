@@ -1,0 +1,26 @@
+{
+  "evaluation_dir": "/Users/xyra/projects/software-evaluation/evaluations/exopriors-main-vs-nucleus-20260710",
+  "records_total": 16,
+  "instrument_counts": {
+    "mechanical": 16
+  },
+  "referenced_record_ids": [
+    "r-api-main",
+    "r-api-nucleus",
+    "r-deps-main",
+    "r-deps-nucleus",
+    "r-duplicates-main",
+    "r-duplicates-nucleus",
+    "r-files-main",
+    "r-files-nucleus",
+    "r-functions-main",
+    "r-functions-nucleus",
+    "r-metrics-comparison",
+    "r-repo-change",
+    "r-repo-static",
+    "r-scope-relationship",
+    "r-tests-main",
+    "r-tests-nucleus"
+  ],
+  "issues": []
+}

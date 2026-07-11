@@ -1,0 +1,389 @@
+{
+  "schema_version": 1,
+  "evaluation": "exopriors-main-vs-nucleus-20260710",
+  "status": "mechanical-baseline-complete-and-archive-audited; empirical and judged axes pending",
+  "generated_at": "2026-07-11T04:49:19.864457Z",
+  "artifacts": [
+    {
+      "name": "exopriors-main",
+      "ref": "origin/main",
+      "revision": "c95daa69575c141e645c1f7d09df0e89cf62fe40",
+      "tree_digest": "842137570bbb9072f35bd0ea88208ed287cd8a6d",
+      "snapshot_path": "/private/tmp/seval-exopriors-main"
+    },
+    {
+      "name": "exopriors-nucleus",
+      "ref": "origin/nucleus",
+      "revision": "80c973da663b03977aa61aba5ed77d1ecbf8d0a2",
+      "tree_digest": "dcb792ec7bb5682c121d3cebaa01a0ac66c10033",
+      "snapshot_path": "/private/tmp/seval-exopriors-nucleus"
+    }
+  ],
+  "relationship": {
+    "left_ref": "origin/main",
+    "left_revision": "c95daa69575c141e645c1f7d09df0e89cf62fe40",
+    "right_ref": "origin/nucleus",
+    "right_revision": "80c973da663b03977aa61aba5ed77d1ecbf8d0a2",
+    "merge_base": null,
+    "merge_base_exit": 1,
+    "left_only_commits": 5682,
+    "right_only_commits": 231,
+    "commands": [
+      [
+        "/usr/bin/git",
+        "merge-base",
+        "c95daa69575c141e645c1f7d09df0e89cf62fe40",
+        "80c973da663b03977aa61aba5ed77d1ecbf8d0a2"
+      ],
+      [
+        "/usr/bin/git",
+        "rev-list",
+        "--left-right",
+        "--count",
+        "c95daa69575c141e645c1f7d09df0e89cf62fe40...80c973da663b03977aa61aba5ed77d1ecbf8d0a2"
+      ]
+    ],
+    "interpretation": "No merge base was found; these snapshots are unrelated histories, so deltas compare artifact shapes rather than a before/after lineage."
+  },
+  "evaluator": {
+    "name": "software-evaluation",
+    "revision": "fbcb4445721ecb2f221615598bc7d6993f2dd0df",
+    "version": "seval 0.1.0",
+    "binary": "/Users/xyra/projects/software-evaluation/target/release/seval",
+    "binary_sha256": "1640f9d0bcf05a3996b6bf5c02a0a3ab0309ddb6ba7306ae1e5f89bece2ed10e"
+  },
+  "commands": [
+    {
+      "output": "repo-compare.json",
+      "stderr": "repo-compare.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "repo-compare",
+        "/private/tmp/seval-exopriors-main",
+        "/private/tmp/seval-exopriors-nucleus",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 3.252,
+      "completed_at": "2026-07-11T04:42:57.983649Z",
+      "stdout_bytes": 36749,
+      "stdout_sha256": "e85556f699b7ced54100bedf31ff7b335f6b4cf5ff2c115e779f368f4e67b96d",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "metrics-compare.json",
+      "stderr": "metrics-compare.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "metrics-compare",
+        "/private/tmp/seval-exopriors-main",
+        "/private/tmp/seval-exopriors-nucleus",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 5.402,
+      "completed_at": "2026-07-11T04:43:00.139241Z",
+      "stdout_bytes": 140308,
+      "stdout_sha256": "f1b78498b98f69432fae732ff6211d8c9511fa190a799adaa2f3b1a66cc55706",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "deps-main.json",
+      "stderr": "deps-main.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "deps",
+        "/private/tmp/seval-exopriors-main",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 15.908,
+      "completed_at": "2026-07-11T04:43:10.644997Z",
+      "stdout_bytes": 5044452,
+      "stdout_sha256": "71c0eae203221daf9d11205407f7e42360a8320de5420074476dc9f340f5dc29",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "deps-nucleus.json",
+      "stderr": "deps-nucleus.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "deps",
+        "/private/tmp/seval-exopriors-nucleus",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 2.945,
+      "completed_at": "2026-07-11T04:42:57.682616Z",
+      "stdout_bytes": 270650,
+      "stdout_sha256": "62f48e3aba2fedf7c6b3c8ba6973fa95207a91c658e2a8fab8623446949fe4f0",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "duplicates-main.json",
+      "stderr": "duplicates-main.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "duplicates",
+        "/private/tmp/seval-exopriors-main",
+        "--min-tokens",
+        "40",
+        "--min-lines",
+        "5",
+        "--max-groups",
+        "1000",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 110.831,
+      "completed_at": "2026-07-11T04:44:45.574374Z",
+      "stdout_bytes": 5692221,
+      "stdout_sha256": "40a186ddc5942646b4f06938f176097977967ec78887668e99896c747b08b82d",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "duplicates-nucleus.json",
+      "stderr": "duplicates-nucleus.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "duplicates",
+        "/private/tmp/seval-exopriors-nucleus",
+        "--min-tokens",
+        "40",
+        "--min-lines",
+        "5",
+        "--max-groups",
+        "1000",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 22.953,
+      "completed_at": "2026-07-11T04:43:20.633443Z",
+      "stdout_bytes": 824366,
+      "stdout_sha256": "deddc4b9bd38f776cbcc592a5400781941aecb5ed4a1ccdde63a90cb727807a7",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "api-main.json",
+      "stderr": "api-main.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "api",
+        "/private/tmp/seval-exopriors-main",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 19.759,
+      "completed_at": "2026-07-11T04:43:17.742555Z",
+      "stdout_bytes": 6071164,
+      "stdout_sha256": "5c4b423a68cabbb7e1bc34d7073c7b63a10cf37230184c78ba8d1c5ea0b20804",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "api-nucleus.json",
+      "stderr": "api-nucleus.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "api",
+        "/private/tmp/seval-exopriors-nucleus",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 5.056,
+      "completed_at": "2026-07-11T04:43:05.197341Z",
+      "stdout_bytes": 1986468,
+      "stdout_sha256": "fbdd66611582b9952b1f2f898b13e08bb27566aac413d18c296dc5496eedde5e",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "tests-main.json",
+      "stderr": "tests-main.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "tests",
+        "/private/tmp/seval-exopriors-main",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 17.777,
+      "completed_at": "2026-07-11T04:43:22.974920Z",
+      "stdout_bytes": 408171,
+      "stdout_sha256": "5c9f9ef6d100e117ea084e9793dd14bf7efc8691db698419073b1a82d3e3f101",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "tests-nucleus.json",
+      "stderr": "tests-nucleus.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "tests",
+        "/private/tmp/seval-exopriors-nucleus",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.999,
+      "completed_at": "2026-07-11T04:43:12.640021Z",
+      "stdout_bytes": 34355,
+      "stdout_sha256": "5dcca447d3a0f36e6766dfc9dd48e0f09abdc9d45f4acebf031d628f4779d415",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "functions-main.json",
+      "stderr": "functions-main.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "functions",
+        "/private/tmp/seval-exopriors-main",
+        "--sort",
+        "cognitive",
+        "--top",
+        "30",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 3.58,
+      "completed_at": "2026-07-11T04:43:16.223765Z",
+      "stdout_bytes": 25387,
+      "stdout_sha256": "cbcf184181f1be0dc299ccbb91e06883788322575ddc280d2468261c321ee805",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "functions-nucleus.json",
+      "stderr": "functions-nucleus.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "functions",
+        "/private/tmp/seval-exopriors-nucleus",
+        "--sort",
+        "cognitive",
+        "--top",
+        "30",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.904,
+      "completed_at": "2026-07-11T04:43:17.127537Z",
+      "stdout_bytes": 25018,
+      "stdout_sha256": "dc18822871a82b2a348ca1225da8f7e24ba6174a839760d25127c3e5d746ad21",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "files-main.json",
+      "stderr": "files-main.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "files",
+        "/private/tmp/seval-exopriors-main",
+        "--sort",
+        "cognitive",
+        "--top",
+        "30",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 3.331,
+      "completed_at": "2026-07-11T04:43:20.459102Z",
+      "stdout_bytes": 23870,
+      "stdout_sha256": "adb7a88b92c67996c0983634bc95dc584f9344b070fb92af8a62c3acbdf621f1",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "files-nucleus.json",
+      "stderr": "files-nucleus.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "files",
+        "/private/tmp/seval-exopriors-nucleus",
+        "--sort",
+        "cognitive",
+        "--top",
+        "30",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.098,
+      "completed_at": "2026-07-11T04:43:18.841270Z",
+      "stdout_bytes": 23472,
+      "stdout_sha256": "f354b8dee06172f23a12e3e4e228577b2a9df25b0b8fd71956a6be933fdf5a15",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "coverage": {
+    "mechanical_commands": 14,
+    "empirical_probes": 0,
+    "independent_judges": 0,
+    "taxonomy_axes_with_mechanical_proxy_evidence": [
+      "parsimony",
+      "interface-sharpness",
+      "correctness-machinery",
+      "documentation-truth",
+      "evolvability"
+    ],
+    "taxonomy_axes_uncovered": [
+      "consistency",
+      "robustness",
+      "operational-legibility",
+      "fitness-to-intent"
+    ]
+  },
+  "critical_caveats": [
+    "unrelated Git histories",
+    "zero root-relative source files matched",
+    "both clone scans saturated max_groups=1000",
+    "one-off source instruments are bound to commits by this manifest, not their native envelopes",
+    "no target behavior or tests executed",
+    "no independent normative judges"
+  ],
+  "verification": {
+    "argv": [
+      "/Users/xyra/projects/software-evaluation/target/release/seval",
+      "audit",
+      "/Users/xyra/projects/software-evaluation/evaluations/exopriors-main-vs-nucleus-20260710",
+      "--format",
+      "json"
+    ],
+    "exit_code": 0,
+    "completed_at": "2026-07-11T04:53:16.921393Z",
+    "output": "audit.json",
+    "stdout_sha256": "f0050b4616fb5028483b54606d3b83b0a132d8b53ea28adc497391e3480688d8",
+    "stderr": "audit.stderr.txt",
+    "stderr_bytes": 0,
+    "result": {
+      "records_total": 16,
+      "instrument_counts": {
+        "mechanical": 16
+      },
+      "referenced_record_ids": 16,
+      "issues": 0
+    },
+    "coverage_note": "PASS certifies current archive schema/path/reference checks only; findings.md F-006 lists what it does not certify."
+  }
+}
