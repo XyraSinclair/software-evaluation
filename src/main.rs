@@ -1,11 +1,20 @@
+mod analysis_output;
+
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use analysis_output::{
+    print_api, print_benchmark, print_dependencies, print_duplicates, print_tests,
+};
 use clap::{Parser, Subcommand, ValueEnum};
+use software_evaluation::api_surface::analyze_api_surface;
 use software_evaluation::audit::{AuditReport, Severity, audit_evaluation_dir};
+use software_evaluation::benchmark::{BenchmarkSpec, run_benchmark};
 use software_evaluation::compare::{CompareError, EvaluationComparison, compare_evaluation_runs};
+use software_evaluation::deps::analyze_dependencies;
+use software_evaluation::duplicates::{DuplicateConfig, analyze_duplicates};
 use software_evaluation::info::{PlanReport, PlanSpec, plan};
 use software_evaluation::kernel::{
     BeliefState, CriterionProgram, DecisionSpec, EvaluationRun, ResourceBudget, StopReason,
@@ -19,6 +28,7 @@ use software_evaluation::metrics::{
 use software_evaluation::repo::{
     GitChangeShapeProgram, RepoProfileConfig, StaticRepoShapeProgram, snapshot_git_repo,
 };
+use software_evaluation::tests_analysis::analyze_tests;
 
 #[derive(Debug, Parser)]
 #[command(name = "seval", version, about = "Evidence-first software evaluation")]
@@ -125,6 +135,78 @@ enum Command {
         top: usize,
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
         format: OutputFormat,
+    },
+    /// Inspect imports, manifests, dependency topology, and cycles.
+    #[command(visible_alias = "dependencies")]
+    Deps {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Maximum table rows shown in text output.
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Detect structurally duplicated source after AST token normalization.
+    #[command(visible_alias = "clones")]
+    Duplicates {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        #[arg(long, default_value_t = 40)]
+        min_tokens: usize,
+        #[arg(long, default_value_t = 5)]
+        min_lines: usize,
+        #[arg(long, default_value_t = 100)]
+        max_groups: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Inventory the representable public API surface.
+    Api {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Maximum symbol rows shown in text output.
+        #[arg(long, default_value_t = 100)]
+        top: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Inventory test files, cases, ignored cases, and assertion-like calls.
+    #[command(visible_alias = "test-shape")]
+    Tests {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Maximum file/path rows shown in each text section.
+        #[arg(long, default_value_t = 100)]
+        top: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Benchmark an exact argv repeatedly and emit resource receipts.
+    Bench {
+        /// Warmup invocations, excluded from measured distributions.
+        #[arg(long, default_value_t = 1)]
+        warmup: u32,
+        /// Measured invocations; the first is reported separately.
+        #[arg(long, default_value_t = 10)]
+        runs: u32,
+        /// Per-invocation timeout in milliseconds.
+        #[arg(long, default_value_t = 30_000)]
+        timeout_ms: u64,
+        /// Child working directory; defaults to the current directory.
+        #[arg(long)]
+        cwd: Option<PathBuf>,
+        /// Optional fixed logical operations completed per invocation.
+        #[arg(long)]
+        workload_units: Option<u64>,
+        /// Optional fixed bytes processed per invocation.
+        #[arg(long)]
+        workload_bytes: Option<u64>,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+        /// Exact command argv. Separate it from seval options with `--`.
+        #[arg(last = true, required = true, num_args = 1.., allow_hyphen_values = true)]
+        command: Vec<String>,
     },
 }
 
@@ -374,6 +456,83 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
                 OutputFormat::Text => print_files(&report, sort, top),
             }
             Ok(ExitCode::SUCCESS)
+        }
+        Command::Deps { path, top, format } => {
+            let report = analyze_dependencies(&path).map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_dependencies(&report, top),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Duplicates {
+            path,
+            min_tokens,
+            min_lines,
+            max_groups,
+            format,
+        } => {
+            let config = DuplicateConfig {
+                min_tokens,
+                min_lines,
+                max_groups,
+            };
+            let report = analyze_duplicates(&path, &config).map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_duplicates(&report),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Api { path, top, format } => {
+            let report = analyze_api_surface(&path).map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_api(&report, top),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Tests { path, top, format } => {
+            let report = analyze_tests(&path).map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_tests(&report, top),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Bench {
+            warmup,
+            runs,
+            timeout_ms,
+            cwd,
+            workload_units,
+            workload_bytes,
+            format,
+            command,
+        } => {
+            let (program, args) = command
+                .split_first()
+                .ok_or_else(|| "benchmark command argv is empty".to_owned())?;
+            let report = run_benchmark(&BenchmarkSpec {
+                program: program.clone(),
+                args: args.to_vec(),
+                cwd,
+                warmup_runs: warmup,
+                measured_runs: runs,
+                timeout_ms,
+                workload_units,
+                workload_bytes,
+            })
+            .map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_benchmark(&report),
+            }
+            Ok(if report.successful {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            })
         }
     }
 }

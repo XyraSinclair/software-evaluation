@@ -44,10 +44,10 @@ Built on three refusals:
 4. **Repository profiling and comparison:** run two fast, deterministic proxy
    programs against committed Git snapshots, then derive matched numeric deltas
    without assigning a winner or an overall quality score.
-5. **One-off source measurement:** tabulate functions and files with AST-derived
-   complexity, LOC, argument/exit, Halstead, maintainability, and ABC metrics;
-   report normalized rates and function-distribution tails; and compare two
-   files or source trees as explicit `right - left` differences.
+5. **One-off source and execution measurement:** tabulate AST complexity,
+   dependency topology, normalized clones, public API surface, test machinery,
+   and direct-argv benchmark receipts; compare source trees as explicit
+   `right - left` differences without manufacturing a global score.
 
 ```console
 $ cargo run -- audit evaluations/forward-cycle1-20260709
@@ -58,6 +58,11 @@ $ cargo run --release -- metrics /path/to/repo
 $ cargo run --release -- functions /path/to/repo --sort cognitive --top 30
 $ cargo run --release -- files /path/to/repo --sort maintainability --top 30
 $ cargo run --release -- metrics-compare /path/to/left /path/to/right --format json
+$ cargo run --release -- deps /path/to/repo
+$ cargo run --release -- duplicates /path/to/repo --min-tokens 40 --min-lines 5
+$ cargo run --release -- api /path/to/repo --top 100
+$ cargo run --release -- tests /path/to/repo --top 100
+$ cargo run --release -- bench --warmup 1 --runs 20 -- ./program --exact-arg
 ```
 
 `repo-profile` composes two versioned programs:
@@ -78,21 +83,27 @@ both repositories, rejects incomplete or structurally incompatible results,
 and reports `right - left` at matched JSON Pointer paths. Delta direction is
 not quality direction.
 
-The source-measurement commands analyze the current file or worktree, not a
-commit snapshot. Their walker respects ignore files, does not follow symlinks,
-and currently recognizes Rust, Python, JavaScript, TypeScript/TSX, and Go.
-`metrics` reports totals, per-language aggregates, normalized rates, and
-nearest-rank function tails. `functions` and `files` expose deterministic
-rankings by cognitive complexity, cyclomatic complexity, SLOC, arguments,
-exits, maintainability, or Halstead effort. `metrics-compare` analyzes both
-sides independently, preserves raw side summaries, reports normalized and tail
-differences, partitions files into matched/left-only/right-only sets, and emits
-matched-file deltas. These are structural proxies: none establishes
-correctness, runtime performance, security, fitness-to-intent, or quality.
+The worktree instruments analyze the current file or directory, not a commit
+snapshot. Their shared walker respects ignore files, does not follow symlinks,
+and recognizes Rust, Python, JavaScript, TypeScript/TSX, and Go. `metrics`
+reports totals, normalized rates, and nearest-rank function tails; `functions`
+and `files` rank hotspots; `metrics-compare` preserves both sides and reports
+matched `right - left` differences. `deps` extracts import evidence, direct
+manifest dependencies, fan-in/out, SCCs, cycles, weak components, and
+condensation depth. `duplicates` finds maximal non-overlapping clone groups
+after AST-token normalization. `api` inventories language-native explicit or
+documented proxy publicness. `tests` measures cases, ignored cases,
+assertion-like calls, source/test lines, and conservative same-stem coverage.
+`bench` executes exact argv without a shell, retains successful, failed, and
+timed-out samples, separates the first measured run from warmed distributions,
+and optionally reports units/s and bytes/s. These are bounded observations:
+none establishes correctness, security, semantic equivalence, test adequacy,
+fitness-to-intent, or quality.
 
 The archive command is expected to fail on the resident evaluation: that bundle
-is deliberately the auditor's first negative fixture. A failed audit or an
-incomplete repository profile exits 1; a CLI/input failure exits 2.
+is deliberately the auditor's first negative fixture. A failed audit,
+incomplete repository profile, or benchmark with any failed/timed-out attempt
+exits 1; a CLI/input failure exits 2.
 
 The planner's sensitivity and specificity values are **calibrated inputs, not
 facts inferred by the planner**. Joint information is computed only when the

@@ -52,13 +52,13 @@ and explicit limitations. `seval repo-compare` compares only numeric leaves at
 identical JSON Pointer paths from matched program versions. It preserves each
 dimension and attaches no good/bad direction to a delta.
 
-### Implemented one-off AST metrics
+### Implemented one-off source instruments
 
-`seval metrics`, `seval functions`, and `seval files` use
-`big-code-analysis@2.0.0` in-process. The file walker respects ignore files and
-does not follow symlinks; analysis is parallel across files and output ordering
-is deterministic. The current grammar set is Rust, Python, JavaScript,
-TypeScript/TSX, and Go.
+The one-off source tools run in-process over a shared tree-sitter file walker.
+The walker respects ignore files, does not follow symlinks, and returns stable
+root-relative paths. The current grammar set is Rust, Python, JavaScript,
+TypeScript/TSX, and Go. Syntax-error trees remain visible and increment an
+explicit coverage field rather than silently passing as clean.
 
 | Program | Observation denominator | What it can establish | What it cannot establish |
 |---|---|---|---|
@@ -66,11 +66,26 @@ TypeScript/TSX, and Go.
 | `seval functions PATH` | AST function spaces, including analyzer-recognized closures | deterministic hotspot rankings by cognitive/cyclomatic complexity, SLOC, arguments, exits, maintainability, or Halstead effort | whether a hotspot is wrong, unjustified, or worth changing |
 | `seval files PATH` | recognized source files | deterministic file-level hotspot rankings on the same dimensions | architectural boundaries, ownership, coupling, or fitness-to-intent |
 | `seval metrics-compare LEFT RIGHT` | independently analyzed sides; files match only at identical root-relative path and language | raw and normalized `right - left` deltas, function-tail shifts, and matched/left-only/right-only file partitions | an overall winner or any intrinsic good/bad direction |
+| `seval deps PATH` | import declarations in recognized source plus direct dependency rows in Cargo, npm, Python, requirements, and Go manifests | declaration evidence, conservative internal resolution, external/unresolved edges, fan-in/out, SCCs, cycles, components, condensation depth, and literal manifest source kinds | runtime loading, feature/alias/build-condition resolution, transitive/lockfile dependencies, causal coupling, or architectural quality |
+| `seval duplicates PATH` | normalized AST leaf-token windows meeting explicit token/line thresholds | maximal non-overlapping structural clone groups, occurrences, and duplicated token/line mass | semantic equivalence, intent, whether duplication is justified, or absence of clones below the thresholds |
+| `seval api PATH` | declarations representable under each language's explicit or lexical publicness rule | public symbol rows, kinds, visibility basis, parameters, generics, adjacent documentation, and symbols/kSLOC | runtime reachability, compatibility, stability, usability, or API quality |
+| `seval tests PATH` | recognized source/test files and supported framework spellings | test/source lines, discovered/ignored cases, assertion-like calls, cases/kSLOC, and conservative same-stem source/test matches | execution, coverage, mutation survival, assertion meaning, correctness, or test adequacy |
 
-Every report names the analyzer version, enumerated/analyzed/skipped counts,
-elapsed time, and explicit limitations. JSON preserves raw rows; text defaults
-to bounded hotspot tables. Run optimized builds (`cargo run --release -- ...`)
-for representative latency.
+Every report names its analyzer, enumerated/analyzed/skipped counts, evidence
+rows, and explicit limitations. JSON preserves raw rows; text defaults to
+bounded tables. Run optimized builds (`cargo run --release -- ...`) for
+representative latency.
+
+### Implemented direct benchmark receipts
+
+`seval bench -- PROGRAM ARGS...` invokes exact argv without a shell. It records
+every warmup and measured attempt, stdout/stderr bytes, exit or signal,
+timeout/termination state, and monotonic elapsed time. The first measured run
+is separate; the remaining samples produce nearest-rank p50/p95/p99/min/max/
+mean latency and optional units/s or bytes/s. Failed and timed-out samples stay
+in the denominator. Peak RSS is currently an honest null: no reliable portable
+per-child mechanism is wired to the wait path. One run is not called cold-cache
+truth, and the receipt is not a performance score.
 
 ## 2. Empirical — exercised behavior
 
