@@ -14,5 +14,6 @@ pub mod kernel;
 pub mod metrics;
 pub mod repo;
 
+pub mod service;
 pub mod source;
 pub mod tests_analysis;

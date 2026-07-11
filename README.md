@@ -117,6 +117,45 @@ claim/dependence group is selected. Information, decision value, dollars, and
 seconds remain separate; the selected multi-budget sequence is labeled as a
 greedy heuristic.
 
+## Public GitHub snapshot service
+
+`sevald` exposes the five source instruments through a bounded asynchronous API
+for public GitHub repositories. It resolves the default branch to an immutable
+commit, downloads a fixed-host ZIP archive, extracts it under strict path and
+size limits, and analyzes it in a kill-and-reap worker process. Repository code,
+tests, hooks, builds, and package managers are never executed.
+
+```console
+$ cargo run --release --bin sevald -- serve \
+    --listen 127.0.0.1:7077 \
+    --cache-dir .seval-cache
+$ curl -sS -X POST http://127.0.0.1:7077/v1/analyses \
+    -H 'content-type: application/json' \
+    -d '{"owner":"octocat","repo":"Hello-World"}'
+```
+
+Poll the returned `/v1/analyses/{analysis_id}` URL until `state` is
+`completed`, `completed_partial`, or `failed`. Completed responses retain the
+immutable commit, cache provenance, each analyzer's coverage denominator,
+observations, and limitations. They contain no aggregate score or verdict.
+`GITHUB_TOKEN` is optional and stays server-side; authenticated acquisition
+still rejects private repositories.
+
+For a contained local deployment, `docker compose up --build -d` builds only
+`sevald`, binds it to host loopback on port 7077, drops Linux capabilities,
+uses a read-only root filesystem, and applies CPU, memory, process, and temp
+storage limits. Put an HTTPS reverse proxy with request-rate limits in front of
+that loopback listener before exposing it publicly. The service deliberately
+has no end-user authentication or TLS termination. Keep `.seval-cache` on the
+named volume; archive and source bytes live only in the bounded temporary
+filesystem and are deleted after each job.
+
+The zero-build Manifest V3 client lives at
+[`extensions/github-software-evaluation/`](extensions/github-software-evaluation/).
+Its development configuration points only to `http://127.0.0.1:7077`; the
+extension README defines the atomic two-file cutover to one production HTTPS
+origin.
+
 ## Uses
 
 - **A vs B**: expose the artifacts' difference shape and the evidence needed

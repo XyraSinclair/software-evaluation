@@ -9,11 +9,26 @@ license = "MIT"
 name = "seval"
 path = "src/main.rs"
 
+[[bin]]
+name = "sevald"
+path = "src/bin/sevald.rs"
+
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
 big-code-analysis = { version = "=2.0.0", default-features = false, features = ["rust", "python", "javascript", "typescript", "go"] }
 ignore = "0.4"
 rayon = "1.11"
+async-trait = "0.1"
+axum = { version = "0.8", features = ["json"] }
+bytes = "1"
+futures-util = "0.3"
+http = "1"
+percent-encoding = "2"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+tempfile = "3.20"
+tokio = { version = "1", features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "process", "signal", "sync", "time"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+zip = { version = "4", default-features = false, features = ["deflate"] }
 regex = "1.11"
 sha2 = "0.10"
 serde = { version = "1.0", features = ["derive"] }
@@ -30,3 +45,5 @@ thiserror = "2.0"
 [dev-dependencies]
 approx = "0.5"
 tempfile = "3.20"
+http-body-util = "0.1"
+tower = { version = "0.5", features = ["util"] }

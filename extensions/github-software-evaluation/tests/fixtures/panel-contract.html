@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="octolytics-dimension-repository_nwo" content="Fixture/Repository">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GitHub Software Evaluation browser contract fixture</title>
+  <style>
+    body { margin: 24px; max-width: 780px; font: 14px/1.5 system-ui, sans-serif; }
+    button { margin: 3px; padding: 8px 12px; }
+    pre { padding: 12px; background: #f3f4f6; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Extension panel contract fixture</h1>
+    <p>This fixture runs without a server, package manager, bundler, jsdom, or network. “Run checks” exercises the native Shadow DOM and lifecycle test seam.</p>
+    <div>
+      <button id="run" type="button">Run checks</button>
+      <button id="loading" type="button">Loading</button>
+      <button id="progress" type="button">Progress</button>
+      <button id="ready" type="button">Ready/cache hit</button>
+      <button id="error" type="button">Error</button>
+      <button id="navigate" type="button">Navigate repository</button>
+      <button id="away" type="button">Route away</button>
+    </div>
+    <pre id="report" role="status" aria-live="polite">Not run.</pre>
+  </main>
+
+  <script>
+    globalThis.__SEVAL_EXTENSION_TEST__ = true;
+    globalThis.chrome = { runtime: { connect() { throw new Error('fixture controller not installed'); } } };
+  </script>
+  <script src="../../config.js"></script>
+  <script src="../../repo-identity.js"></script>
+  <script src="../../panel.js"></script>
+  <script src="../../content.js"></script>
+  <script>
+    (() => {
+      'use strict';
+      const report = document.getElementById('report');
+      const metadata = document.querySelector('meta[name="octolytics-dimension-repository_nwo"]');
+      const fixtureLocation = { protocol: 'https:', hostname: 'github.com', pathname: '/Fixture/Repository', search: '' };
+      const ports = [];
+
+      function portFactory() {
+        const messageListeners = [];
+        const disconnectListeners = [];
+        const port = {
+          sent: [], disconnected: false,
+          onMessage: { addListener(fn) { messageListeners.push(fn); } },
+          onDisconnect: { addListener(fn) { disconnectListeners.push(fn); } },
+          postMessage(message) { this.sent.push(message); },
+          disconnect() { this.disconnected = true; for (const fn of disconnectListeners) fn(); },
+          emit(message) { for (const fn of messageListeners) fn(message); },
+        };
+        ports.push(port);
+        return port;
+      }
+
+      const fixtureChrome = { runtime: { connect: portFactory } };
+      const controller = SEVAL_CONTENT_TEST.createController({
+        document, location: fixtureLocation, chrome: fixtureChrome,
+        SEVAL_REPO_IDENTITY, SEVAL_PANEL,
+      });
+      document.addEventListener('turbo:before-render', controller.stale, true);
+      document.addEventListener('turbo:load', controller.schedule, true);
+
+      const hostile = '<img src=x onerror="document.body.dataset.injected=1">';
+      const readyResult = (cacheHit = true) => ({
+        status: 'completed',
+        snapshot: { commit: '0123456789abcdef0123456789abcdef01234567', cache: { hit: cacheHit, bundle_version: 'fixture-v1' } },
+        metrics: [
+          { id: 'metrics', status: 'complete', observations: { p90: null }, limitations: [hostile] },
+          { id: 'dependencies', status: 'complete', observations: { nodes: 17 }, limitations: ['Manifest-only dependency view.'] },
+        ],
+      });
+      const tick = () => new Promise(resolve => queueMicrotask(resolve));
+      const root = () => document.getElementById('seval-github-panel-host')?.shadowRoot;
+      const aside = () => root()?.querySelector('aside[data-seval-panel]');
+      const currentPort = () => ports.at(-1);
+
+      function begin() {
+        metadata.content = 'Fixture/Repository';
+        fixtureLocation.pathname = '/Fixture/Repository';
+        fixtureLocation.search = '';
+        controller.reconcile();
+      }
+      function emitProgress() {
+        currentPort().emit({ type: 'progress', result: { status: 'analyzing', progress: { completed_instruments: 2, total_instruments: 5 }, metrics: [] } });
+      }
+      function emitReady(cacheHit = true) { currentPort().emit({ type: 'result', result: readyResult(cacheHit) }); }
+      function emitError() { currentPort().emit({ type: 'error', message: hostile, retryable: true }); }
+      async function navigate(nwo = 'Second/Repository') {
+        document.dispatchEvent(new Event('turbo:before-render'));
+        metadata.content = nwo;
+        fixtureLocation.pathname = `/${nwo}`;
+        document.dispatchEvent(new Event('turbo:load'));
+        await tick();
+      }
+      async function routeAway() {
+        document.dispatchEvent(new Event('turbo:before-render'));
+        metadata.content = 'settings/profile';
+        fixtureLocation.pathname = '/settings/profile';
+        document.dispatchEvent(new Event('turbo:load'));
+        await tick();
+      }
+
+      function check(condition, message) { if (!condition) throw new Error(message); }
+      async function runChecks() {
+        const passed = [];
+        const contract = (condition, message) => { check(condition, message); passed.push(message); };
+        begin();
+        contract(document.querySelectorAll('#seval-github-panel-host').length === 1, 'one Shadow DOM host while loading');
+        contract(aside().dataset.state === 'loading', 'loading state is visible');
+        contract(aside().getAttribute('aria-labelledby') === 'seval-title', 'aside is labelled by its heading');
+        contract(root().querySelector('[role="status"][aria-live="polite"][aria-atomic="true"]'), 'normal status is polite and atomic');
+
+        emitProgress();
+        contract(aside().dataset.state === 'progress' && root().textContent.includes('2/5 instruments'), 'progress state reports stage and bounded count');
+
+        emitReady(true);
+        contract(aside().dataset.state === 'ready' && aside().dataset.cache === 'hit', 'ready state exposes cache hit provenance');
+        contract(root().textContent.includes('commit 0123456789ab') && root().textContent.includes('analyzer fixture-v1'), 'ready state exposes snapshot and analyzer provenance');
+        contract(root().textContent.includes('Not reported') && !/\b(?:NaN|undefined)\b/.test(root().textContent), 'null observation remains unavailable, never NaN or undefined');
+        contract(root().textContent.includes(hostile) && !root().querySelector('img'), 'hostile service text is text, not markup');
+        contract(!root().querySelector('[data-metric-id="score"],[data-metric-id="quality_score"],[data-metric-id="verdict"]'), 'no composite judgment is rendered');
+
+        const toggle = root().querySelector('button[aria-controls="seval-body"]');
+        const activeBefore = document.activeElement;
+        toggle.click();
+        contract(toggle.getAttribute('aria-expanded') === 'false' && aside().classList.contains('collapsed'), 'collapse state and aria-expanded agree');
+        contract(document.activeElement === activeBefore, 'render and collapse do not move document focus');
+        toggle.click();
+
+        const stalePort = currentPort();
+        await navigate();
+        contract(stalePort.disconnected && aside().dataset.state === 'loading', 'Turbo navigation disconnects stale generation and starts loading the new repository');
+        stalePort.emit({ type: 'result', result: readyResult(false) });
+        contract(aside().dataset.state === 'loading', 'stale generation cannot render over the new repository');
+        emitReady(false);
+        contract(aside().dataset.cache === 'miss', 'ready state distinguishes a cache miss');
+        controller.reconcile();
+        contract(document.querySelectorAll('#seval-github-panel-host').length === 1, 'reconcile is idempotent for the same repository');
+
+        emitError();
+        contract(aside().dataset.state === 'error' && root().querySelector('[role="alert"]'), 'error state uses an alert');
+        contract(root().querySelector('button.retry') && !root().querySelector('img'), 'retry is conditional and error text cannot inject markup');
+
+        await routeAway();
+        contract(!document.getElementById('seval-github-panel-host') && currentPort().disconnected, 'route-away removes the host and disconnects work');
+        report.textContent = `${passed.length} browser contracts passed:\n- ${passed.join('\n- ')}`;
+      }
+
+      document.getElementById('run').addEventListener('click', () => runChecks().catch(error => { report.textContent = `FAIL: ${error.stack || error}`; }));
+      document.getElementById('loading').addEventListener('click', begin);
+      document.getElementById('progress').addEventListener('click', () => { if (!currentPort()) begin(); emitProgress(); });
+      document.getElementById('ready').addEventListener('click', () => { if (!currentPort()) begin(); emitReady(true); });
+      document.getElementById('error').addEventListener('click', () => { if (!currentPort()) begin(); emitError(); });
+      document.getElementById('navigate').addEventListener('click', () => navigate());
+      document.getElementById('away').addEventListener('click', routeAway);
+      globalThis.SEVAL_FIXTURE = Object.freeze({ controller, ports, begin, emitProgress, emitReady, emitError, navigate, routeAway, runChecks });
+    })();
+  </script>
+</body>
+</html>

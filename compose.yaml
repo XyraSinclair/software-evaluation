@@ -1,0 +1,25 @@
+services:
+  sevald:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7077:7077"
+    environment:
+      - GITHUB_TOKEN
+    volumes:
+      - sevald-cache:/var/lib/sevald
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=512m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 1g
+    cpus: 2.0
+
+volumes:
+  sevald-cache:

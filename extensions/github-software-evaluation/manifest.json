@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "GitHub Software Evaluation",
+  "version": "0.1.0",
+  "description": "Shows bounded, independent repository observations on public GitHub repositories.",
+  "permissions": [],
+  "host_permissions": [
+    "https://github.com/*",
+    "http://127.0.0.1:7077/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["config.js", "repo-identity.js", "panel.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
