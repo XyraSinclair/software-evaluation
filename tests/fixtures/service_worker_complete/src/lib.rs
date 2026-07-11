@@ -1,3 +1,6 @@
+mod alpha;
+mod beta;
+
 /// Returns the sum of the inclusive range from zero through `limit`.
 pub fn triangular(limit: u64) -> u64 {
     (0..=limit).sum()

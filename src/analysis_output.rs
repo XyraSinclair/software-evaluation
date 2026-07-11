@@ -30,6 +30,46 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
             .condensation_maximum_depth
             .map_or_else(|| "n/a".to_owned(), |value| value.to_string()),
     );
+    let propagation = &report.propagation;
+    let status = match propagation.reachability_status {
+        software_evaluation::deps::ReachabilityStatus::Computed => "computed",
+        software_evaluation::deps::ReachabilityStatus::NotApplicable => "not_applicable",
+        software_evaluation::deps::ReachabilityStatus::SizeLimit => "size_limit",
+        software_evaluation::deps::ReachabilityStatus::WorkLimit => "work_limit",
+    };
+    println!(
+        "internal transitive reachability: {}/{} non-self source-file pairs; status={status}; node-limit={}; work-upper-bound={}; work-limit={}",
+        propagation
+            .reachable_nonself_pairs
+            .map_or_else(|| "n/a".to_owned(), |value| value.to_string()),
+        propagation
+            .possible_nonself_pairs
+            .map_or_else(|| "n/a".to_owned(), |value| value.to_string()),
+        propagation.reachability_node_limit,
+        propagation
+            .reachability_work_upper_bound
+            .map_or_else(|| "overflow".to_owned(), |value| value.to_string()),
+        propagation.reachability_work_limit,
+    );
+    println!(
+        "internal cycles: {} cyclic components, {}/{} cyclic source files, largest={} source files",
+        propagation.cyclic_components,
+        if propagation.source_files == 0 {
+            "n/a".to_owned()
+        } else {
+            propagation.cyclic_source_files.to_string()
+        },
+        if propagation.source_files == 0 {
+            "n/a".to_owned()
+        } else {
+            propagation.source_files.to_string()
+        },
+        if propagation.source_files == 0 {
+            "n/a".to_owned()
+        } else {
+            propagation.largest_cyclic_component_files.to_string()
+        },
+    );
     println!(
         "manifest dependencies: {} total, {} non-registry, {} risky literal sources",
         report.manifest_dependency_count,
@@ -59,11 +99,29 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
         nodes.len().min(top),
         nodes.len()
     );
-    println!("  {:>7} {:>7} {:<22} NODE", "FAN-OUT", "FAN-IN", "KIND");
+    println!(
+        "  {:>7} {:>7} {:>14} {:>15} {:>18} {:>19} {:<22} NODE",
+        "FAN-OUT",
+        "FAN-IN",
+        "INTERNAL-OUT",
+        "INTERNAL-IN",
+        "TRANSITIVE-OUT",
+        "TRANSITIVE-IN",
+        "KIND"
+    );
     for node in nodes.into_iter().take(top) {
+        let shown =
+            |value: Option<usize>| value.map_or_else(|| "n/a".to_owned(), |n| n.to_string());
         println!(
-            "  {:>7} {:>7} {:<22?} {}",
-            node.fan_out, node.fan_in, node.kind, node.id
+            "  {:>7} {:>7} {:>14} {:>15} {:>18} {:>19} {:<22?} {}",
+            node.fan_out,
+            node.fan_in,
+            shown(node.direct_internal_out_degree),
+            shown(node.direct_internal_in_degree),
+            shown(node.transitive_internal_out_count),
+            shown(node.transitive_internal_in_count),
+            node.kind,
+            node.id
         );
     }
 

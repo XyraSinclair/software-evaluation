@@ -66,7 +66,7 @@ explicit coverage field rather than silently passing as clean.
 | `seval functions PATH` | AST function spaces, including analyzer-recognized closures | deterministic hotspot rankings by cognitive/cyclomatic complexity, SLOC, arguments, exits, maintainability, or Halstead effort | whether a hotspot is wrong, unjustified, or worth changing |
 | `seval files PATH` | recognized source files | deterministic file-level hotspot rankings on the same dimensions | architectural boundaries, ownership, coupling, or fitness-to-intent |
 | `seval metrics-compare LEFT RIGHT` | independently analyzed sides; files match only at identical root-relative path and language | raw and normalized `right - left` deltas, function-tail shifts, and matched/left-only/right-only file partitions | an overall winner or any intrinsic good/bad direction |
-| `seval deps PATH` | import declarations in recognized source plus direct dependency rows in Cargo, npm, Python, requirements, and Go manifests | declaration evidence, conservative internal resolution, external/unresolved edges, fan-in/out, SCCs, cycles, components, condensation depth, and literal manifest source kinds | runtime loading, feature/alias/build-condition resolution, transitive/lockfile dependencies, causal coupling, or architectural quality |
+| `seval deps PATH` | import declarations in recognized source plus direct dependency rows in Cargo, npm, Python, requirements, and Go manifests | declaration evidence, conservative internal resolution, all-edge and resolved-internal fan-in/out, SCCs, cycles, components, condensation depth, and bounded exact non-self transitive reachability | runtime loading, feature/alias/build-condition resolution, transitive/lockfile dependencies, causal change impact, or architectural quality |
 | `seval duplicates PATH` | normalized AST leaf-token windows meeting explicit token/line thresholds | maximal non-overlapping structural clone groups, occurrences, and duplicated token/line mass | semantic equivalence, intent, whether duplication is justified, or absence of clones below the thresholds |
 | `seval api PATH` | externally reachable Rust declarations plus declarations representable under the other languages' documented lexical publicness rules | symbol rows, kinds, visibility basis, parameters, generics, adjacent documentation, and symbols/kSLOC | runtime reachability outside Rust's resolved module visibility, compatibility, stability, usability, or API quality |
 | `seval tests PATH` | recognized source/test files and supported framework spellings | test/source lines, discovered/ignored cases including skipped-suite ancestry, assertion-like calls, cases/kSLOC, and conservative path-aware same-stem source/test matches | execution, coverage, mutation survival, assertion meaning, correctness, or test adequacy |
@@ -75,6 +75,66 @@ Every report names its analyzer, enumerated/analyzed/skipped counts, evidence
 rows, and explicit limitations. JSON preserves raw rows; text defaults to
 bounded tables. Run optimized builds (`cargo run --release -- ...`) for
 representative latency.
+
+### Dependency propagation profile
+
+For $n$ analyzed source files and the unique resolved internal edges $u \to v$:
+
+- `direct_internal_out_degree(u)` counts distinct resolved internal targets;
+  `direct_internal_in_degree(v)` counts distinct analyzed sources.
+- `transitive_internal_out_count(u)` and `transitive_internal_in_count(v)`
+  count distinct reachable files, excluding self even when a cycle returns to it.
+- `reachable_nonself_pairs / possible_nonself_pairs` is the observed graph's
+  non-self propagation fraction, where the denominator is $n(n-1)$. It is null
+  for $n < 2$, never manufactured as zero.
+- Cycle observations retain the number of cyclic SCCs, participating files,
+  largest cyclic SCC, and both file-count denominators.
+
+These are file-graph topology coordinates. Higher reach means broader static
+reach in the analyzer's observed graph; it does not mean worse maintenance,
+causal change impact, or a refactoring requirement. Graph granularity, source
+classification, and resolver coverage remain confounders. Exact reachability is
+reported only when the graph is within both protocol bounds: 10,000 analyzed
+files and a checked 100,000,000-unit traversal-work upper bound
+$n(1 + |E_{internal}|)$. `size_limit` and `work_limit` retain direct degrees and
+cycle measures but return null transitive counts rather than an approximation.
+
+The construct follows dependency-structure-matrix propagation analysis
+([MacCormack, Rusnak, and Baldwin, 2006](https://doi.org/10.1287/mnsc.1060.0552))
+and keeps coupling direction/counting explicit as required by
+[Briand, Daly, and Wüst, 1999](https://doi.org/10.1109/32.748920). Those sources
+support the measurement family, not a universal quality direction or causal
+maintenance claim.
+
+**Display contract.** Show the propagation numerator, denominator, status, and
+coverage before hotspots. Use separate in/out views: direct degree on one axis,
+transitive count on the other, with labeled files for drill-down. Show cyclic
+SCCs as discrete components. For artifact comparisons, use aligned profile rows
+or slope lines with raw deltas; do not use a radar chart, traffic light, shared
+bar scale, or area encoding that implies unlike units are commensurate.
+
+### Metric admission queue
+
+The next useful families are ordered by decision value and instrument honesty:
+
+1. Join the existing bounded Git change observations to static complexity as a
+   two-coordinate hotspot view; keep churn, current size, window, and history
+   status separate rather than multiplying them into a risk score.
+2. Import native runtime coverage artifacts as executed/coverable counts and
+   uncovered locations with run provenance; coverage is not correctness.
+3. Add compiler- or language-server-resolved call, type, member, and inheritance
+   edges as separate coupling relations; never collapse them into one CBO value.
+4. Add TCC/LCC method-state cohesion only for languages and constructs where
+   instance-field access can be resolved, preserving method-pair denominators.
+5. Add build/test queue and execution tails when CI telemetry is available;
+   those measure developer friction, not intrinsic source quality.
+
+Universal smell thresholds, letter grades, weighted maintainability scores,
+LCOM variants without explicit definitions, learned readability scores, and
+defect/change probabilities without temporally held-out calibration remain
+inadmissible. Size alone can confound apparent OO-metric associations
+([El Emam et al., 2001](https://doi.org/10.1109/32.935855)); every future family
+must retain size, language, extraction coverage, and missingness beside values.
 
 ### Implemented direct benchmark receipts
 

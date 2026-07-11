@@ -24,9 +24,14 @@ fn assert_forbidden_keys_absent(value: &Value) {
     const FORBIDDEN: &[&str] = &[
         "score",
         "quality_score",
+        "quality",
         "verdict",
         "grade",
         "winner",
+        "threshold",
+        "rating",
+        "rank",
+        "direction",
         "html",
         "raw_source",
         "local_path",
@@ -96,6 +101,101 @@ fn worker_reports_all_five_instruments_as_compact_independent_evidence() {
         "compact result was {} bytes",
         encoded.len()
     );
+
+    let dependencies = &result.instruments["dependencies"].observations;
+    let structure = dependencies
+        .get("dependency_structure")
+        .and_then(Value::as_object)
+        .expect("dependencies must expose a nested dependency_structure object");
+    assert_eq!(
+        structure
+            .keys()
+            .map(String::as_str)
+            .collect::<BTreeSet<_>>(),
+        BTreeSet::from([
+            "direct_internal_in_hotspots",
+            "direct_internal_out_hotspots",
+            "propagation",
+            "transitive_internal_in_hotspots",
+            "transitive_internal_out_hotspots",
+        ]),
+        "dependency_structure schema is closed"
+    );
+
+    let propagation = &structure["propagation"];
+    assert_eq!(propagation["source_files"], 3);
+    assert_eq!(propagation["reachability_status"], "computed");
+    assert_eq!(propagation["reachability_node_limit"], 10_000);
+    assert_eq!(propagation["reachability_work_limit"], 100_000_000);
+    assert_eq!(propagation["reachability_work_upper_bound"], 15);
+    assert_eq!(propagation["reachable_nonself_pairs"], 4);
+    assert_eq!(propagation["possible_nonself_pairs"], 6);
+    assert_eq!(propagation["nonself_propagation_fraction"], 2.0 / 3.0);
+    assert_eq!(propagation["cyclic_components"], 1);
+    assert_eq!(propagation["cyclic_source_files"], 2);
+    assert_eq!(propagation["cyclic_source_file_fraction"], 2.0 / 3.0);
+    assert_eq!(propagation["largest_cyclic_component_files"], 2);
+    assert_eq!(propagation["largest_cyclic_component_fraction"], 2.0 / 3.0);
+
+    let alpha = serde_json::json!({
+        "path": "src/alpha.rs",
+        "internal_fan_in": 2,
+        "internal_fan_out": 1,
+        "transitive_internal_fan_in": 2,
+        "transitive_internal_fan_out": 1
+    });
+    let beta = serde_json::json!({
+        "path": "src/beta.rs",
+        "internal_fan_in": 2,
+        "internal_fan_out": 1,
+        "transitive_internal_fan_in": 2,
+        "transitive_internal_fan_out": 1
+    });
+    let lib = serde_json::json!({
+        "path": "src/lib.rs",
+        "internal_fan_in": 0,
+        "internal_fan_out": 2,
+        "transitive_internal_fan_in": 0,
+        "transitive_internal_fan_out": 2
+    });
+    let expected_hotspots = [
+        (
+            "direct_internal_in_hotspots",
+            serde_json::json!([alpha.clone(), beta.clone()]),
+        ),
+        (
+            "direct_internal_out_hotspots",
+            serde_json::json!([lib.clone(), alpha.clone(), beta.clone()]),
+        ),
+        (
+            "transitive_internal_in_hotspots",
+            serde_json::json!([alpha.clone(), beta.clone()]),
+        ),
+        (
+            "transitive_internal_out_hotspots",
+            serde_json::json!([lib, alpha, beta]),
+        ),
+    ];
+    for (key, expected) in expected_hotspots {
+        assert_eq!(
+            structure[key], expected,
+            "{key} must be count-descending then path-ascending"
+        );
+        let rows = structure[key].as_array().expect("hotspots must be arrays");
+        assert!(rows.len() <= 5, "{key} must be bounded to five rows");
+        let primary = match key {
+            "direct_internal_in_hotspots" => "internal_fan_in",
+            "direct_internal_out_hotspots" => "internal_fan_out",
+            "transitive_internal_in_hotspots" => "transitive_internal_fan_in",
+            "transitive_internal_out_hotspots" => "transitive_internal_fan_out",
+            _ => unreachable!(),
+        };
+        assert!(
+            rows.iter()
+                .all(|row| row[primary].as_u64().is_some_and(|count| count > 0)),
+            "{key} must not emit zero-primary rows"
+        );
+    }
 }
 
 #[test]

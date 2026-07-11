@@ -82,6 +82,14 @@ fn write_file(root: &Path, relative: &str, contents: &str) {
         .unwrap_or_else(|error| panic!("write fixture {}: {error}", path.display()));
 }
 
+fn analyze_source_fixture(files: &[(&str, &str)]) -> software_evaluation::deps::DependencyReport {
+    let directory = TempDir::new().expect("temporary dependency graph repository");
+    for (path, contents) in files {
+        write_file(directory.path(), path, contents);
+    }
+    analyze_dependencies(directory.path()).expect("analyze dependency graph fixture")
+}
+
 fn manifest_row(
     manifest: &str,
     ecosystem: &str,
@@ -466,6 +474,226 @@ fn polyglot_graph_preserves_evidence_topology_and_direct_manifest_observations()
 }
 
 #[test]
+fn internal_degree_and_propagation_oracle_is_exact_for_polyglot_graph() {
+    let fixture = DependencyFixture::new();
+
+    // Hand-computed over the ten analyzed files and the six unique internal edges. External and
+    // unresolved targets do not participate. The Rust cycle reaches its two members plus its
+    // two-node tail; Python and JavaScript each contribute one reachable ordered pair.
+    let expected_internal_counts = BTreeMap::from([
+        ("broken.rs", (Some(0), Some(0), Some(0), Some(0))),
+        ("external:react", (None, None, None, None)),
+        ("go/main.go", (Some(0), Some(0), Some(0), Some(0))),
+        ("py/a.py", (Some(0), Some(1), Some(0), Some(1))),
+        ("py/b.py", (Some(1), Some(0), Some(1), Some(0))),
+        ("src/alpha.rs", (Some(1), Some(2), Some(1), Some(3))),
+        ("src/leaf.rs", (Some(1), Some(1), Some(2), Some(1))),
+        ("src/main.rs", (Some(1), Some(1), Some(1), Some(3))),
+        ("src/tail.rs", (Some(1), Some(0), Some(3), Some(0))),
+        ("unresolved:ghost", (None, None, None, None)),
+        ("web/app.ts", (Some(0), Some(1), Some(0), Some(1))),
+        ("web/helper.js", (Some(1), Some(0), Some(1), Some(0))),
+    ]);
+
+    let report = analyze_dependencies(fixture.path()).expect("analyze polyglot graph oracle");
+    let actual_internal_counts = report
+        .nodes
+        .iter()
+        .filter(|node| expected_internal_counts.contains_key(node.id.as_str()))
+        .map(|node| {
+            (
+                node.id.as_str(),
+                (
+                    node.direct_internal_in_degree,
+                    node.direct_internal_out_degree,
+                    node.transitive_internal_in_count,
+                    node.transitive_internal_out_count,
+                ),
+            )
+        })
+        .collect::<BTreeMap<_, _>>();
+    assert_eq!(actual_internal_counts, expected_internal_counts);
+
+    let propagation = serde_json::to_value(&report.propagation).expect("serialize propagation");
+    assert_eq!(propagation["source_files"], 10);
+    assert_eq!(propagation["reachability_status"], "computed");
+    assert_eq!(propagation["reachability_node_limit"], 10_000);
+    assert_eq!(propagation["reachability_work_limit"], 100_000_000);
+    assert_eq!(propagation["reachability_work_upper_bound"], 70);
+    assert_eq!(propagation["reachable_nonself_pairs"], 9);
+    assert_eq!(propagation["possible_nonself_pairs"], 90);
+    assert_eq!(propagation["nonself_propagation_fraction"], 0.1);
+    assert_eq!(propagation["cyclic_components"], 1);
+    assert_eq!(propagation["cyclic_source_files"], 2);
+    assert_eq!(propagation["cyclic_source_file_fraction"], 0.2);
+    assert_eq!(propagation["largest_cyclic_component_files"], 2);
+    assert_eq!(propagation["largest_cyclic_component_fraction"], 0.2);
+}
+
+#[test]
+fn smallest_dependency_graphs_prove_null_zero_cycle_and_dedup_semantics() {
+    let cases = [
+        ("zero", analyze_source_fixture(&[])),
+        (
+            "one-edge",
+            analyze_source_fixture(&[
+                ("a.js", "import './b.js';\nimport './b.js';\n"),
+                ("b.js", "export const b = 1;\n"),
+            ]),
+        ),
+        (
+            "self-loop",
+            analyze_source_fixture(&[("a.js", "import './a.js';\nimport './a.js';\n")]),
+        ),
+        (
+            "two-cycle",
+            analyze_source_fixture(&[
+                ("a.js", "import './b.js';\n"),
+                ("b.js", "import './a.js';\n"),
+            ]),
+        ),
+    ];
+
+    let expected_profiles = [
+        (
+            "zero",
+            0,
+            "not_applicable",
+            None,
+            None,
+            None,
+            0,
+            0,
+            None,
+            0,
+            None,
+        ),
+        (
+            "one-edge",
+            2,
+            "computed",
+            Some(1),
+            Some(2),
+            Some(0.5),
+            0,
+            0,
+            Some(0.0),
+            0,
+            Some(0.0),
+        ),
+        (
+            "self-loop",
+            1,
+            "computed",
+            Some(0),
+            Some(0),
+            None,
+            1,
+            1,
+            Some(1.0),
+            1,
+            Some(1.0),
+        ),
+        (
+            "two-cycle",
+            2,
+            "computed",
+            Some(2),
+            Some(2),
+            Some(1.0),
+            1,
+            2,
+            Some(1.0),
+            2,
+            Some(1.0),
+        ),
+    ];
+
+    for ((name, report), expected) in cases.iter().zip(expected_profiles) {
+        assert_eq!(*name, expected.0);
+        let profile = &report.propagation;
+        let value = serde_json::to_value(profile).expect("serialize smallest-case propagation");
+        assert_eq!(value["source_files"].as_u64(), Some(expected.1));
+        assert_eq!(value["reachability_status"], expected.2);
+        assert_eq!(value["reachability_node_limit"], 10_000);
+        assert_eq!(value["reachable_nonself_pairs"].as_u64(), expected.3);
+        assert_eq!(value["possible_nonself_pairs"].as_u64(), expected.4);
+        assert_eq!(value["nonself_propagation_fraction"].as_f64(), expected.5);
+        assert_eq!(value["cyclic_components"].as_u64(), Some(expected.6));
+        assert_eq!(value["cyclic_source_files"].as_u64(), Some(expected.7));
+        assert_eq!(value["cyclic_source_file_fraction"].as_f64(), expected.8);
+        assert_eq!(
+            value["largest_cyclic_component_files"].as_u64(),
+            Some(expected.9)
+        );
+        assert_eq!(
+            value["largest_cyclic_component_fraction"].as_f64(),
+            expected.10
+        );
+    }
+
+    let one_edge = &cases[1].1;
+    let a = one_edge
+        .nodes
+        .iter()
+        .find(|node| node.id == "a.js")
+        .expect("a.js node");
+    let b = one_edge
+        .nodes
+        .iter()
+        .find(|node| node.id == "b.js")
+        .expect("b.js node");
+    assert_eq!(
+        (a.direct_internal_in_degree, a.direct_internal_out_degree),
+        (Some(0), Some(1))
+    );
+    assert_eq!(
+        (b.direct_internal_in_degree, b.direct_internal_out_degree),
+        (Some(1), Some(0))
+    );
+    assert_eq!(
+        (
+            a.transitive_internal_in_count,
+            a.transitive_internal_out_count
+        ),
+        (Some(0), Some(1))
+    );
+    assert_eq!(
+        (
+            b.transitive_internal_in_count,
+            b.transitive_internal_out_count
+        ),
+        (Some(1), Some(0))
+    );
+    assert_eq!(
+        one_edge.internal_edges, 1,
+        "repeated declarations must not duplicate degree"
+    );
+
+    let self_node = cases[2]
+        .1
+        .nodes
+        .iter()
+        .find(|node| node.id == "a.js")
+        .expect("self node");
+    assert_eq!(
+        (
+            self_node.direct_internal_in_degree,
+            self_node.direct_internal_out_degree
+        ),
+        (Some(1), Some(1))
+    );
+    assert_eq!(
+        (
+            self_node.transitive_internal_in_count,
+            self_node.transitive_internal_out_count
+        ),
+        (Some(0), Some(0)),
+        "transitive counts exclude self even through a cycle"
+    );
+}
+
+#[test]
 fn deps_cli_json_is_observational_and_text_discloses_structural_proxy_limits() {
     let fixture = DependencyFixture::new();
     let expected_counts = (6_u64, 5_u64, 3_u64);
@@ -517,6 +745,39 @@ fn deps_cli_json_is_observational_and_text_discloses_structural_proxy_limits() {
         root.get("cycles").and_then(Value::as_array).map(Vec::len),
         Some(1)
     );
+    let propagation = root
+        .get("propagation")
+        .expect("dependency JSON must include propagation profile");
+    assert_eq!(propagation["source_files"], 10);
+    assert_eq!(propagation["reachability_status"], "computed");
+    assert_eq!(propagation["reachability_node_limit"], 10_000);
+    assert_eq!(propagation["reachability_work_limit"], 100_000_000);
+    assert_eq!(propagation["reachability_work_upper_bound"], 70);
+    assert_eq!(propagation["reachable_nonself_pairs"], 9);
+    assert_eq!(propagation["possible_nonself_pairs"], 90);
+    assert_eq!(propagation["nonself_propagation_fraction"], 0.1);
+    assert_eq!(propagation["cyclic_components"], 1);
+    assert_eq!(propagation["cyclic_source_files"], 2);
+    assert_eq!(propagation["cyclic_source_file_fraction"], 0.2);
+    let nodes = root["nodes"]
+        .as_array()
+        .expect("dependency nodes must be an array");
+    let alpha = nodes
+        .iter()
+        .find(|node| node["id"] == "src/alpha.rs")
+        .expect("serialized alpha node");
+    assert_eq!(alpha["direct_internal_in_degree"], 1);
+    assert_eq!(alpha["direct_internal_out_degree"], 2);
+    assert_eq!(alpha["transitive_internal_in_count"], 1);
+    assert_eq!(alpha["transitive_internal_out_count"], 3);
+    let external = nodes
+        .iter()
+        .find(|node| node["id"] == "external:react")
+        .expect("serialized external node");
+    assert!(external["direct_internal_in_degree"].is_null());
+    assert!(external["direct_internal_out_degree"].is_null());
+    assert!(external["transitive_internal_in_count"].is_null());
+    assert!(external["transitive_internal_out_count"].is_null());
 
     let text_output = run_cli(fixture.path(), &["--top", "2", "--format", "text"]);
     assert!(
@@ -527,7 +788,22 @@ fn deps_cli_json_is_observational_and_text_discloses_structural_proxy_limits() {
     );
     let text = String::from_utf8(text_output.stdout).expect("deps text must be UTF-8");
     assert!(text.contains("graph: 18 nodes, 14 edges (6 internal, 5 external, 3 unresolved), 5 weak components, 1 cycles, condensation-depth=2"));
+    assert!(text.contains("internal transitive reachability: 9/90 non-self source-file pairs; status=computed; node-limit=10000"));
+    assert!(text.contains(
+        "internal cycles: 1 cyclic components, 2/10 cyclic source files, largest=2 source files"
+    ));
+    assert!(text.contains("INTERNAL-OUT"));
+    assert!(text.contains("INTERNAL-IN"));
+    assert!(text.contains("TRANSITIVE-OUT"));
+    assert!(text.contains("TRANSITIVE-IN"));
     assert!(text.contains("graph statistics are structural proxies, not quality measures"));
     assert!(text.contains("Fan-in, fan-out, components, cycles, and depth are structural proxies and carry no quality verdict or weighting."));
     assert!(text.contains("Resolution is filesystem-only:"));
+
+    let empty = TempDir::new().expect("empty dependency repository");
+    let empty_text_output = run_cli(empty.path(), &["--format", "text"]);
+    assert!(empty_text_output.status.success());
+    let empty_text = String::from_utf8(empty_text_output.stdout).expect("empty deps text UTF-8");
+    assert!(empty_text.contains("internal transitive reachability: n/a/n/a non-self source-file pairs; status=not_applicable; node-limit=10000"));
+    assert!(empty_text.contains("internal cycles: 0 cyclic components, n/a/n/a cyclic source files, largest=n/a source files"));
 }

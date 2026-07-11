@@ -46,6 +46,43 @@ pub struct DependencyReport {
     pub cycles: Vec<Vec<String>>,
     pub weak_components: Vec<Vec<String>>,
     pub condensation_maximum_depth: Option<usize>,
+    pub propagation: DependencyPropagation,
+}
+
+pub const REACHABILITY_NODE_LIMIT: usize = 10_000;
+pub const REACHABILITY_WORK_LIMIT: usize = 100_000_000;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DependencyPropagation {
+    pub source_files: usize,
+    pub reachability_status: ReachabilityStatus,
+    pub reachability_node_limit: usize,
+    pub reachability_work_limit: usize,
+    pub reachability_work_upper_bound: Option<usize>,
+    pub reachable_nonself_pairs: Option<usize>,
+    pub possible_nonself_pairs: Option<usize>,
+    pub nonself_propagation_fraction: Option<f64>,
+    pub cyclic_components: usize,
+    pub cyclic_source_files: usize,
+    pub cyclic_source_file_fraction: Option<f64>,
+    pub largest_cyclic_component_files: usize,
+    pub largest_cyclic_component_fraction: Option<f64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReachabilityStatus {
+    Computed,
+    NotApplicable,
+    SizeLimit,
+    WorkLimit,
+}
+
+struct ReachabilityComputation {
+    status: ReachabilityStatus,
+    work_upper_bound: Option<usize>,
+    incoming: Option<Vec<usize>>,
+    outgoing: Option<Vec<usize>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -64,6 +101,10 @@ pub struct DependencyNode {
     pub kind: DependencyNodeKind,
     pub fan_in: usize,
     pub fan_out: usize,
+    pub direct_internal_in_degree: Option<usize>,
+    pub direct_internal_out_degree: Option<usize>,
+    pub transitive_internal_in_count: Option<usize>,
+    pub transitive_internal_out_count: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -216,19 +257,46 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
             .or_default()
             .insert(edge.source.clone());
     }
+    let source_paths = known.iter().cloned().collect::<Vec<_>>();
+    let source_index = source_paths
+        .iter()
+        .enumerate()
+        .map(|(index, path)| (path.as_str(), index))
+        .collect::<BTreeMap<_, _>>();
+    let mut indexed_outgoing = vec![Vec::new(); source_paths.len()];
+    let mut indexed_incoming = vec![Vec::new(); source_paths.len()];
+    for edge in edges
+        .iter()
+        .filter(|edge| edge.classification == DependencyClassification::Internal)
+    {
+        let source = source_index[edge.source.as_str()];
+        let target = source_index[edge.target.as_str()];
+        indexed_outgoing[source].push(target);
+        indexed_incoming[target].push(source);
+    }
+    let reachability = transitive_internal_degrees(&indexed_outgoing);
     let nodes = node_kinds
         .iter()
-        .map(|(id, kind)| DependencyNode {
-            id: id.clone(),
-            kind: *kind,
-            fan_in: incoming.get(id).map_or(0, BTreeSet::len),
-            fan_out: outgoing.get(id).map_or(0, BTreeSet::len),
+        .map(|(id, kind)| {
+            let source = source_index.get(id.as_str()).copied();
+            DependencyNode {
+                id: id.clone(),
+                kind: *kind,
+                fan_in: incoming.get(id).map_or(0, BTreeSet::len),
+                fan_out: outgoing.get(id).map_or(0, BTreeSet::len),
+                direct_internal_in_degree: source.map(|index| indexed_incoming[index].len()),
+                direct_internal_out_degree: source.map(|index| indexed_outgoing[index].len()),
+                transitive_internal_in_count: source
+                    .and_then(|index| reachability.incoming.as_ref().map(|values| values[index])),
+                transitive_internal_out_count: source
+                    .and_then(|index| reachability.outgoing.as_ref().map(|values| values[index])),
+            }
         })
         .collect::<Vec<_>>();
 
     let internal_adjacency = adjacency(&known, &edges, true);
     let sccs = tarjan(&known, &internal_adjacency);
-    let cycles = sccs
+    let cycles: Vec<Vec<String>> = sccs
         .iter()
         .filter(|c| {
             c.len() > 1
@@ -238,6 +306,7 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         })
         .cloned()
         .collect();
+    let propagation = dependency_propagation(source_paths.len(), &cycles, &reachability);
     let all_ids: BTreeSet<_> = node_kinds.keys().cloned().collect();
     let all_adjacency = adjacency(&all_ids, &edges, false);
     let weak_components = weak_components(&all_ids, &all_adjacency);
@@ -304,6 +373,7 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
             "JavaScript and TypeScript resolve only relative paths using an explicit deterministic suffix/index search; bare specifiers are external.".to_owned(),
             "Go imports are external/unresolved without go.mod module-path knowledge; standard-library and third-party imports are not distinguished.".to_owned(),
             "Fan-in, fan-out, components, cycles, and depth are structural proxies and carry no quality verdict or weighting.".to_owned(),
+            "Propagation is measured on the file-level internal dependency graph and depends on resolver completeness; exact transitive reachability is omitted above either the 10,000 analyzed-source-file node bound or the 100,000,000 edge-visit work upper bound while direct internal degrees and cycle measures remain available.".to_owned(),
         ],
         syntax_error_files,
         manifest_dependency_count: manifest_dependencies.len(),
@@ -314,7 +384,103 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         node_count: nodes.len(), edge_count: edges.len(), internal_edges, external_edges, unresolved_edges,
         nodes, edges, strongly_connected_components: sccs, cycles, weak_components,
         condensation_maximum_depth: depth,
+        propagation,
     })
+}
+
+fn transitive_internal_degrees(adjacency: &[Vec<usize>]) -> ReachabilityComputation {
+    let source_files = adjacency.len();
+    let work_upper_bound = adjacency
+        .iter()
+        .try_fold(0usize, |sum, edges| sum.checked_add(edges.len()))
+        .and_then(|internal_unique_edges| internal_unique_edges.checked_add(1))
+        .and_then(|per_source| source_files.checked_mul(per_source));
+    let status = if source_files == 0 {
+        ReachabilityStatus::NotApplicable
+    } else if source_files > REACHABILITY_NODE_LIMIT {
+        ReachabilityStatus::SizeLimit
+    } else if work_upper_bound.is_none_or(|bound| bound > REACHABILITY_WORK_LIMIT) {
+        ReachabilityStatus::WorkLimit
+    } else {
+        ReachabilityStatus::Computed
+    };
+    if status != ReachabilityStatus::Computed {
+        return ReachabilityComputation {
+            status,
+            work_upper_bound,
+            incoming: None,
+            outgoing: None,
+        };
+    }
+
+    let mut incoming = vec![0usize; adjacency.len()];
+    let mut outgoing = vec![0usize; adjacency.len()];
+    let mut visited = vec![0usize; adjacency.len()];
+    let mut generation = 0usize;
+    let mut stack = Vec::new();
+    for source in 0..adjacency.len() {
+        generation += 1;
+        visited[source] = generation;
+        stack.extend(adjacency[source].iter().copied());
+        while let Some(target) = stack.pop() {
+            if visited[target] == generation {
+                continue;
+            }
+            visited[target] = generation;
+            outgoing[source] += 1;
+            incoming[target] += 1;
+            stack.extend(adjacency[target].iter().copied());
+        }
+    }
+    ReachabilityComputation {
+        status,
+        work_upper_bound,
+        incoming: Some(incoming),
+        outgoing: Some(outgoing),
+    }
+}
+
+fn dependency_propagation(
+    source_files: usize,
+    cycles: &[Vec<String>],
+    reachability: &ReachabilityComputation,
+) -> DependencyPropagation {
+    let cyclic_source_files = cycles.iter().map(Vec::len).sum();
+    let largest_cyclic_component_files = cycles.iter().map(Vec::len).max().unwrap_or(0);
+    let (reachable_nonself_pairs, possible_nonself_pairs) =
+        if reachability.status == ReachabilityStatus::Computed {
+            let reachable = reachability.outgoing.as_deref().and_then(|outgoing| {
+                outgoing
+                    .iter()
+                    .try_fold(0usize, |sum, count| sum.checked_add(*count))
+            });
+            let possible = source_files.checked_mul(source_files.saturating_sub(1));
+            (reachable, possible)
+        } else {
+            (None, None)
+        };
+    let nonself_propagation_fraction = reachable_nonself_pairs
+        .zip(possible_nonself_pairs)
+        .and_then(|(reachable, possible)| {
+            (possible != 0).then_some(reachable as f64 / possible as f64)
+        });
+    let source_fraction = |count| (source_files != 0).then_some(count as f64 / source_files as f64);
+
+    DependencyPropagation {
+        source_files,
+        reachability_status: reachability.status,
+        reachability_node_limit: REACHABILITY_NODE_LIMIT,
+        reachability_work_limit: REACHABILITY_WORK_LIMIT,
+        reachability_work_upper_bound: reachability.work_upper_bound,
+        reachable_nonself_pairs,
+        possible_nonself_pairs,
+        nonself_propagation_fraction,
+        cyclic_components: cycles.len(),
+        cyclic_source_files,
+        cyclic_source_file_fraction: source_fraction(cyclic_source_files),
+        largest_cyclic_component_files,
+        largest_cyclic_component_fraction: source_fraction(largest_cyclic_component_files),
+    }
 }
 
 fn walk(node: Node<'_>, file: &SourceFile, out: &mut Vec<Declaration>) {
@@ -1153,5 +1319,102 @@ fn manifest_row(
         name: name.to_owned(),
         requirement: requirement.to_owned(),
         source_kind,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_skipped_reachability(
+        adjacency: &[Vec<usize>],
+        expected_status: ReachabilityStatus,
+        expected_work_upper_bound: usize,
+        expected_serialized_status: &str,
+    ) {
+        let reachability = transitive_internal_degrees(adjacency);
+        assert_eq!(reachability.status, expected_status);
+        assert_eq!(
+            reachability.work_upper_bound,
+            Some(expected_work_upper_bound)
+        );
+        assert_eq!(reachability.incoming, None);
+        assert_eq!(reachability.outgoing, None);
+
+        let serialized =
+            serde_json::to_value(dependency_propagation(adjacency.len(), &[], &reachability))
+                .expect("serialize skipped reachability profile");
+        assert_eq!(
+            serialized["reachability_status"],
+            expected_serialized_status
+        );
+        assert_eq!(serialized["reachability_node_limit"], 10_000);
+        assert_eq!(serialized["reachability_work_limit"], 100_000_000);
+        assert_eq!(
+            serialized["reachability_work_upper_bound"],
+            expected_work_upper_bound
+        );
+        assert_eq!(
+            serialized["reachable_nonself_pairs"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            serialized["possible_nonself_pairs"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            serialized["nonself_propagation_fraction"],
+            serde_json::Value::Null
+        );
+    }
+
+    #[test]
+    fn reachability_node_bound_precedes_work_and_preserves_boundary_values() {
+        let empty = transitive_internal_degrees(&[]);
+        assert_eq!(empty.status, ReachabilityStatus::NotApplicable);
+        assert_eq!(empty.work_upper_bound, Some(0));
+        assert_eq!(empty.incoming, None);
+        assert_eq!(empty.outgoing, None);
+
+        let at_node_limit = vec![Vec::new(); REACHABILITY_NODE_LIMIT];
+        let computed = transitive_internal_degrees(&at_node_limit);
+        assert_eq!(computed.status, ReachabilityStatus::Computed);
+        assert_eq!(computed.work_upper_bound, Some(10_000));
+        assert_eq!(
+            computed.incoming.as_deref(),
+            Some(vec![0; 10_000].as_slice())
+        );
+        assert_eq!(
+            computed.outgoing.as_deref(),
+            Some(vec![0; 10_000].as_slice())
+        );
+
+        let above_node_limit = vec![Vec::new(); REACHABILITY_NODE_LIMIT + 1];
+        assert_skipped_reachability(
+            &above_node_limit,
+            ReachabilityStatus::SizeLimit,
+            10_001,
+            "size_limit",
+        );
+    }
+
+    #[test]
+    fn reachability_work_bound_is_inclusive_and_skips_vectors_only_above_limit() {
+        let mut at_work_limit = vec![Vec::new(); 1_000];
+        at_work_limit[0] = vec![0; 99_999];
+        let computed = transitive_internal_degrees(&at_work_limit);
+        assert_eq!(computed.status, ReachabilityStatus::Computed);
+        assert_eq!(computed.work_upper_bound, Some(100_000_000));
+        assert!(computed.incoming.is_some());
+        assert!(computed.outgoing.is_some());
+
+        let mut above_work_limit = vec![Vec::new(); 1_000];
+        above_work_limit[0] = vec![0; 100_000];
+        assert_skipped_reachability(
+            &above_work_limit,
+            ReachabilityStatus::WorkLimit,
+            100_001_000,
+            "work_limit",
+        );
     }
 }

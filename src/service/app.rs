@@ -26,7 +26,7 @@ use std::{
 use tokio::sync::{Mutex, Semaphore};
 use uuid::Uuid;
 
-const BUNDLE: &str = concat!(env!("CARGO_PKG_VERSION"), ":static-five:v1:dup-40-5-100");
+const BUNDLE: &str = concat!(env!("CARGO_PKG_VERSION"), ":static-five:v2:dup-40-5-100");
 #[derive(Debug, Clone)]
 pub struct ServiceConfig {
     pub cache_dir: PathBuf,

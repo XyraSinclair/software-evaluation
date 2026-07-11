@@ -24,6 +24,35 @@ fn failed(analyzer: &str) -> InstrumentResult {
 fn value<T: serde::Serialize>(v: &T) -> Value {
     serde_json::to_value(v).unwrap_or_else(|_| json!({}))
 }
+fn dependency_hotspots(
+    nodes: &[deps::DependencyNode],
+    primary: fn(&deps::DependencyNode) -> Option<usize>,
+    secondary: fn(&deps::DependencyNode) -> Option<usize>,
+) -> Vec<Value> {
+    let mut nodes = nodes
+        .iter()
+        .filter(|node| primary(node).is_some_and(|count| count != 0))
+        .collect::<Vec<_>>();
+    nodes.sort_by(|left, right| {
+        primary(right)
+            .cmp(&primary(left))
+            .then_with(|| secondary(right).cmp(&secondary(left)))
+            .then_with(|| left.id.cmp(&right.id))
+    });
+    nodes
+        .into_iter()
+        .take(5)
+        .map(|node| {
+            json!({
+                "path": node.id,
+                "internal_fan_in": node.direct_internal_in_degree,
+                "internal_fan_out": node.direct_internal_out_degree,
+                "transitive_internal_fan_in": node.transitive_internal_in_count,
+                "transitive_internal_fan_out": node.transitive_internal_out_count,
+            })
+        })
+        .collect()
+}
 
 pub fn analyze(root: &Path, provenance: RepositoryProvenance) -> CompactResult {
     let mut instruments = BTreeMap::new();
@@ -44,14 +73,36 @@ pub fn analyze(root: &Path, provenance: RepositoryProvenance) -> CompactResult {
     };
     instruments.insert("metrics".into(), m);
     let d = match deps::analyze_dependencies(root) {
-        Ok(r) => InstrumentResult {
-            analyzer: r.analyzer,
-            state: InstrumentState::Complete,
-            coverage: value(&r.coverage),
-            observations: json!({"manifest_count":r.coverage.manifests_analyzed,"manifest_dependencies":r.manifest_dependency_count,"nodes":r.node_count,"edges":r.edge_count,"internal_edges":r.internal_edges,"external_edges":r.external_edges,"unresolved_edges":r.unresolved_edges,"cycles":r.cycles.len(),"components":r.weak_components.len(),"condensation_depth":r.condensation_maximum_depth}),
-            limitations: r.limitations,
-            error: None,
-        },
+        Ok(r) => {
+            let direct_internal_in_hotspots = dependency_hotspots(
+                &r.nodes,
+                |node| node.direct_internal_in_degree,
+                |node| node.direct_internal_out_degree,
+            );
+            let direct_internal_out_hotspots = dependency_hotspots(
+                &r.nodes,
+                |node| node.direct_internal_out_degree,
+                |node| node.direct_internal_in_degree,
+            );
+            let transitive_internal_in_hotspots = dependency_hotspots(
+                &r.nodes,
+                |node| node.transitive_internal_in_count,
+                |node| node.transitive_internal_out_count,
+            );
+            let transitive_internal_out_hotspots = dependency_hotspots(
+                &r.nodes,
+                |node| node.transitive_internal_out_count,
+                |node| node.transitive_internal_in_count,
+            );
+            InstrumentResult {
+                analyzer: r.analyzer,
+                state: InstrumentState::Complete,
+                coverage: value(&r.coverage),
+                observations: json!({"manifest_count":r.coverage.manifests_analyzed,"manifest_dependencies":r.manifest_dependency_count,"nodes":r.node_count,"edges":r.edge_count,"internal_edges":r.internal_edges,"external_edges":r.external_edges,"unresolved_edges":r.unresolved_edges,"cycles":r.cycles.len(),"components":r.weak_components.len(),"condensation_depth":r.condensation_maximum_depth,"dependency_structure":{"propagation":r.propagation,"direct_internal_in_hotspots":direct_internal_in_hotspots,"direct_internal_out_hotspots":direct_internal_out_hotspots,"transitive_internal_in_hotspots":transitive_internal_in_hotspots,"transitive_internal_out_hotspots":transitive_internal_out_hotspots}}),
+                limitations: r.limitations,
+                error: None,
+            }
+        }
         Err(_) => failed("dependency-structure"),
     };
     instruments.insert("dependencies".into(), d);

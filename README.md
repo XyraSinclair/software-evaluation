@@ -92,9 +92,10 @@ and recognizes Rust, Python, JavaScript, TypeScript/TSX, and Go. `metrics`
 reports totals, normalized rates, and nearest-rank function tails; `functions`
 and `files` rank hotspots; `metrics-compare` preserves both sides and reports
 matched `right - left` differences. `deps` extracts import evidence, direct
-manifest dependencies, fan-in/out, SCCs, cycles, weak components, and
-condensation depth. `duplicates` finds maximal non-overlapping clone groups
-after AST-token normalization. `api` inventories externally reachable Rust
+manifest dependencies, all-edge and resolved-internal fan-in/out, SCCs, cycles,
+weak components, condensation depth, and bounded exact non-self transitive
+reachability over the observed internal file graph. `duplicates` finds maximal
+non-overlapping clone groups after AST-token normalization. `api` inventories
 declarations and documented lexical publicness proxies for the other supported
 languages. `tests` measures cases, inherited ignored-suite state,
 assertion-like calls, source/test lines, and conservative path-aware same-stem
@@ -138,6 +139,10 @@ Poll the returned `/v1/analyses/{analysis_id}` URL until `state` is
 `completed`, `completed_partial`, or `failed`. Completed responses retain the
 immutable commit, cache provenance, each analyzer's coverage denominator,
 observations, and limitations. They contain no aggregate score or verdict.
+Dependency observations also retain the propagation numerator and denominator,
+cycle participation, the computation status and resource bounds, and bounded
+direct/transitive in/out hotspot rows. These remain topology coordinates, not
+maintenance scores or refactoring recommendations.
 `GITHUB_TOKEN` is optional and stays server-side; authenticated acquisition
 still rejects private repositories.
 
