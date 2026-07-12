@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "evaluation": "exopriors-change-profile-20260712",
+  "generated_at": "2026-07-12T21:37:43.959153Z",
+  "artifacts": [
+    {
+      "name": "exopriors-main",
+      "revision": "c95daa69575c141e645c1f7d09df0e89cf62fe40",
+      "tree_digest": "842137570bbb9072f35bd0ea88208ed287cd8a6d",
+      "snapshot_path": "/private/tmp/seval-change-main-20260712"
+    },
+    {
+      "name": "exopriors-nucleus",
+      "revision": "80c973da663b03977aa61aba5ed77d1ecbf8d0a2",
+      "tree_digest": "dcb792ec7bb5682c121d3cebaa01a0ac66c10033",
+      "snapshot_path": "/private/tmp/seval-change-nucleus-20260712"
+    }
+  ],
+  "evaluator": {
+    "name": "software-evaluation",
+    "revision": "d5c6a59298d4748cdf7118c036c60d119e2b22c1",
+    "version": "seval 0.1.0",
+    "analyzer": "seval-change-profile-v1",
+    "binary": "/Users/xyra/projects/software-evaluation/target/release/seval",
+    "binary_sha256": "7fac83a8501a9b599cfb303e522cd0ab9f3ff3d941c108ba4422c4f69a4acc02"
+  },
+  "commands": [
+    {
+      "output": "main.json",
+      "stderr": "main-json.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "change-profile",
+        "/private/tmp/seval-change-main-20260712",
+        "--history-commits",
+        "200",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 3.029179749999912,
+      "completed_at": "2026-07-12T21:37:39.807504Z",
+      "stdout_bytes": 1205346,
+      "stdout_sha256": "dd9cd37f8a4bf1364a7626fbf42d35a23357243554620001b7e36f2e7aa81dbb",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "main.svg",
+      "stderr": "main-svg.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "change-profile",
+        "/private/tmp/seval-change-main-20260712",
+        "--history-commits",
+        "200",
+        "--format",
+        "svg"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 2.5461520829999245,
+      "completed_at": "2026-07-12T21:37:42.355181Z",
+      "stdout_bytes": 1294482,
+      "stdout_sha256": "27ef191dd2e7df7b1b2847e6654d8c2cc9e536cbe03a66601102305a9b08f252",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "nucleus.json",
+      "stderr": "nucleus-json.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "change-profile",
+        "/private/tmp/seval-change-nucleus-20260712",
+        "--history-commits",
+        "200",
+        "--format",
+        "json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.788161874999787,
+      "completed_at": "2026-07-12T21:37:43.144794Z",
+      "stdout_bytes": 97811,
+      "stdout_sha256": "ae56c15e95cd6e5e051c81044a71778a84b13e7153eab2f5cd305fc310938945",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "output": "nucleus.svg",
+      "stderr": "nucleus-svg.stderr.txt",
+      "argv": [
+        "/Users/xyra/projects/software-evaluation/target/release/seval",
+        "change-profile",
+        "/private/tmp/seval-change-nucleus-20260712",
+        "--history-commits",
+        "200",
+        "--format",
+        "svg"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.813618041999689,
+      "completed_at": "2026-07-12T21:37:43.959153Z",
+      "stdout_bytes": 154039,
+      "stdout_sha256": "357077a988e3de094c07415b56d395ec885701347effadf1f6ef48c124a72dc5",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "interpretation": {
+    "instrument_class": "mechanical committed change-by-structure proxy",
+    "direction": "neutral",
+    "comparison_scope": "unrelated fixed artifact snapshots; not a before/after lineage",
+    "certifies": "current AST measures for supported committed blobs, bounded per-path Git change observations, exact raw-path join partitions, and the recorded deterministic renderings",
+    "does_not_certify": [
+      "history outside the sampled count window",
+      "rename continuity",
+      "semantic or causal coupling",
+      "defect probability",
+      "maintainability",
+      "correctness",
+      "quality",
+      "fitness to intent"
+    ]
+  }
+}
