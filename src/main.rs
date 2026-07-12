@@ -1,4 +1,5 @@
 mod analysis_output;
+mod change_profile_output;
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -8,10 +9,12 @@ use std::process::ExitCode;
 use analysis_output::{
     print_api, print_benchmark, print_dependencies, print_duplicates, print_tests,
 };
+use change_profile_output::{render_change_profile_svg, render_change_profile_text};
 use clap::{Parser, Subcommand, ValueEnum};
 use software_evaluation::api_surface::analyze_api_surface;
 use software_evaluation::audit::{AuditReport, Severity, audit_evaluation_dir};
 use software_evaluation::benchmark::{BenchmarkSpec, run_benchmark};
+use software_evaluation::change_profile::{ChangeProfileConfig, analyze_change_profile};
 use software_evaluation::compare::{CompareError, EvaluationComparison, compare_evaluation_runs};
 use software_evaluation::deps::analyze_dependencies;
 use software_evaluation::duplicates::{DuplicateConfig, analyze_duplicates};
@@ -69,6 +72,20 @@ enum Command {
         max_programs: u32,
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
         format: OutputFormat,
+    },
+    /// Relate bounded committed change history to current source structure.
+    ChangeProfile {
+        /// Clean Git repository to profile at HEAD.
+        #[arg(default_value = ".")]
+        repository: PathBuf,
+        /// Maximum non-merge commits included (a count window, newest first).
+        #[arg(long, default_value_t = 200)]
+        history_commits: usize,
+        /// Maximum current-file rows in text output; ignored for JSON and SVG.
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        #[arg(long, value_enum, default_value_t = ChangeProfileFormat::Text)]
+        format: ChangeProfileFormat,
     },
     /// Compare matched repository observations without choosing a winner.
     RepoCompare {
@@ -224,6 +241,13 @@ enum OutputFormat {
     Json,
 }
 
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum ChangeProfileFormat {
+    Text,
+    Json,
+    Svg,
+}
+
 #[derive(Clone, Copy, Debug, ValueEnum, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
 enum MetricSortArg {
@@ -358,6 +382,22 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             } else {
                 ExitCode::from(1)
             })
+        }
+        Command::ChangeProfile {
+            repository,
+            history_commits,
+            top,
+            format,
+        } => {
+            let report =
+                analyze_change_profile(&repository, ChangeProfileConfig { history_commits })
+                    .map_err(|error| error.to_string())?;
+            match format {
+                ChangeProfileFormat::Text => print!("{}", render_change_profile_text(&report, top)),
+                ChangeProfileFormat::Json => print_json(&report)?,
+                ChangeProfileFormat::Svg => println!("{}", render_change_profile_svg(&report)?),
+            }
+            Ok(ExitCode::SUCCESS)
         }
         Command::RepoCompare {
             left,

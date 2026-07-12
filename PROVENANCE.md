@@ -73,3 +73,20 @@ under reframing is reported *with* its instability, not despite it.
    contested axis.
 4. Nothing is deleted: a superseded or refuted record gets
    `"superseded_by": "r-041"`, staying in the file as the trail.
+
+## Committed profile receipts
+
+`seval change-profile` binds current structure and bounded history separately.
+The source receipt records the pinned revision, `git ls-tree -r -z --long`
+command, Git version, complete tree-stream byte count and SHA-256, ordered
+`git cat-file --batch` request SHA-256, and complete batch-response byte count
+and SHA-256. Each response is accepted only when its object ID, blob type, byte
+size, order, and framing match the tree entry and request. Metrics consume those
+returned bytes, not worktree files. The history receipt records the exact
+rename-disabled, non-merge Git log command, Git version, raw-output byte count,
+and SHA-256. The artifact revision and tree digest accompany both.
+
+These receipts certify the input streams and deterministic protocol. They do
+not certify tree-sitter construct validity, the adequacy of the sampled history
+window, rename continuity, causality, defect probability, maintainability, or
+quality. Those gaps remain visible in the report limitations.

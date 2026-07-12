@@ -99,7 +99,7 @@ pub fn load_source_tree(input: &Path) -> Result<SourceTree, SourceError> {
         return Err(SourceError::Symlink(input.to_owned()));
     }
 
-    let (root, mut candidates) = if metadata.is_file() {
+    let (root, candidates) = if metadata.is_file() {
         let parent = input.parent().unwrap_or_else(|| Path::new("."));
         (parent.to_path_buf(), vec![input.to_path_buf()])
     } else if metadata.is_dir() {
@@ -126,7 +126,24 @@ pub fn load_source_tree(input: &Path) -> Result<SourceTree, SourceError> {
         });
     };
 
-    candidates.sort_by_key(|path| normalized_relative(&root, path));
+    load_source_candidates(input, &root, candidates)
+}
+
+#[allow(dead_code)]
+pub(crate) fn load_source_files(
+    root: &Path,
+    relative_paths: &[PathBuf],
+) -> Result<SourceTree, SourceError> {
+    let candidates = relative_paths.iter().map(|path| root.join(path)).collect();
+    load_source_candidates(root, root, candidates)
+}
+
+fn load_source_candidates(
+    reported_input: &Path,
+    root: &Path,
+    mut candidates: Vec<PathBuf>,
+) -> Result<SourceTree, SourceError> {
+    candidates.sort_by_key(|path| normalized_relative(root, path));
     let enumerated = candidates.len();
     let mut skipped = 0;
     let mut files = Vec::new();
@@ -135,7 +152,7 @@ pub fn load_source_tree(input: &Path) -> Result<SourceTree, SourceError> {
             skipped += 1;
             continue;
         };
-        let path = relative_path(&root, &absolute_path)?;
+        let path = relative_path(root, &absolute_path)?;
         let bytes = fs::read(&absolute_path).map_err(|source| SourceError::Read {
             path: absolute_path.clone(),
             source,
@@ -147,9 +164,8 @@ pub fn load_source_tree(input: &Path) -> Result<SourceTree, SourceError> {
             bytes,
         });
     }
-
     Ok(SourceTree {
-        root: normalized_path(input)?,
+        root: normalized_path(reported_input)?,
         files,
         enumerated,
         skipped,

@@ -52,6 +52,41 @@ and explicit limitations. `seval repo-compare` compares only numeric leaves at
 identical JSON Pointer paths from matched program versions. It preserves each
 dimension and attaches no good/bad direction to a delta.
 
+### Committed change × structure profile
+
+`seval change-profile REPOSITORY` joins two observations without collapsing
+their units. The current side is every regular blob at the pinned revision
+whose raw Git path is UTF-8 and whose extension is supported; worktree presence,
+bytes, ignore files, hidden-path filtering, and untracked files cannot change
+that denominator. The analyzer reads selected object IDs through
+`git cat-file --batch`, validates object identity, type, size, order, and
+framing, then measures the returned bytes directly. The history side is the
+first $N$ non-merge commits emitted for the pinned revision plus one sentinel
+commit used only to establish truncation. Rename detection is disabled. Current
+and historical rows join on exact raw path bytes.
+
+Per current file, the report retains current SLOC, cognitive and cyclomatic
+totals, commits touched, actual-window touch fraction, distinct UTC committer
+days, text-commit and binary-touch counts, summed textual additions plus
+deletions, first/last observed committer timestamps, and the join/history
+status. Cognitive density is
+$1000\,C/\mathrm{SLOC}$. Textual change density is
+$M/\mathrm{SLOC}$ only when SLOC is nonzero and no sampled binary touch makes
+$M$ incomplete; otherwise it is null. No-history paths remain missing, never
+measured zero. History-only paths remain a separate ledger.
+
+Source coverage, history coverage, and both sides of the join are explicit and
+must close arithmetically. The source receipt binds the revision's `ls-tree`
+stream, the ordered blob request, and the complete `cat-file` response with
+SHA-256 digests and byte counts; the history receipt binds the exact Git log
+stream the same way. JSON is complete. Text sorting is a stated operational
+view, not a combined rank. SVG uses shared cross-language domains, raw-value
+ticks on log1p-positioned axes, separate absolute and normalized planes,
+explicit missingness, and independently named coordinate extrema. Point area
+encodes current SLOC only in the absolute plane. None of these coordinates
+establishes defect risk, maintenance cost, causal coupling, quality, or a
+refactoring requirement.
+
 ### Implemented one-off source instruments
 
 The one-off source tools run in-process over a shared tree-sitter file walker.
@@ -117,16 +152,13 @@ bar scale, or area encoding that implies unlike units are commensurate.
 
 The next useful families are ordered by decision value and instrument honesty:
 
-1. Join the existing bounded Git change observations to static complexity as a
-   two-coordinate hotspot view; keep churn, current size, window, and history
-   status separate rather than multiplying them into a risk score.
-2. Import native runtime coverage artifacts as executed/coverable counts and
+1. Import native runtime coverage artifacts as executed/coverable counts and
    uncovered locations with run provenance; coverage is not correctness.
-3. Add compiler- or language-server-resolved call, type, member, and inheritance
+2. Add compiler- or language-server-resolved call, type, member, and inheritance
    edges as separate coupling relations; never collapse them into one CBO value.
-4. Add TCC/LCC method-state cohesion only for languages and constructs where
+3. Add TCC/LCC method-state cohesion only for languages and constructs where
    instance-field access can be resolved, preserving method-pair denominators.
-5. Add build/test queue and execution tails when CI telemetry is available;
+4. Add build/test queue and execution tails when CI telemetry is available;
    those measure developer friction, not intrinsic source quality.
 
 Universal smell thresholds, letter grades, weighted maintainability scores,

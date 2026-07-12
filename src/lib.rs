@@ -6,6 +6,7 @@
 pub mod api_surface;
 pub mod audit;
 pub mod benchmark;
+pub mod change_profile;
 pub mod compare;
 pub mod deps;
 pub mod duplicates;

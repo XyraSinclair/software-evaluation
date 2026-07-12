@@ -277,6 +277,41 @@ pub enum MetricSort {
     HalsteadEffort,
 }
 
+pub(crate) fn supports_path(path: &Path) -> bool {
+    language_for_path(path).is_some()
+}
+
+pub(crate) fn analyze_committed_files(
+    root: &Path,
+    files: Vec<(PathBuf, String, Vec<u8>)>,
+) -> Result<MetricsReport, MetricsError> {
+    let started = Instant::now();
+    let candidates = files
+        .into_iter()
+        .map(|(path, display, bytes)| (root.join(path), Some(display), Some(bytes)))
+        .collect::<Vec<_>>();
+    analyze_candidates(root, root, candidates, started)
+}
+
+fn discover_directory_files(input: &Path) -> Result<Vec<PathBuf>, MetricsError> {
+    let mut paths = Vec::new();
+    let mut walker = WalkBuilder::new(input);
+    walker
+        .follow_links(false)
+        .standard_filters(true)
+        .require_git(false);
+    for entry in walker.build() {
+        let entry = entry.map_err(|error| MetricsError::Traversal {
+            path: input.to_owned(),
+            message: error.to_string(),
+        })?;
+        if entry.file_type().is_some_and(|kind| kind.is_file()) {
+            paths.push(entry.into_path());
+        }
+    }
+    Ok(paths)
+}
+
 pub fn analyze_path(input: &Path) -> Result<MetricsReport, MetricsError> {
     let started = Instant::now();
     let metadata = fs::symlink_metadata(input).map_err(|source| {
@@ -297,22 +332,7 @@ pub fn analyze_path(input: &Path) -> Result<MetricsReport, MetricsError> {
         let root = input.parent().unwrap_or_else(|| Path::new(".")).to_owned();
         (root, vec![input.to_owned()])
     } else if metadata.is_dir() {
-        let mut paths = Vec::new();
-        let mut walker = WalkBuilder::new(input);
-        walker
-            .follow_links(false)
-            .standard_filters(true)
-            .require_git(false);
-        for entry in walker.build() {
-            let entry = entry.map_err(|error| MetricsError::Traversal {
-                path: input.to_owned(),
-                message: error.to_string(),
-            })?;
-            if entry.file_type().is_some_and(|kind| kind.is_file()) {
-                paths.push(entry.into_path());
-            }
-        }
-        (input.to_owned(), paths)
+        (input.to_owned(), discover_directory_files(input)?)
     } else {
         return Err(MetricsError::Traversal {
             path: input.to_owned(),
@@ -320,14 +340,39 @@ pub fn analyze_path(input: &Path) -> Result<MetricsReport, MetricsError> {
         });
     };
 
-    let mut candidates = candidates;
-    candidates.sort_by_key(|path| normalized_relative(&root, path));
+    analyze_candidates(
+        input,
+        &root,
+        candidates
+            .into_iter()
+            .map(|path| (path, None, None))
+            .collect(),
+        started,
+    )
+}
+
+fn analyze_candidates(
+    reported_input: &Path,
+    root: &Path,
+    mut candidates: Vec<(PathBuf, Option<String>, Option<Vec<u8>>)>,
+    started: Instant,
+) -> Result<MetricsReport, MetricsError> {
+    candidates.sort_by(|(left_path, left_name, _), (right_path, right_name, _)| {
+        left_name
+            .as_ref()
+            .map_or_else(|| normalized_relative(root, left_path), Clone::clone)
+            .cmp(
+                &right_name
+                    .as_ref()
+                    .map_or_else(|| normalized_relative(root, right_path), Clone::clone),
+            )
+    });
     let enumerated = candidates.len();
     let mut skipped = 0;
     let supported = candidates
         .into_iter()
-        .filter_map(|path| match language_for_path(&path) {
-            Some(language) => Some((path, language)),
+        .filter_map(|(path, relative, bytes)| match language_for_path(&path) {
+            Some(language) => Some((path, relative, bytes, language)),
             None => {
                 skipped += 1;
                 None
@@ -336,14 +381,17 @@ pub fn analyze_path(input: &Path) -> Result<MetricsReport, MetricsError> {
         .collect::<Vec<_>>();
 
     let analyzed = supported
-        .par_iter()
-        .map(|(path, language)| {
-            let relative = relative_path(&root, path)?;
-            let bytes = fs::read(path).map_err(|source| MetricsError::Read {
-                path: path.clone(),
-                source,
-            })?;
-            let source = Source::from_bytes(*language, bytes).with_name(Some(relative.clone()));
+        .into_par_iter()
+        .map(|(path, relative, bytes, language)| {
+            let relative = relative.map_or_else(|| relative_path(root, &path), Ok)?;
+            let bytes = match bytes {
+                Some(bytes) => bytes,
+                None => fs::read(&path).map_err(|source| MetricsError::Read {
+                    path: path.clone(),
+                    source,
+                })?,
+            };
+            let source = Source::from_bytes(language, bytes).with_name(Some(relative.clone()));
             let options = MetricsOptions::default().with_only(&[
                 Metric::Abc,
                 Metric::Cognitive,
@@ -363,7 +411,7 @@ pub fn analyze_path(input: &Path) -> Result<MetricsReport, MetricsError> {
                     message: error.to_string(),
                 })?;
             let wire = space.to_wire();
-            let language_name = if *language == LANG::Tsx {
+            let language_name = if language == LANG::Tsx {
                 "typescript"
             } else {
                 language.name()
@@ -396,7 +444,7 @@ pub fn analyze_path(input: &Path) -> Result<MetricsReport, MetricsError> {
     let rates = metric_rates(&summary);
     let distributions = function_distributions(&functions);
     Ok(MetricsReport {
-        root: normalized_path(input)?,
+        root: normalized_path(reported_input)?,
         analyzer: "big-code-analysis 2.0.0".to_owned(),
         coverage: Coverage {
             enumerated,

@@ -443,6 +443,9 @@ fn two_repository_programs_complete_with_zero_dollars_and_auditable_receipts() {
     assert_eq!(run.remaining.programs, 0);
     assert_eq!(run.steps[0].receipt.status, ProgramStatus::Completed);
     assert_eq!(run.steps[1].receipt.status, ProgramStatus::Completed);
+    assert_eq!(run.steps[0].receipt.program.version, "1");
+    assert_eq!(run.steps[1].receipt.program.id, "repo.git-change-shape");
+    assert_eq!(run.steps[1].receipt.program.version, "2");
     assert_ne!(
         run.steps[0].receipt.program.id,
         run.steps[1].receipt.program.id
@@ -453,16 +456,18 @@ fn two_repository_programs_complete_with_zero_dollars_and_auditable_receipts() {
         ["ls-tree", "-r", "-z", "--long", &artifact.revision],
     )
     .stdout;
+    // v2 receipts the full timestamp-aware N+1 probe, not the truncated parsed window:
+    // requested N=2 therefore independently reconstructs `git log -n 3` byte-for-byte.
     let history_stdout = git(
         repository.path(),
         [
             "log",
             "--no-merges",
             "--no-renames",
-            "--format=%x1e%H",
+            "--format=%x1e%H%x00%ct%x00",
             "--numstat",
             "-n",
-            "2",
+            "3",
             &artifact.revision,
             "--",
         ],

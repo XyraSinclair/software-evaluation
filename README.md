@@ -57,6 +57,7 @@ $ cargo run -- audit evaluations/forward-cycle1-20260709
 $ cargo run -- plan examples/audit-plan.json
 $ cargo run -- repo-profile /path/to/clean/repo --format json
 $ cargo run -- repo-compare /path/to/left /path/to/right --format json
+$ cargo run --release -- change-profile /path/to/clean/repo --history-commits 200 --format svg
 $ cargo run --release -- metrics /path/to/repo
 $ cargo run --release -- functions /path/to/repo --sort cognitive --top 30
 $ cargo run --release -- files /path/to/repo --sort maintainability --top 30
@@ -85,6 +86,18 @@ SHA-256 digest, resource vector, limitations, and a kernel-measured receipt.
 both repositories, rejects incomplete or structurally incompatible results,
 and reports `right - left` at matched JSON Pointer paths. Delta direction is
 not quality direction.
+
+`change-profile` is a third commit-pinned repository instrument. It enumerates
+all regular blobs at `HEAD`, selects supported source extensions whose raw Git
+paths are UTF-8, reads the selected objects from Git rather than from the
+worktree, and joins their current AST structure to up to N non-merge history
+commits by exact raw path bytes. Worktree ignore rules do not alter this
+committed-tree denominator. JSON preserves every row; text provides a bounded
+operational table; SVG renders paired absolute and size-normalized language
+facets with raw-value log ticks, explicit missingness, coordinate extrema, and
+a bounded history-only ledger. The output never multiplies change, size, and
+complexity into a score. Tree, blob-batch, and history receipts retain exact
+Git commands, versions, byte counts, and SHA-256 digests.
 
 The worktree instruments analyze the current file or directory, not a commit
 snapshot. Their shared walker respects ignore files, does not follow symlinks,

@@ -7,9 +7,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
 use std::fs;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -296,7 +296,7 @@ impl CriterionProgram for GitChangeShapeProgram {
     fn descriptor(&self) -> ProgramDescriptor {
         ProgramDescriptor {
             id: "repo.git-change-shape".to_owned(),
-            version: "1".to_owned(),
+            version: "2".to_owned(),
             criterion: "evolvability.change-topology".to_owned(),
             epistemic_class: EpistemicClass::Proxy,
             deterministic: true,
@@ -314,41 +314,238 @@ impl CriterionProgram for GitChangeShapeProgram {
 
     fn run(&self, context: &ProgramContext<'_>) -> Result<ProgramOutput, ProgramFailure> {
         let artifact = context.artifact;
-        let args = vec![
-            OsString::from("log"),
-            OsString::from("--no-merges"),
-            OsString::from("--no-renames"),
-            OsString::from("--format=%x1e%H"),
-            OsString::from("--numstat"),
-            OsString::from("-n"),
-            OsString::from(self.config.history_commits.to_string()),
-            OsString::from(&artifact.revision),
-            OsString::from("--"),
-        ];
-        let command = run_git_os(Some(&artifact.root), &args).map_err(repo_tool_failure)?;
-        let git_version = read_git_version().map_err(repo_tool_failure)?;
-        let commits =
-            parse_git_log(&command.stdout, &command.command).map_err(repo_tool_failure)?;
-        let limitations = change_limitations(&git_version, self.config.history_commits);
-        let observation =
-            build_change_shape(self.config.history_commits, commits, limitations.clone())?;
+        let history =
+            scan_file_history(artifact, self.config.history_commits).map_err(repo_tool_failure)?;
+        let limitations = change_limitations(&history.git_version, self.config.history_commits);
+        let observation = build_change_shape(
+            self.config.history_commits,
+            history.commits,
+            limitations.clone(),
+        )?;
         let observation = serde_json::to_value(observation).map_err(|error| {
             ProgramFailure::invariant(format!("could not serialize Git change shape: {error}"))
         })?;
 
         Ok(ProgramOutput {
             observation,
-            evidence: vec![git_evidence(
-                &command,
-                &git_version,
-                "Raw commit-separated Git numstat history used for change-shape metrics",
-            )],
+            evidence: vec![EvidenceItem {
+                kind: "git-command-stdout".to_owned(),
+                locator: history.command.clone(),
+                digest: Some(history.stdout_sha256.clone()),
+                description: format!(
+                    "Raw commit-separated Git numstat history used for change-shape metrics; executable reported {}",
+                    history.git_version
+                ),
+            }],
             belief_updates: Vec::new(),
-            resources: output_resources(command.stdout.len())?,
+            resources: output_resources(usize::try_from(history.stdout_bytes).map_err(|_| {
+                ProgramFailure::invariant("Git stdout length cannot be represented as usize")
+            })?)?,
             continuation_hints: Vec::new(),
             limitations,
         })
     }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub(crate) struct CommittedRegularFile {
+    pub(crate) path: Vec<u8>,
+    pub(crate) size: u64,
+    pub(crate) mode: Vec<u8>,
+    pub(crate) oid: Vec<u8>,
+}
+
+#[derive(Debug)]
+pub(crate) struct FileHistoryScan {
+    pub(crate) commits: Vec<ParsedCommit>,
+    pub(crate) truncated: bool,
+    pub(crate) git_version: String,
+    pub(crate) command: String,
+    pub(crate) stdout_sha256: String,
+    pub(crate) stdout_bytes: u64,
+}
+#[derive(Debug)]
+pub(crate) struct CommittedTreeScan {
+    pub(crate) files: Vec<CommittedRegularFile>,
+    pub(crate) command: String,
+    pub(crate) stdout_sha256: String,
+    pub(crate) stdout_bytes: u64,
+    pub(crate) git_version: String,
+}
+
+#[derive(Debug)]
+pub(crate) struct CommittedBlobRead {
+    pub(crate) blobs: Vec<Vec<u8>>,
+    pub(crate) command: String,
+    pub(crate) request_sha256: String,
+    pub(crate) stdout_sha256: String,
+    pub(crate) stdout_bytes: u64,
+}
+
+pub(crate) fn scan_committed_regular_files(
+    artifact: &ArtifactSnapshot,
+) -> Result<CommittedTreeScan, RepoError> {
+    let args = vec![
+        OsString::from("ls-tree"),
+        OsString::from("-r"),
+        OsString::from("-z"),
+        OsString::from("--long"),
+        OsString::from(&artifact.revision),
+    ];
+    let output = run_git_os(Some(&artifact.root), &args)?;
+    let stdout_bytes = u64::try_from(output.stdout.len())
+        .map_err(|_| git_parse(&output.command, "ls-tree stdout length overflowed u64"))?;
+    let files = parse_ls_tree(&output.stdout, &output.command)?
+        .into_iter()
+        .filter(|entry| matches!(entry.mode.as_slice(), b"100644" | b"100755"))
+        .map(|entry| CommittedRegularFile {
+            path: entry.path,
+            size: entry.size,
+            mode: entry.mode,
+            oid: entry.oid,
+        })
+        .collect();
+    Ok(CommittedTreeScan {
+        files,
+        command: output.command,
+        stdout_sha256: sha256_hex(&output.stdout),
+        stdout_bytes,
+        git_version: read_git_version()?,
+    })
+}
+
+pub(crate) fn read_committed_blobs(
+    artifact: &ArtifactSnapshot,
+    files: &[CommittedRegularFile],
+) -> Result<CommittedBlobRead, RepoError> {
+    let command_name = argv_locator(&[
+        OsString::from("git"),
+        OsString::from("-C"),
+        artifact.root.as_os_str().to_owned(),
+        OsString::from("cat-file"),
+        OsString::from("--batch"),
+    ]);
+    let mut request = Vec::new();
+    for file in files {
+        request.extend_from_slice(&file.oid);
+        request.push(b'\n');
+    }
+    let request_sha256 = sha256_hex(&request);
+    let mut child = Command::new("git")
+        .arg("-C")
+        .arg(&artifact.root)
+        .args(["cat-file", "--batch"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|source| RepoError::GitInvocation {
+            command: command_name.clone(),
+            source,
+        })?;
+    let mut stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| git_parse(&command_name, "cat-file stdin was unavailable"))?;
+    let writer = std::thread::spawn(move || stdin.write_all(&request));
+    let output = child.wait_with_output();
+    let write_result = writer
+        .join()
+        .map_err(|_| git_parse(&command_name, "cat-file stdin writer panicked"))?;
+    write_result.map_err(|source| RepoError::GitInvocation {
+        command: command_name.clone(),
+        source,
+    })?;
+    let output = output.map_err(|source| RepoError::GitInvocation {
+        command: command_name.clone(),
+        source,
+    })?;
+    let output = successful_git_output(command_name.clone(), output)?;
+    let mut remaining = output.stdout.as_slice();
+    let mut blobs = Vec::with_capacity(files.len());
+    for file in files {
+        let newline = remaining
+            .iter()
+            .position(|byte| *byte == b'\n')
+            .ok_or_else(|| git_parse(&command_name, "cat-file response header was unterminated"))?;
+        let header = &remaining[..newline];
+        remaining = &remaining[newline + 1..];
+        let fields = header.split(|byte| *byte == b' ').collect::<Vec<_>>();
+        if fields.len() != 3 || fields[0] != file.oid || fields[1] != b"blob" {
+            return Err(git_parse(
+                &command_name,
+                "cat-file response identity or type did not match request",
+            ));
+        }
+        let size = parse_u64_ascii(fields[2])
+            .ok_or_else(|| git_parse(&command_name, "cat-file response had invalid size"))?;
+        if size != file.size {
+            return Err(git_parse(
+                &command_name,
+                "cat-file blob size disagreed with committed tree",
+            ));
+        }
+        let size = usize::try_from(size)
+            .map_err(|_| git_parse(&command_name, "cat-file blob size exceeded usize"))?;
+        let blob = remaining
+            .get(..size)
+            .ok_or_else(|| git_parse(&command_name, "cat-file blob was truncated"))?;
+        if remaining.get(size) != Some(&b'\n') {
+            return Err(git_parse(
+                &command_name,
+                "cat-file blob lacked trailing delimiter",
+            ));
+        }
+        blobs.push(blob.to_vec());
+        remaining = &remaining[size + 1..];
+    }
+    if !remaining.is_empty() {
+        return Err(git_parse(&command_name, "cat-file returned trailing bytes"));
+    }
+    let stdout_bytes = u64::try_from(output.stdout.len())
+        .map_err(|_| git_parse(&command_name, "cat-file stdout length overflowed u64"))?;
+    Ok(CommittedBlobRead {
+        blobs,
+        command: command_name,
+        request_sha256,
+        stdout_sha256: sha256_hex(&output.stdout),
+        stdout_bytes,
+    })
+}
+
+pub(crate) fn scan_file_history(
+    artifact: &ArtifactSnapshot,
+    requested_commits: usize,
+) -> Result<FileHistoryScan, RepoError> {
+    let fetch = requested_commits.checked_add(1).ok_or_else(|| {
+        RepoError::InvalidConfig("history commit count overflowed usize".to_owned())
+    })?;
+    let args = vec![
+        OsString::from("log"),
+        OsString::from("--no-merges"),
+        OsString::from("--no-renames"),
+        OsString::from("--format=%x1e%H%x00%ct%x00"),
+        OsString::from("--numstat"),
+        OsString::from("-n"),
+        OsString::from(fetch.to_string()),
+        OsString::from(&artifact.revision),
+        OsString::from("--"),
+    ];
+    let output = run_git_os(Some(&artifact.root), &args)?;
+    let mut commits = parse_git_log(&output.stdout, &output.command)?;
+    let truncated = commits.len() > requested_commits;
+    commits.truncate(requested_commits);
+    let stdout_bytes = u64::try_from(output.stdout.len())
+        .map_err(|_| git_parse(&output.command, "stdout byte length overflowed u64"))?;
+    Ok(FileHistoryScan {
+        commits,
+        truncated,
+        git_version: read_git_version()?,
+        command: output.command,
+        stdout_sha256: sha256_hex(&output.stdout),
+        stdout_bytes,
+    })
 }
 
 #[derive(Debug)]
@@ -522,6 +719,8 @@ fn sha256_hex(bytes: &[u8]) -> String {
 struct TreeEntry {
     path: Vec<u8>,
     size: u64,
+    mode: Vec<u8>,
+    oid: Vec<u8>,
 }
 
 fn parse_ls_tree(bytes: &[u8], command: &str) -> Result<Vec<TreeEntry>, RepoError> {
@@ -559,6 +758,8 @@ fn parse_ls_tree(bytes: &[u8], command: &str) -> Result<Vec<TreeEntry>, RepoErro
                 entries.push(TreeEntry {
                     path: path.to_vec(),
                     size,
+                    mode: fields[0].to_vec(),
+                    oid: fields[2].to_vec(),
                 });
             }
             b"commit" | b"tree" => {
@@ -673,14 +874,16 @@ fn build_static_shape(
 }
 
 #[derive(Debug)]
-struct ParsedCommit {
-    files: BTreeMap<Vec<u8>, CommitFile>,
+pub(crate) struct ParsedCommit {
+    pub(crate) committer_unix_seconds: i64,
+    pub(crate) files: BTreeMap<Vec<u8>, CommitFile>,
 }
 
 #[derive(Debug, Clone, Copy)]
-struct CommitFile {
-    line_mass: u64,
-    binary: bool,
+pub(crate) struct CommitFile {
+    pub(crate) line_mass: u64,
+    pub(crate) text: bool,
+    pub(crate) binary: bool,
 }
 
 fn parse_git_log(bytes: &[u8], command: &str) -> Result<Vec<ParsedCommit>, RepoError> {
@@ -703,16 +906,24 @@ fn parse_git_log(bytes: &[u8], command: &str) -> Result<Vec<ParsedCommit>, RepoE
         if section.iter().all(u8::is_ascii_whitespace) {
             continue;
         }
-        let mut lines = section.split(|byte| *byte == b'\n');
-        let raw_hash = lines.next().unwrap_or_default();
-        let hash = raw_hash.strip_suffix(b"\r").unwrap_or(raw_hash);
+        let (hash, remainder) = split_once_byte(section, 0)
+            .ok_or_else(|| git_parse(command, "commit header has no hash terminator"))?;
         if !matches!(hash.len(), 40 | 64) || !hash.iter().all(u8::is_ascii_hexdigit) {
             return Err(git_parse(
                 command,
                 "commit section has an invalid object id",
             ));
         }
-
+        let (timestamp, numstat) = split_once_byte(remainder, 0)
+            .ok_or_else(|| git_parse(command, "commit header has no timestamp terminator"))?;
+        let timestamp = std::str::from_utf8(timestamp)
+            .ok()
+            .and_then(|value| value.parse::<i64>().ok())
+            .ok_or_else(|| {
+                git_parse(command, "commit section has an invalid committer timestamp")
+            })?;
+        let numstat = numstat.strip_prefix(b"\n").unwrap_or(numstat);
+        let lines = numstat.split(|byte| *byte == b'\n');
         let mut files: BTreeMap<Vec<u8>, CommitFile> = BTreeMap::new();
         for raw_line in lines {
             let line = raw_line.strip_suffix(b"\r").unwrap_or(raw_line);
@@ -764,11 +975,22 @@ fn parse_git_log(bytes: &[u8], command: &str) -> Result<Vec<ParsedCommit>, RepoE
                     .checked_add(line_mass)
                     .ok_or_else(|| git_parse(command, "duplicate path line mass overflowed u64"))?;
                 existing.binary |= binary;
+                existing.text |= !binary;
             } else {
-                files.insert(path, CommitFile { line_mass, binary });
+                files.insert(
+                    path,
+                    CommitFile {
+                        line_mass,
+                        text: !binary,
+                        binary,
+                    },
+                );
             }
         }
-        commits.push(ParsedCommit { files });
+        commits.push(ParsedCommit {
+            committer_unix_seconds: timestamp,
+            files,
+        });
     }
 
     if commits.is_empty() {
@@ -1513,4 +1735,57 @@ fn change_limitations(git_version: &str, requested_commits: usize) -> Vec<String
         "Commit topology and line counts do not measure correctness, complexity, maintainability, security, or user value.".to_owned(),
         format!("Git is an external dependency ({git_version}); deterministic replay is scoped to the commit, requested history, classifier, command, and Git behavior, not claimed byte-for-byte across Git versions."),
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_git_log, parse_ls_tree};
+
+    #[test]
+    fn duplicate_text_and_binary_rows_retain_both_observations_once_per_commit() {
+        let mut stdout = Vec::new();
+        stdout.extend_from_slice(b"\x1eaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\0978397200\0\n");
+        stdout.extend_from_slice(b"2\t3\tsrc/mixed.rs\n");
+        stdout.extend_from_slice(b"-\t-\tsrc/mixed.rs\n");
+
+        let commits = parse_git_log(&stdout, "synthetic git log")
+            .expect("synthetic timestamp-aware numstat must parse");
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].committer_unix_seconds, 978_397_200);
+        // One map entry is the independent per-commit dedup oracle: downstream
+        // commits_touched iterates this map and therefore counts this path once.
+        assert_eq!(commits[0].files.len(), 1);
+        let observation = commits[0]
+            .files
+            .get(b"src/mixed.rs".as_slice())
+            .expect("raw path identity retained");
+        assert_eq!(observation.line_mass, 5, "2 additions + 3 deletions");
+        assert!(
+            observation.text,
+            "textual mass observation must survive binary row"
+        );
+        assert!(
+            observation.binary,
+            "binary observation must survive textual row"
+        );
+    }
+
+    #[test]
+    fn tree_parser_preserves_non_utf8_path_bytes_for_explicit_filtering() {
+        let raw_path = b"src/raw-\xff.rs";
+        let mut stdout = b"100644 blob aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 17\t".to_vec();
+        stdout.extend_from_slice(raw_path);
+        stdout.push(0);
+
+        let entries = parse_ls_tree(&stdout, "synthetic git ls-tree")
+            .expect("raw-byte tree record must parse");
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].path, raw_path);
+        assert_eq!(entries[0].size, 17);
+        assert_eq!(entries[0].mode, b"100644");
+        assert!(
+            std::str::from_utf8(&entries[0].path).is_err(),
+            "non-UTF8 Git path is excluded from current metrics even when its blob contents are ASCII"
+        );
+    }
 }
