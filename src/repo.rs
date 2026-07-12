@@ -448,6 +448,9 @@ pub(crate) fn read_committed_blobs(
         .stdin
         .take()
         .ok_or_else(|| git_parse(&command_name, "cat-file stdin was unavailable"))?;
+    // `cat-file` streams a response per request. Write stdin while
+    // `wait_with_output` drains stdout, or large batches can deadlock when both
+    // pipes fill.
     let writer = std::thread::spawn(move || stdin.write_all(&request));
     let output = child.wait_with_output();
     let write_result = writer
