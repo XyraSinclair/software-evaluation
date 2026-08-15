@@ -64,8 +64,12 @@ pub struct DependencyPropagation {
     pub possible_nonself_pairs: Option<usize>,
     pub nonself_propagation_fraction: Option<f64>,
     /// Ordered pairs (u, v), u != v, with u and v in the same strongly connected
-    /// component: sum over SCC sizes s of s * (s - 1). Exact from Tarjan output.
-    pub mutually_reachable_pairs: usize,
+    /// component: sum over SCC sizes s of s * (s - 1). Exact from Tarjan
+    /// output; u128 so the integers are architecture-independent.
+    pub mutually_reachable_pairs: u128,
+    /// n * (n - 1), the denominator of the fraction below; None for fewer than
+    /// two files. The integers are authoritative; the f64 is display.
+    pub mutual_possible_pairs: Option<u128>,
     /// mutually_reachable_pairs over n * (n - 1); None for fewer than two files.
     /// The fraction of ordered file pairs with no one-directional reading order.
     pub mutual_reachability_fraction: Option<f64>,
@@ -84,7 +88,7 @@ pub struct DependencyPropagation {
     /// reported over W*(W-1) of its own weak component. Argmax is exact
     /// (integer cross-multiplication), ties broken toward the larger
     /// component.
-    pub worst_weak_component_mutually_reachable_pairs: usize,
+    pub worst_weak_component_mutually_reachable_pairs: u128,
     pub worst_weak_component_files: usize,
     pub worst_weak_component_mutual_reachability_fraction: Option<f64>,
 }
@@ -121,8 +125,12 @@ pub struct LayoutPartition {
     pub cross_community_edge_fraction: Option<f64>,
     /// Newman–Girvan modularity `Q = Σ_c [ e_c/m − (d_c/2m)² ]` with `m`
     /// undirected edges, `e_c` edges inside `c`, `d_c` the degree sum of nodes
-    /// in `c`; `None` when `m = 0`.
+    /// in `c`; `None` when `m = 0`. Derived from the exact rational below.
     pub modularity: Option<f64>,
+    /// Exact rational form of Q: signed numerator `Σ_c (4m·e_c − d_c²)` over
+    /// denominator `4m²`. The integers are authoritative; the f64 is display.
+    pub modularity_numerator: Option<i128>,
+    pub modularity_denominator: Option<u128>,
     /// Per-community rows, descending by crossing-edge count then path.
     pub rows: Vec<LayoutCommunity>,
 }
@@ -546,11 +554,12 @@ fn dependency_propagation(
     let source_fraction = |count| (source_files != 0).then_some(count as f64 / source_files as f64);
     let mutually_reachable_pairs = cycles
         .iter()
-        .map(|component| component.len() * (component.len() - 1))
-        .sum::<usize>();
-    let mutual_possible = source_files.checked_mul(source_files.saturating_sub(1));
-    let mutual_reachability_fraction = mutual_possible
-        .and_then(|possible| (possible != 0).then_some(mutually_reachable_pairs as f64 / possible as f64));
+        .map(|component| (component.len() as u128) * (component.len() as u128 - 1))
+        .sum::<u128>();
+    let mutual_possible_pairs =
+        (source_files >= 2).then(|| (source_files as u128) * (source_files as u128 - 1));
+    let mutual_reachability_fraction = mutual_possible_pairs
+        .map(|possible| mutually_reachable_pairs as f64 / possible as f64);
 
     let largest_weak_component_files = internal_weak.iter().map(Vec::len).max().unwrap_or(0);
     let member_component: BTreeMap<&str, usize> = internal_weak
@@ -558,15 +567,15 @@ fn dependency_propagation(
         .enumerate()
         .flat_map(|(index, files)| files.iter().map(move |file| (file.as_str(), index)))
         .collect();
-    let mut component_pairs = vec![0usize; internal_weak.len()];
+    let mut component_pairs = vec![0u128; internal_weak.len()];
     for component in cycles {
         if let Some(&index) = component.first().and_then(|f| member_component.get(f.as_str())) {
-            component_pairs[index] += component.len() * (component.len() - 1);
+            component_pairs[index] += (component.len() as u128) * (component.len() as u128 - 1);
         }
     }
     // Argmax of pairs/(W*(W-1)) by exact integer cross-multiplication; ties
     // toward the larger component, then earlier (sorted) component order.
-    let mut worst: Option<(usize, usize)> = None; // (pairs, files)
+    let mut worst: Option<(u128, usize)> = None; // (pairs, files)
     for (index, files) in internal_weak.iter().enumerate() {
         let w = files.len();
         if w < 2 {
@@ -576,8 +585,8 @@ fn dependency_propagation(
         let better = match worst {
             None => true,
             Some((best_pairs, best_w)) => {
-                let lhs = (pairs as u128) * (best_w as u128) * (best_w as u128 - 1);
-                let rhs = (best_pairs as u128) * (w as u128) * (w as u128 - 1);
+                let lhs = pairs * (best_w as u128) * (best_w as u128 - 1);
+                let rhs = best_pairs * (w as u128) * (w as u128 - 1);
                 lhs > rhs || (lhs == rhs && w > best_w)
             }
         };
@@ -599,6 +608,7 @@ fn dependency_propagation(
         possible_nonself_pairs,
         nonself_propagation_fraction,
         mutually_reachable_pairs,
+        mutual_possible_pairs,
         mutual_reachability_fraction,
         cyclic_components: cycles.len(),
         cyclic_source_files,
@@ -705,14 +715,17 @@ fn layout_partition(
             aggs.get_mut(ct).unwrap().in_edges += 1;
         }
     }
-    let modularity = (m != 0).then(|| {
+    let modularity_numerator = (m != 0).then(|| {
         aggs.values()
             .map(|agg| {
-                agg.intra_edges as f64 / m as f64
-                    - (agg.degree_sum as f64 / (2.0 * m as f64)).powi(2)
+                4 * (m as i128) * (agg.intra_edges as i128) - (agg.degree_sum as i128).pow(2)
             })
-            .sum()
+            .sum::<i128>()
     });
+    let modularity_denominator = (m != 0).then(|| 4 * (m as u128) * (m as u128));
+    let modularity = modularity_numerator
+        .zip(modularity_denominator)
+        .map(|(numerator, denominator)| numerator as f64 / denominator as f64);
     let cross_community_edge_fraction =
         (m != 0).then(|| cross_total as f64 / (intra_total + cross_total) as f64);
     let mut rows: Vec<LayoutCommunity> = aggs
@@ -736,6 +749,8 @@ fn layout_partition(
         cross_community_edges: cross_total,
         cross_community_edge_fraction,
         modularity,
+        modularity_numerator,
+        modularity_denominator,
         rows,
     }
 }

@@ -95,6 +95,11 @@ pub struct CochangeLayoutReport {
     /// Upper bound on `total_pair_weight_ideal - total_pair_weight`, the mass lost
     /// to per-pair fixed-point truncation. Zero for two-file commits.
     pub total_pair_weight_quantization_bound: f64,
+    /// The same three masses as raw `weight_scale`-scaled integers — the
+    /// authoritative values from which the f64s above are derived.
+    pub total_pair_weight_scaled: u128,
+    pub total_pair_weight_ideal_scaled: u128,
+    pub total_pair_weight_quantization_bound_scaled: u128,
     pub partitions: Vec<CochangePartition>,
     pub limitations: Vec<String>,
 }
@@ -144,11 +149,19 @@ pub struct CochangePartition {
     pub communities: usize,
     pub intra_weight: f64,
     pub cross_weight: f64,
+    /// Raw scaled-integer twins of the two masses above (authoritative).
+    pub intra_weight_scaled: u128,
+    pub cross_weight_scaled: u128,
     /// `cross / (intra + cross)`; `None` when the total pair mass is zero.
     pub cross_weight_fraction: Option<f64>,
     /// Weighted Newman modularity `Q = Σ_c [ e_c/W − (d_c/2W)² ]`; `None` when
-    /// the total pair mass `W` is zero.
+    /// the total pair mass `W` is zero. Derived from the exact rational below,
+    /// computed in scaled-integer units (the scale cancels in the ratio).
     pub modularity: Option<f64>,
+    /// Exact rational form of Q: signed numerator `Σ_c (4W·e_c − d_c²)` over
+    /// denominator `4W²`, all in scaled units. Integers authoritative.
+    pub modularity_numerator: Option<i128>,
+    pub modularity_denominator: Option<u128>,
     /// Per-community rows, descending by crossing weight then path.
     pub rows: Vec<CochangeCommunity>,
 }
@@ -162,6 +175,9 @@ pub struct CochangeCommunity {
     /// Mass of pairs with exactly one endpoint in this community (`d_c − 2·e_c`);
     /// each crossing pair is counted at both of its communities.
     pub cross_weight: f64,
+    /// Raw scaled-integer twins of the two masses above (authoritative).
+    pub intra_weight_scaled: u128,
+    pub cross_weight_scaled: u128,
 }
 
 #[derive(Default)]
@@ -224,15 +240,20 @@ impl PartitionAccumulator {
         let cross = total
             .checked_sub(self.intra)
             .ok_or_else(|| CochangeLayoutError::Invariant("intra mass exceeded total".to_owned()))?;
-        let modularity = (total != 0).then(|| {
-            let w = total as f64;
+        // Exact rational Q in scaled units: Σ_c (4W·e_c − d_c²) over 4W².
+        // The fixed-point scale cancels in the ratio.
+        let modularity_numerator = (total != 0).then(|| {
             self.masses
                 .values()
                 .map(|mass| {
-                    mass.intra as f64 / w - (mass.strength as f64 / (2.0 * w)).powi(2)
+                    4 * (total as i128) * (mass.intra as i128) - (mass.strength as i128).pow(2)
                 })
-                .sum()
+                .sum::<i128>()
         });
+        let modularity_denominator = (total != 0).then(|| 4 * total * total);
+        let modularity = modularity_numerator
+            .zip(modularity_denominator)
+            .map(|(numerator, denominator)| numerator as f64 / denominator as f64);
         let cross_weight_fraction = (total != 0).then(|| cross as f64 / total as f64);
         let mut rows = self
             .file_counts
@@ -251,12 +272,14 @@ impl PartitionAccumulator {
                     files,
                     intra_weight: unit_weight(intra),
                     cross_weight: unit_weight(crossing),
+                    intra_weight_scaled: intra,
+                    cross_weight_scaled: crossing,
                 })
             })
             .collect::<Result<Vec<_>, CochangeLayoutError>>()?;
         rows.sort_by(|a, b| {
-            b.cross_weight
-                .total_cmp(&a.cross_weight)
+            b.cross_weight_scaled
+                .cmp(&a.cross_weight_scaled)
                 .then_with(|| a.path.cmp(&b.path))
         });
         Ok(CochangePartition {
@@ -264,8 +287,12 @@ impl PartitionAccumulator {
             communities: self.file_counts.len(),
             intra_weight: unit_weight(self.intra),
             cross_weight: unit_weight(cross),
+            intra_weight_scaled: self.intra,
+            cross_weight_scaled: cross,
             cross_weight_fraction,
             modularity,
+            modularity_numerator,
+            modularity_denominator,
             rows,
         })
     }
@@ -426,6 +453,9 @@ pub fn analyze_cochange_layout(
         total_pair_weight: unit_weight(total_mass),
         total_pair_weight_ideal: eligible_commits as f64,
         total_pair_weight_quantization_bound: unit_weight(ideal_mass - total_mass),
+        total_pair_weight_scaled: total_mass,
+        total_pair_weight_ideal_scaled: ideal_mass,
+        total_pair_weight_quantization_bound_scaled: ideal_mass - total_mass,
         partitions,
         limitations: limitations(config.history_commits),
     })

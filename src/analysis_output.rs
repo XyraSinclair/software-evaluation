@@ -79,7 +79,7 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
         "mutual reachability: {}/{} ordered same-component pairs (fraction={})",
         propagation.mutually_reachable_pairs,
         propagation
-            .possible_nonself_pairs
+            .mutual_possible_pairs
             .map_or_else(|| "n/a".to_owned(), |value| value.to_string()),
         propagation
             .mutual_reachability_fraction
@@ -89,7 +89,8 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
         "  within worst weak component: {}/{} pairs over {} files (fraction={}); {} weak components, largest {} files",
         propagation.worst_weak_component_mutually_reachable_pairs,
         if propagation.worst_weak_component_files >= 2 {
-            (propagation.worst_weak_component_files * (propagation.worst_weak_component_files - 1))
+            ((propagation.worst_weak_component_files as u128)
+                * (propagation.worst_weak_component_files as u128 - 1))
                 .to_string()
         } else {
             "n/a".to_owned()
