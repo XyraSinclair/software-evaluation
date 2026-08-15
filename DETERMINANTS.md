@@ -280,6 +280,33 @@ vertical-slice commits; low-static/high-co-change is produced by successful
 dependency inversion (volatile plugins importing a stable kernel). The
 coordinate locates; the diagnosis needs the support cross-tab and a human.
 
+### Third wave (2026-08-15): the adjudicated set closes into instruments
+
+Ten of the twelve survivor rows and all six type-space determinants (T3 landed
+last) are now running instruments; only row 4 (task-grounded reader
+experimentation) and row 5 (balanced separator witness) remain gated, both
+deliberately, on the validation arm. The wave's own findings, in the spirit of
+the instruments measuring their maker:
+
+- The conductance certificate's 3-path component certifies λ₂ ≥ 1024/2^10 —
+  exactly P3's true normalized eigenvalue, a built-in ground-truth check that
+  the bisection and exact inertia agree with textbook spectra.
+- Louvain headroom 1896/12544 (~0.15) with directory-pure detected
+  communities: `src/` hides coupling subcommunities; the folder tree is not
+  wrong, it is coarse.
+- T3's generic-washing deflator fired on its own repository: 7 of 8 generic
+  parameters are `Into`/`AsRef`-bounded — nominally generic, morally concrete.
+- A broken fixture manifest had been silently able to abort `seval deps`
+  entirely (zero output on this very repo); unreadable manifests are now named
+  skips with reasons, the denominator stays honest, and the contract test pins
+  the new behavior.
+
+The standing empirical gate is unchanged: the validation arm (refactor-delta
+mining — do the determinants move the way theory predicts across accepted
+refactorings?) is what separates a coordinate system from a collection of
+numbers. Nothing above claims validity; it claims exactness, closure, and
+disclosed limitations.
+
 ## PL-theoretic determinants — the type-space arm
 
 Seat consult 2026-08-15 (Claude Opus, repo-grounded; full text was distilled
