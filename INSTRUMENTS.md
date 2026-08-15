@@ -176,6 +176,43 @@ cross-community edges, so $Q$ is a coordinate rather than a target. The graph is
 file-granularity only, and conservative import resolution leaves unresolved edges
 absent, so heavily unresolved code yields a partial partition.
 
+### Co-change layout profile
+
+Over the *same* two directory partitions as the static layout profile, but a
+different graph — the git co-change graph rather than resolved imports. The
+universe is every source-classified tracked blob with a UTF-8 path at the pinned
+revision (the change-profile eligibility rule minus its language-parser
+requirement, so a source file in any language participates). Each non-merge
+commit that touches $k \geq 2$ in-universe files contributes total pair mass
+$1$, spread as $1/\binom{k}{2}$ over every unordered pair of those files
+([Geipel & Schweitzer, 2012](https://doi.org/10.1109/TSE.2012.18)):
+
+- The two partitions are the identical `top_level` and `parent_directory`
+  communities the static profile scores.
+- Per partition it reports the intra- and cross-community pair mass, their cross
+  fraction (null when the total mass $W = 0$), and the weighted Newman
+  modularity $Q = \sum_c \left[ e_c/W - (d_c/2W)^2 \right]$ with $e_c$ the mass
+  fully inside community $c$ and $d_c$ the incident mass (null when $W = 0$).
+- Per-community rows carry the file count, intra mass, and the crossing mass
+  incident to the community (counted at both of its endpoints).
+- Total mass equals the eligible-commit count exactly; pair weights are stored
+  as fixed-point integers (scale $2^{40}$), so $\text{intra} + \text{cross} = W$
+  closes under integer addition while the reported quantization bound caps the
+  truncation. Rename detection is disabled and commits touching more than a
+  documented cap (100 in-universe files) are counted and excluded as broad.
+
+This is the maintenance-activity counterpart to the static layout $Q$: it asks
+whether the tree maps how the code *changes*, not how it *imports*. Read as a
+2-D coordinate against the static $Q$, never subtracted into one congruence
+score. **High static / low co-change** is a clean-looking layout that everyday
+maintenance keeps crossing; **low static / high co-change** is a tree whose
+imports cross boundaries but whose edits stay local. It shares the static
+profile's caveats — $Q$ only compares one partition to a configuration null,
+a single community scores near zero, over-splitting inflates crossing mass — and
+adds its own: co-change is correlation of edits (not causal coupling), squash and
+rebase rewrite the observed history, and commit granularity is Goodhart-exposed
+because splitting a coupled edit across commits lowers crossing mass for free.
+
 ### Metric admission queue
 
 The next useful families are ordered by decision value and instrument honesty

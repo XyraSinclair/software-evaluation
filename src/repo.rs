@@ -1181,6 +1181,13 @@ fn build_change_shape(
     })
 }
 
+/// Whether the repo-lexical classifier assigns this raw Git path to the
+/// `source` category. Shared with the co-change layout instrument, which admits
+/// every source-classified tracked path regardless of language-parser support.
+pub(crate) fn classified_source(path: &[u8]) -> bool {
+    classify_path(path) == CATEGORY_SOURCE
+}
+
 fn classify_path(path: &[u8]) -> &'static str {
     let lower = path.iter().map(u8::to_ascii_lowercase).collect::<Vec<_>>();
     let segments = lower.split(|byte| *byte == b'/').collect::<Vec<_>>();

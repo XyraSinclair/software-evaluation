@@ -1,6 +1,7 @@
 use std::cmp::Reverse;
 
 use software_evaluation::api_surface::ApiReport;
+use software_evaluation::cochange::CochangeLayoutReport;
 use software_evaluation::benchmark::{BenchmarkReport, RunReceipt};
 use software_evaluation::deps::DependencyReport;
 use software_evaluation::discipline::{
@@ -633,4 +634,71 @@ fn print_limitations(limitations: &[String]) {
     for limitation in limitations {
         println!("  - {limitation}");
     }
+}
+
+pub fn print_cochange_layout(report: &CochangeLayoutReport, top: usize) {
+    let artifact = serde_json::to_string(&report.artifact).unwrap_or_else(|_| "null".to_owned());
+    let h = &report.history_coverage;
+    let u = &report.universe_coverage;
+    let p = &report.source_provenance;
+    println!("cochange-layout analyzer={}", report.analyzer);
+    println!("artifact {artifact}");
+    println!(
+        "history requested_commits={} commits_streamed={} truncated={} eligible_commits={} broad_commits_excluded={} (cap={}) below_pair_threshold_commits={} earliest_committer_unix_seconds={} latest_committer_unix_seconds={}",
+        h.requested_commits,
+        h.commits_streamed,
+        h.truncated,
+        h.eligible_commits,
+        h.broad_commits_excluded,
+        h.broad_commit_cap,
+        h.below_pair_threshold_commits,
+        h.earliest_committer_unix_seconds
+            .map_or_else(|| "n/a".to_owned(), |v| v.to_string()),
+        h.latest_committer_unix_seconds
+            .map_or_else(|| "n/a".to_owned(), |v| v.to_string()),
+    );
+    println!(
+        "history_receipt git_version={} command={} stdout_sha256={} stdout_bytes={}",
+        h.git_version, h.command, h.stdout_sha256, h.stdout_bytes
+    );
+    println!(
+        "universe tracked_regular_files={} utf8_path_regular_files={} source_classified_files={} files_touched_in_history={} files_never_touched={}",
+        u.tracked_regular_files,
+        u.utf8_path_regular_files,
+        u.source_classified_files,
+        u.files_touched_in_history,
+        u.files_never_touched,
+    );
+    println!(
+        "source_tree_receipt git_version={} command={} stdout_sha256={} stdout_bytes={}",
+        p.git_version, p.ls_tree_command, p.ls_tree_stdout_sha256, p.ls_tree_stdout_bytes
+    );
+    println!(
+        "mass total_pair_weight={:.3} ideal={:.3} quantization_bound={:.3e} weight_scale={}",
+        report.total_pair_weight,
+        report.total_pair_weight_ideal,
+        report.total_pair_weight_quantization_bound,
+        report.weight_scale,
+    );
+    for partition in &report.partitions {
+        println!(
+            "  {}: communities={}, intra={:.3}, cross={:.3} (fraction={}), modularity Q={}",
+            partition.granularity,
+            partition.communities,
+            partition.intra_weight,
+            partition.cross_weight,
+            optional(partition.cross_weight_fraction),
+            optional(partition.modularity),
+        );
+        if !partition.rows.is_empty() {
+            println!("    {:<40} {:>6} {:>10} {:>10}", "PATH", "FILES", "INTRA", "CROSS");
+            for row in partition.rows.iter().take(top) {
+                println!(
+                    "    {:<40} {:>6} {:>10.3} {:>10.3}",
+                    row.path, row.files, row.intra_weight, row.cross_weight,
+                );
+            }
+        }
+    }
+    print_limitations(&report.limitations);
 }
