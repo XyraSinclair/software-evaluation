@@ -156,13 +156,18 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
     println!("analyzer: {}", report.analyzer);
     println!("root: {}", report.root);
     println!(
-        "coverage: {} source files / {} entries; {} declarations; {} manifests; syntax-error-files={}",
+        "coverage: {} source files / {} entries; {} declarations; {} manifests ({} unreadable, skipped); syntax-error-files={}",
         report.coverage.source_files_analyzed,
         report.coverage.filesystem_entries_enumerated,
         report.coverage.declarations_extracted,
         report.coverage.manifests_analyzed,
+        report.coverage.manifests_unreadable,
         report.syntax_error_files,
     );
+    for manifest in &report.unreadable_manifests {
+        let reason = manifest.reason.split_whitespace().collect::<Vec<_>>().join(" ");
+        println!("  unreadable manifest (skipped): {} — {reason}", manifest.path);
+    }
     println!(
         "graph: {} nodes, {} edges ({} internal, {} external, {} unresolved), {} weak components, {} cycles, condensation-depth={}",
         report.node_count,

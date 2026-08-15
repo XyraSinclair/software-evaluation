@@ -30,6 +30,7 @@ pub struct DependencyReport {
     pub coverage: DependencyCoverage,
     pub limitations: Vec<String>,
     pub syntax_error_files: usize,
+    pub unreadable_manifests: Vec<UnreadableManifest>,
     pub manifest_dependencies: Vec<ManifestDependency>,
     pub manifest_dependency_count: usize,
     pub non_registry_manifest_dependency_count: usize,
@@ -258,6 +259,19 @@ pub struct DependencyCoverage {
     pub declarations_extracted: usize,
     pub unique_edges: usize,
     pub manifests_analyzed: usize,
+    /// Manifests found but skipped because they could not be read or parsed;
+    /// each skip is named with its path and reason in `unreadable_manifests`.
+    pub manifests_unreadable: usize,
+}
+
+/// A manifest the inventory found but could not read or parse. Recorded and
+/// skipped rather than aborting the whole analysis: broken fixture manifests
+/// are common in real repositories, and an abort would make the denominator
+/// zero instead of honest.
+#[derive(Debug, Clone, Serialize)]
+pub struct UnreadableManifest {
+    pub path: String,
+    pub reason: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -489,7 +503,8 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         .count();
     let unresolved_edges = edges.len() - internal_edges - external_edges;
     let evidence_count = edges.iter().map(|e| e.evidence.len()).sum();
-    let (manifest_dependencies, manifest_count) = inventory_manifests(input)?;
+    let (manifest_dependencies, manifest_count, unreadable_manifests) =
+        inventory_manifests(input)?;
     let non_registry_manifest_dependency_count = manifest_dependencies
         .iter()
         .filter(|d| d.source_kind != ManifestSourceKind::Registry)
@@ -531,19 +546,22 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
             declarations_extracted: evidence_count,
             unique_edges: edges.len(),
             manifests_analyzed: manifest_count,
+            manifests_unreadable: unreadable_manifests.len(),
         },
-        limitations: vec![
-            "Syntax-error trees are analyzed error-tolerantly; declarations from those files may be partial.".to_owned(),
-            "Resolution is filesystem-only: no Cargo metadata, Python environment, package.json/tsconfig aliases, JavaScript package exports, Go modules, build tags, generated code, or conditional compilation are interpreted.".to_owned(),
-            "Manifest inventory reads only direct declarations; it does not resolve lockfiles, target markers, feature activation, transitive dependencies, or registry defaults beyond the literal manifest syntax.".to_owned(),
-            "Rust resolves only mod declarations and direct crate/self/super filesystem module paths; use aliases, re-exports, and extern-prelude names can remain unresolved.".to_owned(),
-            "Python resolves only an exact matching .py file or package __init__.py; imported attributes and environment packages are not inferred.".to_owned(),
-            "JavaScript and TypeScript resolve only relative paths using an explicit deterministic suffix/index search; bare specifiers are external.".to_owned(),
-            "Go imports are external/unresolved without go.mod module-path knowledge; standard-library and third-party imports are not distinguished.".to_owned(),
-            "Fan-in, fan-out, components, cycles, and depth are structural proxies and carry no quality verdict or weighting.".to_owned(),
-            "Propagation is measured on the file-level internal dependency graph and depends on resolver completeness; exact transitive reachability is omitted above either the 10,000 analyzed-source-file node bound or the 100,000,000 edge-visit work upper bound while direct internal degrees and cycle measures remain available.".to_owned(),
-        ],
+        limitations: {
+            let mut limitations = if unreadable_manifests.is_empty() {
+                Vec::new()
+            } else {
+                vec![format!(
+                    "{} manifest(s) could not be read or parsed and are excluded from the manifest inventory; each is named with its reason in unreadable_manifests.",
+                    unreadable_manifests.len()
+                )]
+            };
+            limitations.extend(base_limitations());
+            limitations
+        },
         syntax_error_files,
+        unreadable_manifests,
         manifest_dependency_count: manifest_dependencies.len(),
         non_registry_manifest_dependency_count,
         risky_manifest_dependency_count,
@@ -556,6 +574,20 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         propagation,
         layout,
     })
+}
+
+fn base_limitations() -> Vec<String> {
+    vec![
+            "Syntax-error trees are analyzed error-tolerantly; declarations from those files may be partial.".to_owned(),
+            "Resolution is filesystem-only: no Cargo metadata, Python environment, package.json/tsconfig aliases, JavaScript package exports, Go modules, build tags, generated code, or conditional compilation are interpreted.".to_owned(),
+            "Manifest inventory reads only direct declarations; it does not resolve lockfiles, target markers, feature activation, transitive dependencies, or registry defaults beyond the literal manifest syntax.".to_owned(),
+            "Rust resolves only mod declarations and direct crate/self/super filesystem module paths; use aliases, re-exports, and extern-prelude names can remain unresolved.".to_owned(),
+            "Python resolves only an exact matching .py file or package __init__.py; imported attributes and environment packages are not inferred.".to_owned(),
+            "JavaScript and TypeScript resolve only relative paths using an explicit deterministic suffix/index search; bare specifiers are external.".to_owned(),
+            "Go imports are external/unresolved without go.mod module-path knowledge; standard-library and third-party imports are not distinguished.".to_owned(),
+            "Fan-in, fan-out, components, cycles, and depth are structural proxies and carry no quality verdict or weighting.".to_owned(),
+            "Propagation is measured on the file-level internal dependency graph and depends on resolver completeness; exact transitive reachability is omitted above either the 10,000 analyzed-source-file node bound or the 100,000,000 edge-visit work upper bound while direct internal degrees and cycle measures remain available.".to_owned(),
+    ]
 }
 
 fn transitive_internal_degrees(adjacency: &[Vec<usize>]) -> ReachabilityComputation {
@@ -1597,7 +1629,9 @@ fn condensation_depth_profile(
     })
 }
 
-fn inventory_manifests(input: &Path) -> Result<(Vec<ManifestDependency>, usize), DependencyError> {
+fn inventory_manifests(
+    input: &Path,
+) -> Result<(Vec<ManifestDependency>, usize, Vec<UnreadableManifest>), DependencyError> {
     let root = if input.is_dir() {
         input
     } else {
@@ -1625,27 +1659,46 @@ fn inventory_manifests(input: &Path) -> Result<(Vec<ManifestDependency>, usize),
         }
     }
     paths.sort_by_key(|p| normalized(p.strip_prefix(root).unwrap_or(p)).unwrap_or_default());
-    let manifest_count = paths.len();
     let mut rows = Vec::new();
+    let mut unreadable = Vec::new();
+    let mut analyzed = 0usize;
     for path in paths {
         let relative = normalized(path.strip_prefix(root).unwrap_or(&path))
             .unwrap_or_else(|| path.to_string_lossy().into_owned());
-        let content =
-            fs::read_to_string(&path).map_err(|source| DependencyError::ManifestRead {
-                path: path.clone(),
-                source,
-            })?;
-        match path.file_name().and_then(|n| n.to_str()).unwrap_or("") {
-            "Cargo.toml" => parse_cargo(&path, &relative, &content, &mut rows)?,
-            "package.json" => parse_package_json(&path, &relative, &content, &mut rows)?,
-            "pyproject.toml" => parse_pyproject(&path, &relative, &content, &mut rows)?,
-            "go.mod" => parse_go_mod(&relative, &content, &mut rows),
-            _ => parse_requirements(&relative, &content, &mut rows),
+        let content = match fs::read_to_string(&path) {
+            Ok(content) => content,
+            Err(source) => {
+                unreadable.push(UnreadableManifest {
+                    path: relative,
+                    reason: format!("read error: {source}"),
+                });
+                continue;
+            }
+        };
+        let parsed = match path.file_name().and_then(|n| n.to_str()).unwrap_or("") {
+            "Cargo.toml" => parse_cargo(&path, &relative, &content, &mut rows),
+            "package.json" => parse_package_json(&path, &relative, &content, &mut rows),
+            "pyproject.toml" => parse_pyproject(&path, &relative, &content, &mut rows),
+            "go.mod" => {
+                parse_go_mod(&relative, &content, &mut rows);
+                Ok(())
+            }
+            _ => {
+                parse_requirements(&relative, &content, &mut rows);
+                Ok(())
+            }
+        };
+        match parsed {
+            Ok(()) => analyzed += 1,
+            Err(error) => unreadable.push(UnreadableManifest {
+                path: relative,
+                reason: error.to_string(),
+            }),
         }
     }
     rows.sort();
     rows.dedup();
-    Ok((rows, manifest_count))
+    Ok((rows, analyzed, unreadable))
 }
 
 fn is_manifest(path: &Path) -> bool {

@@ -199,25 +199,26 @@ fn worker_reports_all_five_instruments_as_compact_independent_evidence() {
 }
 
 #[test]
-fn worker_preserves_four_successes_when_dependency_manifest_is_malformed() {
+fn worker_records_malformed_dependency_manifest_as_named_skip() {
     let result = analyze(&fixture("service_worker_partial"), provenance());
 
-    assert_eq!(result.completed_instruments, 4);
-    assert_eq!(result.failed_instruments, 1);
+    assert_eq!(result.completed_instruments, 5);
+    assert_eq!(result.failed_instruments, 0);
     let dependencies = &result.instruments["dependencies"];
-    assert_eq!(dependencies.state, InstrumentState::Failed);
-    assert_eq!(
-        dependencies.error.as_deref(),
-        Some("instrument analysis failed")
+    assert_eq!(dependencies.state, InstrumentState::Complete);
+    assert_eq!(dependencies.coverage["manifests_unreadable"], 1);
+    let unreadable = dependencies.observations["unreadable_manifests"]
+        .as_array()
+        .expect("unreadable_manifests must be an array");
+    assert_eq!(unreadable.len(), 1);
+    assert_eq!(unreadable[0]["path"], "Cargo.toml");
+    assert!(
+        unreadable[0]["reason"]
+            .as_str()
+            .is_some_and(|reason| reason.contains("TOML parse error")),
+        "skip reason must carry the parse error"
     );
-    for name in ["metrics", "duplicates", "api", "tests"] {
-        assert_eq!(
-            result.instruments[name].state,
-            InstrumentState::Complete,
-            "{name}"
-        );
-    }
 
-    let json = serde_json::to_value(&result).expect("serialize partial compact result");
+    let json = serde_json::to_value(&result).expect("serialize compact result");
     assert_forbidden_keys_absent(&json);
 }

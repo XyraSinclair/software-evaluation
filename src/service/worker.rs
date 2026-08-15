@@ -98,7 +98,7 @@ pub fn analyze(root: &Path, provenance: RepositoryProvenance) -> CompactResult {
                 analyzer: r.analyzer,
                 state: InstrumentState::Complete,
                 coverage: value(&r.coverage),
-                observations: json!({"manifest_count":r.coverage.manifests_analyzed,"manifest_dependencies":r.manifest_dependency_count,"nodes":r.node_count,"edges":r.edge_count,"internal_edges":r.internal_edges,"external_edges":r.external_edges,"unresolved_edges":r.unresolved_edges,"cycles":r.cycles.len(),"components":r.weak_components.len(),"condensation_depth":r.condensation_maximum_depth,"dependency_structure":{"propagation":r.propagation,"direct_internal_in_hotspots":direct_internal_in_hotspots,"direct_internal_out_hotspots":direct_internal_out_hotspots,"transitive_internal_in_hotspots":transitive_internal_in_hotspots,"transitive_internal_out_hotspots":transitive_internal_out_hotspots}}),
+                observations: json!({"manifest_count":r.coverage.manifests_analyzed,"unreadable_manifests":r.unreadable_manifests,"manifest_dependencies":r.manifest_dependency_count,"nodes":r.node_count,"edges":r.edge_count,"internal_edges":r.internal_edges,"external_edges":r.external_edges,"unresolved_edges":r.unresolved_edges,"cycles":r.cycles.len(),"components":r.weak_components.len(),"condensation_depth":r.condensation_maximum_depth,"dependency_structure":{"propagation":r.propagation,"direct_internal_in_hotspots":direct_internal_in_hotspots,"direct_internal_out_hotspots":direct_internal_out_hotspots,"transitive_internal_in_hotspots":transitive_internal_in_hotspots,"transitive_internal_out_hotspots":transitive_internal_out_hotspots}}),
                 limitations: r.limitations,
                 error: None,
             }
