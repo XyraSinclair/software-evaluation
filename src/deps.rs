@@ -889,11 +889,11 @@ fn dependency_layout<'a>(
         .iter()
         .map(|path| (path.as_str(), parent_directory_community(path)))
         .collect::<BTreeMap<_, _>>();
-    let detected = detected_louvain_partition(analyzed, &undirected, m);
+    let detected = detected_louvain_partition(analyzed, undirected, m);
     let top_level_partition = layout_partition(
         "top_level",
         analyzed,
-        &undirected,
+        undirected,
         &internal,
         m,
         &top_level,
@@ -902,7 +902,7 @@ fn dependency_layout<'a>(
     let parent_directory_partition = layout_partition(
         "parent_directory",
         analyzed,
-        &undirected,
+        undirected,
         &internal,
         m,
         &parent_directory,
@@ -911,7 +911,7 @@ fn dependency_layout<'a>(
     let detected_partition = layout_partition(
         "detected_louvain",
         analyzed,
-        &undirected,
+        undirected,
         &internal,
         m,
         &detected,

@@ -19,11 +19,6 @@ use crate::source::{SourceError, SourceFile, SourceLanguage, load_source_tree, p
 pub enum SymbolError {
     #[error(transparent)]
     Source(#[from] SourceError),
-    #[error("symbol identity collision at {path}::{qualified_path}")]
-    IdentityCollision {
-        path: String,
-        qualified_path: String,
-    },
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -52,6 +47,11 @@ pub struct SymbolCoverage {
     pub symbols_extracted: usize,
     pub call_references: usize,
     pub type_use_references: usize,
+    /// Declarations whose (file, qualified path) collided with an earlier
+    /// declaration of a different kind; kept under a kind-tagged identity
+    /// instead of aborting (Rust's type and value namespaces legitimately
+    /// share names, and pre-fix the walker did not scope function bodies).
+    pub identity_disambiguations: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -188,6 +188,7 @@ pub fn analyze_symbols(input: &Path) -> Result<SymbolReport, SymbolError> {
     let mut declarations_extracted = 0;
     let mut nodes_by_id = BTreeMap::new();
     let mut references = Vec::new();
+    let mut identity_disambiguations = 0usize;
 
     for file in &rust_files {
         let parsed = parse_source(file)?;
@@ -201,6 +202,7 @@ pub fn analyze_symbols(input: &Path) -> Result<SymbolReport, SymbolError> {
             &mut declarations_by_start,
             &mut impl_methods,
             &mut nodes_by_id,
+            &mut identity_disambiguations,
         )?;
         declarations_extracted += declarations_by_start.len();
         collect_references(
@@ -357,6 +359,7 @@ pub fn analyze_symbols(input: &Path) -> Result<SymbolReport, SymbolError> {
             symbols_extracted: nodes.len(),
             call_references,
             type_use_references,
+            identity_disambiguations,
         },
         resolution,
         graph,
@@ -386,6 +389,7 @@ fn collect_declarations(
     declarations_by_start: &mut BTreeMap<usize, String>,
     impl_methods: &mut BTreeMap<usize, Vec<String>>,
     nodes: &mut BTreeMap<String, SymbolNode>,
+    identity_disambiguations: &mut usize,
 ) -> Result<(), SymbolError> {
     if node.kind() == "mod_item" {
         let name = field_text(file, node, "name");
@@ -399,6 +403,7 @@ fn collect_declarations(
                     declarations_by_start,
                     impl_methods,
                     nodes,
+                    identity_disambiguations,
                 )
             })?;
             context.modules.pop();
@@ -427,6 +432,7 @@ fn collect_declarations(
                     declarations_by_start,
                     impl_methods,
                     nodes,
+                    identity_disambiguations,
                 )
             })?;
         }
@@ -463,22 +469,42 @@ fn collect_declarations(
             transitive_in_count: None,
             forward_reachable_count: None,
         };
-        declarations_by_start.insert(node.start_byte(), id.clone());
-        if let Some(existing) = nodes.get(&id) {
-            if existing.kind != kind {
-                return Err(SymbolError::IdentityCollision {
-                    path: file.path.clone(),
-                    qualified_path,
-                });
+        if let Some(existing) = nodes.get(&id)
+            && existing.kind != kind
+        {
+            // Same (file, qualified path), different kind: Rust's type and
+            // value namespaces legitimately allow this. Keep both under a
+            // kind-tagged identity and count the disambiguation.
+            let tagged = format!("{id}#{}", kind_tag(kind));
+            declarations_by_start.insert(node.start_byte(), tagged.clone());
+            if !nodes.contains_key(&tagged) {
+                *identity_disambiguations += 1;
+                nodes.insert(
+                    tagged.clone(),
+                    SymbolNode {
+                        id: tagged,
+                        ..symbol
+                    },
+                );
             }
         } else {
-            nodes.insert(id, symbol);
+            declarations_by_start.insert(node.start_byte(), id.clone());
+            nodes.entry(id).or_insert(symbol);
         }
     }
 
     let previous_trait = context.in_trait;
     if node.kind() == "trait_item" {
         context.in_trait = true;
+    }
+    // A function body is a scope: function-local declarations are qualified
+    // by the enclosing function so distinct locals never share an identity.
+    let mut function_scope_pushed = false;
+    if node.kind() == "function_item"
+        && let Some(function_name) = field_text(file, node, "name")
+    {
+        context.modules.push(function_name);
+        function_scope_pushed = true;
     }
     try_visit_named_children(node, |child| {
         collect_declarations(
@@ -488,8 +514,12 @@ fn collect_declarations(
             declarations_by_start,
             impl_methods,
             nodes,
+            identity_disambiguations,
         )
     })?;
+    if function_scope_pushed {
+        context.modules.pop();
+    }
     context.in_trait = previous_trait;
     Ok(())
 }
@@ -510,6 +540,18 @@ fn declaration_kind(node: Node<'_>, context: &DeclarationContext) -> Option<Symb
             Some(SymbolKind::Static)
         }
         _ => None,
+    }
+}
+
+fn kind_tag(kind: SymbolKind) -> &'static str {
+    match kind {
+        SymbolKind::Function => "fn",
+        SymbolKind::Method => "method",
+        SymbolKind::Struct => "struct",
+        SymbolKind::Enum => "enum",
+        SymbolKind::Trait => "trait",
+        SymbolKind::TypeAlias => "type",
+        SymbolKind::Static => "static",
     }
 }
 
