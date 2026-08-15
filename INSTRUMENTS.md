@@ -351,7 +351,8 @@ absent, so heavily unresolved code yields a partial partition.
 
 ### Co-change layout profile
 
-Over the *same* two directory partitions as the static layout profile, but a
+`seval cochange-layout REPOSITORY` scores the *same* two directory partitions
+as the static layout profile, but over a
 different graph — the git co-change graph rather than resolved imports. The
 universe is every source-classified tracked blob with a UTF-8 path at the pinned
 revision (the change-profile eligibility rule minus its language-parser
