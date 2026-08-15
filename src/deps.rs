@@ -46,8 +46,39 @@ pub struct DependencyReport {
     pub cycles: Vec<Vec<String>>,
     pub weak_components: Vec<Vec<String>>,
     pub condensation_maximum_depth: Option<usize>,
+    pub condensation_depth: Option<CondensationDepthProfile>,
     pub propagation: DependencyPropagation,
     pub layout: DependencyLayout,
+}
+
+/// Longest-path depth profile of the SCC-condensation DAG: the
+/// sequential-abstraction-boundary count that reachability cannot see. A deep
+/// thin chain, a shallow wide fan, and a high-fan-in stable kernel have
+/// different depth shapes at equal reach. All integers; percentiles are
+/// nearest-rank over per-file values (each file inherits its SCC's depths).
+#[derive(Debug, Clone, Serialize)]
+pub struct CondensationDepthProfile {
+    pub condensation_nodes: usize,
+    pub condensation_edges: usize,
+    /// Denominator for the distributions below.
+    pub source_files: usize,
+    /// Longest path (in condensation edges) from any source to this file's SCC.
+    pub depth_in_p50: usize,
+    pub depth_in_p90: usize,
+    pub depth_in_max: usize,
+    /// Longest path from this file's SCC to any sink.
+    pub depth_out_p50: usize,
+    pub depth_out_p90: usize,
+    pub depth_out_max: usize,
+    /// One maximum-length path through the condensation, as witness: the
+    /// sorted-first file of each SCC on it, with the SCC's file count.
+    pub longest_path: Vec<CondensationPathStep>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CondensationPathStep {
+    pub file: String,
+    pub scc_files: usize,
 }
 
 pub const REACHABILITY_NODE_LIMIT: usize = 10_000;
@@ -395,7 +426,7 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
     let all_ids: BTreeSet<_> = node_kinds.keys().cloned().collect();
     let all_adjacency = adjacency(&all_ids, &edges, false);
     let weak_components = weak_components(&all_ids, &all_adjacency);
-    let depth = condensation_depth(&sccs, &internal_adjacency);
+    let depth_profile = condensation_depth_profile(&sccs, &internal_adjacency);
     let internal_edges = edges
         .iter()
         .filter(|e| e.classification == DependencyClassification::Internal)
@@ -468,7 +499,8 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         manifest_dependencies,
         node_count: nodes.len(), edge_count: edges.len(), internal_edges, external_edges, unresolved_edges,
         nodes, edges, strongly_connected_components: sccs, cycles, weak_components,
-        condensation_maximum_depth: depth,
+        condensation_maximum_depth: depth_profile.as_ref().map(|profile| profile.depth_in_max),
+        condensation_depth: depth_profile,
         propagation,
         layout,
     })
@@ -1198,10 +1230,14 @@ fn weak_components(
     result
 }
 
-fn condensation_depth(
+/// Longest-path depths on the SCC-condensation DAG: for each SCC node, the
+/// maximum path length (in condensation edges) from any source (`depth_in`)
+/// and to any sink (`depth_out`), plus one witness longest path. O(n + m)
+/// dynamic programming over a topological order; everything integer.
+fn condensation_depth_profile(
     sccs: &[Vec<String>],
     graph: &BTreeMap<String, BTreeSet<String>>,
-) -> Option<usize> {
+) -> Option<CondensationDepthProfile> {
     if sccs.is_empty() {
         return None;
     }
@@ -1212,27 +1248,100 @@ fn condensation_depth(
         }
     }
     let mut dag = vec![BTreeSet::new(); sccs.len()];
+    let mut reverse = vec![BTreeSet::new(); sccs.len()];
     let mut indegree = vec![0usize; sccs.len()];
+    let mut edges = 0usize;
     for (a, bs) in graph {
         for b in bs {
             let (x, y) = (owner[a], owner[b]);
             if x != y && dag[x].insert(y) {
+                reverse[y].insert(x);
                 indegree[y] += 1;
+                edges += 1;
             }
         }
     }
+    // Kahn order; depth_in forward, depth_out via the reversed pass.
     let mut queue: VecDeque<_> = (0..sccs.len()).filter(|i| indegree[*i] == 0).collect();
-    let mut depth = vec![0usize; sccs.len()];
+    let mut order = Vec::with_capacity(sccs.len());
+    let mut depth_in = vec![0usize; sccs.len()];
     while let Some(v) = queue.pop_front() {
+        order.push(v);
         for &w in &dag[v] {
-            depth[w] = depth[w].max(depth[v] + 1);
+            depth_in[w] = depth_in[w].max(depth_in[v] + 1);
             indegree[w] -= 1;
             if indegree[w] == 0 {
                 queue.push_back(w);
             }
         }
     }
-    depth.into_iter().max()
+    let mut depth_out = vec![0usize; sccs.len()];
+    for &v in order.iter().rev() {
+        for &w in &dag[v] {
+            depth_out[v] = depth_out[v].max(depth_out[w] + 1);
+        }
+    }
+    // Witness: start from the first node maximizing depth_in + depth_out
+    // (deterministic: smallest index), walk back then forward along the DP.
+    let start = (0..sccs.len())
+        .max_by_key(|&v| (depth_in[v] + depth_out[v], std::cmp::Reverse(v)))
+        .expect("nonempty");
+    let mut path = VecDeque::from([start]);
+    let mut cursor = start;
+    while depth_in[cursor] > 0 {
+        let previous = reverse[cursor]
+            .iter()
+            .copied()
+            .find(|&p| depth_in[p] + 1 == depth_in[cursor])
+            .expect("depth_in predecessor exists");
+        path.push_front(previous);
+        cursor = previous;
+    }
+    cursor = start;
+    while depth_out[cursor] > 0 {
+        let next = dag[cursor]
+            .iter()
+            .copied()
+            .find(|&n| depth_out[n] + 1 == depth_out[cursor])
+            .expect("depth_out successor exists");
+        path.push_back(next);
+        cursor = next;
+    }
+    // Per-file distributions: every file inherits its SCC's depths.
+    let per_file =
+        |depths: &[usize]| -> Vec<usize> {
+            let mut values: Vec<usize> = sccs
+                .iter()
+                .enumerate()
+                .flat_map(|(i, files)| std::iter::repeat_n(depths[i], files.len()))
+                .collect();
+            values.sort_unstable();
+            values
+        };
+    let nearest_rank = |sorted: &[usize], hundredths: usize| -> usize {
+        let rank = (sorted.len() * hundredths).div_ceil(100).max(1);
+        sorted[rank - 1]
+    };
+    let files_in = per_file(&depth_in);
+    let files_out = per_file(&depth_out);
+    Some(CondensationDepthProfile {
+        condensation_nodes: sccs.len(),
+        condensation_edges: edges,
+        source_files: files_in.len(),
+        depth_in_p50: nearest_rank(&files_in, 50),
+        depth_in_p90: nearest_rank(&files_in, 90),
+        depth_in_max: *files_in.last().expect("nonempty"),
+        depth_out_p50: nearest_rank(&files_out, 50),
+        depth_out_p90: nearest_rank(&files_out, 90),
+        depth_out_max: *files_out.last().expect("nonempty"),
+        longest_path: path
+            .into_iter()
+            .map(|index| CondensationPathStep {
+                file: sccs[index][0].clone(),
+                scc_files: sccs[index].len(),
+            })
+            .collect(),
+    })
 }
 
 fn inventory_manifests(input: &Path) -> Result<(Vec<ManifestDependency>, usize), DependencyError> {

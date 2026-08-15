@@ -102,6 +102,33 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
         propagation.weak_components,
         propagation.largest_weak_component_files,
     );
+    if let Some(depth) = &report.condensation_depth {
+        println!(
+            "condensation depth: {} SCC nodes, {} edges over {} files; depth_in p50={} p90={} max={}, depth_out p50={} p90={} max={}",
+            depth.condensation_nodes,
+            depth.condensation_edges,
+            depth.source_files,
+            depth.depth_in_p50,
+            depth.depth_in_p90,
+            depth.depth_in_max,
+            depth.depth_out_p50,
+            depth.depth_out_p90,
+            depth.depth_out_max,
+        );
+        let witness = depth
+            .longest_path
+            .iter()
+            .map(|step| {
+                if step.scc_files > 1 {
+                    format!("{} (SCC of {})", step.file, step.scc_files)
+                } else {
+                    step.file.clone()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" -> ");
+        println!("  longest path: {witness}");
+    }
     let layout = &report.layout;
     println!(
         "layout: {} analyzed files, {} internal undirected edges",
