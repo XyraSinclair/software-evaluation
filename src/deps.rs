@@ -198,6 +198,12 @@ struct ReachabilityComputation {
     outgoing: Option<Vec<usize>>,
 }
 
+pub(crate) struct QueriedReachability {
+    pub(crate) status: ReachabilityStatus,
+    pub(crate) work_upper_bound: Option<usize>,
+    pub(crate) reachable_pairs: Option<BTreeSet<(usize, usize)>>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct DependencyCoverage {
     pub filesystem_entries_enumerated: usize,
@@ -507,21 +513,7 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
 }
 
 fn transitive_internal_degrees(adjacency: &[Vec<usize>]) -> ReachabilityComputation {
-    let source_files = adjacency.len();
-    let work_upper_bound = adjacency
-        .iter()
-        .try_fold(0usize, |sum, edges| sum.checked_add(edges.len()))
-        .and_then(|internal_unique_edges| internal_unique_edges.checked_add(1))
-        .and_then(|per_source| source_files.checked_mul(per_source));
-    let status = if source_files == 0 {
-        ReachabilityStatus::NotApplicable
-    } else if source_files > REACHABILITY_NODE_LIMIT {
-        ReachabilityStatus::SizeLimit
-    } else if work_upper_bound.is_none_or(|bound| bound > REACHABILITY_WORK_LIMIT) {
-        ReachabilityStatus::WorkLimit
-    } else {
-        ReachabilityStatus::Computed
-    };
+    let (status, work_upper_bound) = reachability_budget(adjacency);
     if status != ReachabilityStatus::Computed {
         return ReachabilityComputation {
             status,
@@ -555,6 +547,69 @@ fn transitive_internal_degrees(adjacency: &[Vec<usize>]) -> ReachabilityComputat
         work_upper_bound,
         incoming: Some(incoming),
         outgoing: Some(outgoing),
+    }
+}
+
+fn reachability_budget(adjacency: &[Vec<usize>]) -> (ReachabilityStatus, Option<usize>) {
+    let source_files = adjacency.len();
+    let work_upper_bound = adjacency
+        .iter()
+        .try_fold(0usize, |sum, edges| sum.checked_add(edges.len()))
+        .and_then(|internal_unique_edges| internal_unique_edges.checked_add(1))
+        .and_then(|per_source| source_files.checked_mul(per_source));
+    let status = if source_files == 0 {
+        ReachabilityStatus::NotApplicable
+    } else if source_files > REACHABILITY_NODE_LIMIT {
+        ReachabilityStatus::SizeLimit
+    } else if work_upper_bound.is_none_or(|bound| bound > REACHABILITY_WORK_LIMIT) {
+        ReachabilityStatus::WorkLimit
+    } else {
+        ReachabilityStatus::Computed
+    };
+    (status, work_upper_bound)
+}
+
+pub(crate) fn queried_undirected_reachability(
+    adjacency: &[Vec<usize>],
+    queries: &BTreeSet<(usize, usize)>,
+) -> QueriedReachability {
+    let (status, work_upper_bound) = reachability_budget(adjacency);
+    if status != ReachabilityStatus::Computed {
+        return QueriedReachability {
+            status,
+            work_upper_bound,
+            reachable_pairs: None,
+        };
+    }
+
+    let mut targets_by_source: BTreeMap<usize, BTreeSet<usize>> = BTreeMap::new();
+    for &(left, right) in queries {
+        targets_by_source.entry(left).or_default().insert(right);
+        targets_by_source.entry(right).or_default().insert(left);
+    }
+    let mut reachable_pairs = BTreeSet::new();
+    let mut visited = vec![0usize; adjacency.len()];
+    let mut generation = 0usize;
+    let mut stack = Vec::new();
+    for (source, targets) in targets_by_source {
+        generation += 1;
+        visited[source] = generation;
+        stack.extend(adjacency[source].iter().copied());
+        while let Some(target) = stack.pop() {
+            if visited[target] == generation {
+                continue;
+            }
+            visited[target] = generation;
+            if targets.contains(&target) {
+                reachable_pairs.insert((source.min(target), source.max(target)));
+            }
+            stack.extend(adjacency[target].iter().copied());
+        }
+    }
+    QueriedReachability {
+        status,
+        work_upper_bound,
+        reachable_pairs: Some(reachable_pairs),
     }
 }
 
