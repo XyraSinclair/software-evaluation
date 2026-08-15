@@ -278,6 +278,52 @@ vertical-slice commits; low-static/high-co-change is produced by successful
 dependency inversion (volatile plugins importing a stable kernel). The
 coordinate locates; the diagnosis needs the support cross-tab and a human.
 
+## PL-theoretic determinants — the type-space arm
+
+Seat consult 2026-08-15 (Claude Opus, repo-grounded; full text was distilled
+here, the distillation is canonical). The graph range measures coupling
+*between* definitions; discipline measures local honesty *inside* one function.
+Neither ranges over **type definitions and signatures** — where state-space
+cardinality lives. Governing caveat: tree-sitter sees the *spelling* of types,
+never their meaning; every row is a proxy over declared syntax until the HIR
+bridge (below).
+
+| # | Determinant | Class | Instrument (denominator) | Goodhart / lies hardest on | Dedupe |
+|---|---|---|---|---|---|
+| T1 | **Algebraic type shape** — sums where the domain branches | generative | data-bearing enums / all type defs; per-struct Option+bool field count, tail of structs with ≥2 (/ structs with ≥2 fields) | two-variant enums that are still bools; hoisting optionals into a sub-struct; builder/config crates (orthogonal optionals are legitimate — read beside T4's builder split) | discipline counts bool *params* only; this is type-definition-scoped |
+| T2 | **Dynamic-state surface** — `HashMap<String,Value>`, `dyn Any`, `Record<string,any>`, `interface{}` in fields + public signatures | diagnostic | dynamic-state mentions / type-constructor leaves in those positions | `type Json = Value` aliasing blinds it entirely (resolution failure, not improvement); serialization libs/interpreters where `Value` *is* the domain | adds container forms discipline's bare-`any` count misses; report only the increment |
+| T3 | **Signature parametricity degree** — theorems for free | generative | abstract type positions / signature type leaves; return-parametric fraction; trait-bounds per parameter as deflator | generic-washing (`T: Into<Concrete>`); async Rust bound soup; a domain CLI is legitimately near zero — within-language distribution only. Proxy even under rustc: Rust breaks parametricity (TypeId, downcast, specialization) | `seval api` has generics counts; ratio/split/deflator new |
+| T4 | **Endomorphic closure** — the API is an algebra | generative | Self-returning public methods / public methods per impl; owned-endo split from `&mut Self` builder-endo; `(T,T)→T` monoid census | setter-chain builders (separated); closure ≠ lawfulness — laws are property-testing territory, never static | none; new |
+| T5 | **Ownership-evasion density** — the compiler-*evaded* mutation half of G3 | diagnostic | `RefCell/Cell/Mutex/RwLock` mentions + borrow/lock sites, `Rc/Arc` separately, `.clone()` / call expressions | hand-rolled `unsafe` interior mutability dodges it (discipline's unsafe count rises — cross-check); concurrent servers legitimately live here | discipline counts compiler-*checked* mutation only; this is the aliased half |
+| T6 | **Newtype adoption vs primitive obsession** | generative | bare wide-primitive mentions / public signature type mentions; newtype supply; `pub`-field newtypes counted as costume | numeric/parser code where the primitive is the domain; distribution only | G5 named it *later*; distinct from T1 (leaf width, not composite shape) |
+
+Culled on the record: annotation-burden ratio (direction-free), totality census
+(no Rust checker; the honest partiality signal is already discipline's
+unwrap/panic/Result census), Curry–Howard (needs a prover), abstract-interpretation
+invariant strength (needs typed CFG — MIR territory), effect gradation
+(marginal over discipline).
+
+**The HIR bridge collapses two queue items into one.** The resolved symbol
+graph (queue #1) and the type-resolution tooling that de-proxies T1/T2/T5/T6
+(alias defeat, inferred locals, transitive field cardinality) are the same
+rust-analyzer/HIR investment: type edges and call edges fall out of one
+bridge. Do not gate T3/T4 on it (T3 stays a proxy even with full types; T4 is
+return-token-visible). Largest irreducible hole: local state that never
+crosses a declared boundary is unseeable at any static level short of MIR
+dataflow.
+
+**Sharpened challenge resolution** (why the graph does not already capture
+this): the graph and co-change see complexity *already paid* — types bound the
+state space available to *tomorrow's* edit (a `HashMap<String,Value>` touched
+by one function today is a landmine with low fan-in). The coupling shadow is
+sign-free — high fan-in is equally a deep module or a stringly god-blob, while
+sum-vs-product and newtype-vs-primitive carry sign. And parametricity/closure
+have *no* graph shadow at all: `f<T>(Vec<T>)->Vec<T>` and
+`f(Vec<Config>)->Vec<Config>` are graph-identical; the definition graph
+quotients out exactly the quantifier structure T3/T4 measure. Admission stays
+empirical: incremental validity after partialling out SLOC + cognitive +
+fan-in, per the standing protocol.
+
 ## Ruled out or downranked
 
 | Determinant | Reason |
