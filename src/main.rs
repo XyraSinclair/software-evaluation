@@ -8,7 +8,7 @@ use std::process::ExitCode;
 
 use analysis_output::{
     print_api, print_benchmark, print_cochange_layout, print_dependencies, print_discipline,
-    print_duplicates, print_tests,
+    print_duplicates, print_shape, print_tests,
 };
 use change_profile_output::{render_change_profile_svg, render_change_profile_text};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -34,6 +34,7 @@ use software_evaluation::metrics::{
 use software_evaluation::repo::{
     GitChangeShapeProgram, RepoProfileConfig, StaticRepoShapeProgram, snapshot_git_repo,
 };
+use software_evaluation::shape::analyze_shape;
 use software_evaluation::tests_analysis::analyze_tests;
 
 #[derive(Debug, Parser)]
@@ -224,6 +225,16 @@ enum Command {
         #[arg(long, value_enum, default_value_t = DisciplineSortArg::Pure)]
         sort: DisciplineSortArg,
         /// Maximum rows shown in each text table.
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Profile per-function interface depth, complexity gap, nesting, and branch symmetry.
+    Shape {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Maximum function rows shown in text output.
         #[arg(long, default_value_t = 30)]
         top: usize,
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
@@ -618,6 +629,14 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             match format {
                 OutputFormat::Json => print_json(&report)?,
                 OutputFormat::Text => print_discipline(&report, sort.library(), top),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Shape { path, top, format } => {
+            let report = analyze_shape(&path).map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_shape(&report, top),
             }
             Ok(ExitCode::SUCCESS)
         }

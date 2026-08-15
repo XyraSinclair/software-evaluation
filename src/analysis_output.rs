@@ -9,6 +9,9 @@ use software_evaluation::discipline::{
     rank_functions as rank_discipline_functions,
 };
 use software_evaluation::duplicates::DuplicateReport;
+use software_evaluation::shape::{
+    IntegerDistribution, ShapeReport, rank_functions as rank_shape_functions,
+};
 use software_evaluation::tests_analysis::TestReport;
 
 pub fn print_dependencies(report: &DependencyReport, top: usize) {
@@ -515,6 +518,158 @@ fn discipline_sort_name(sort: DisciplineSort) -> &'static str {
         DisciplineSort::Errors => "errors",
         DisciplineSort::Params => "params",
     }
+}
+
+pub fn print_shape(report: &ShapeReport, top: usize) {
+    let coverage = &report.coverage;
+    println!("analyzer: {}", report.analyzer);
+    println!("root: {}", report.root);
+    println!("epistemic class: {}", report.epistemic_class);
+    println!(
+        "coverage: {} supported / {} enumerated files; {} skipped; {} functions; syntax-error-files={}",
+        coverage.supported_files,
+        coverage.enumerated_files,
+        coverage.skipped_unsupported_files,
+        coverage.functions_analyzed,
+        coverage.syntax_error_files,
+    );
+    let languages = coverage
+        .functions_per_language
+        .iter()
+        .map(|row| {
+            format!(
+                "{}={}/{}-files",
+                row.language.name(), row.functions_analyzed, row.files_analyzed
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    println!("functions per language: {}", if languages.is_empty() { "none" } else { &languages });
+    println!(
+        "shallow corner: {} / {} functions (interface-width >= interior-volume, volume > 0)",
+        coverage.shallow_functions, coverage.shallow_denominator,
+    );
+    println!(
+        "no-else ifs with then-arm >= 8 statements: {}",
+        coverage.no_else_large_then_arms,
+    );
+    println!("repo distributions (nearest-rank min/p50/p90/max):");
+    println!("  {:<24} {:>8} {:>8} {:>8} {:>8}", "METRIC", "MIN", "P50", "P90", "MAX");
+    for (name, distribution) in [
+        ("interface_width", &report.distributions.interface_width),
+        ("interior_volume", &report.distributions.interior_volume),
+        ("cyclomatic", &report.distributions.cyclomatic),
+        ("cognitive", &report.distributions.cognitive),
+        ("cognitive_gap", &report.distributions.cognitive_gap),
+        ("max_nesting_depth", &report.distributions.max_nesting_depth),
+    ] {
+        print_shape_distribution(name, distribution);
+    }
+    let ratios = &report.distributions.max_arm_size_ratio;
+    println!(
+        "  {:<24} {:>8} {:>8} {:>8} {:>8}  (n={})",
+        "max_arm_size_ratio",
+        optional(ratios.min),
+        optional(ratios.p50),
+        optional(ratios.p90),
+        optional(ratios.max),
+        ratios.observations,
+    );
+
+    println!("file distributions (nearest-rank min/p50/p90/max): {} files", report.files.len());
+    for file in &report.files {
+        println!(
+            "  {} [{}; functions={}; shallow={}; no-else-large={}]",
+            file.path,
+            file.language.name(),
+            file.functions_analyzed,
+            file.shallow_functions,
+            file.no_else_large_then_arms,
+        );
+        println!(
+            "    width={} volume={} cyclomatic={} cognitive={}",
+            compact_distribution(&file.distributions.interface_width),
+            compact_distribution(&file.distributions.interior_volume),
+            compact_distribution(&file.distributions.cyclomatic),
+            compact_distribution(&file.distributions.cognitive),
+        );
+        let ratio = &file.distributions.max_arm_size_ratio;
+        println!(
+            "    gap={} nesting={} arm-ratio={} (n={})",
+            compact_distribution(&file.distributions.cognitive_gap),
+            compact_distribution(&file.distributions.max_nesting_depth),
+            compact_float_distribution(ratio.min, ratio.p50, ratio.p90, ratio.max),
+            ratio.observations,
+        );
+    }
+
+    let functions = rank_shape_functions(report, top);
+    println!("function shapes: {} / {} shown", functions.len(), report.functions.len());
+    println!(
+        "  {:<12} {:>3} {:>3} {:>4} {:>4} {:>4} {:>4} {:>4} {:>6} {:>6} LOCATION / NAME",
+        "LANG", "IFW", "VOL", "CYC", "COG", "GAP", "NEST", "SHAL", "RATIO", "NOELSE"
+    );
+    for function in functions {
+        println!(
+            "  {:<12} {:>3} {:>3} {:>4} {:>4} {:>4} {:>4} {:>4} {:>6} {:>6} {}:{} {}",
+            function.language.name(),
+            function.interface_width,
+            function.interior_volume,
+            function.cyclomatic,
+            function.cognitive,
+            function.cognitive_gap,
+            function.max_nesting_depth,
+            if function.shallow { "yes" } else { "no" },
+            function.max_arm_size_ratio.map_or_else(|| "n/a".to_owned(), |value| format!("{value:.2}")),
+            function.no_else_large_then_arms,
+            function.path,
+            function.start_line,
+            function.name,
+        );
+    }
+    print_limitations(&report.limitations);
+}
+
+fn print_shape_distribution(name: &str, distribution: &IntegerDistribution) {
+    println!(
+        "  {:<24} {:>8} {:>8} {:>8} {:>8}  (n={})",
+        name,
+        optional_integer(distribution.min),
+        optional_integer(distribution.p50),
+        optional_integer(distribution.p90),
+        optional_integer(distribution.max),
+        distribution.observations,
+    );
+}
+
+fn compact_distribution(distribution: &IntegerDistribution) -> String {
+    [
+        distribution.min,
+        distribution.p50,
+        distribution.p90,
+        distribution.max,
+    ]
+    .into_iter()
+    .map(optional_integer)
+    .collect::<Vec<_>>()
+    .join("/")
+}
+
+fn optional_integer(value: Option<i64>) -> String {
+    value.map_or_else(|| "n/a".to_owned(), |number| number.to_string())
+}
+
+fn compact_float_distribution(
+    min: Option<f64>,
+    p50: Option<f64>,
+    p90: Option<f64>,
+    max: Option<f64>,
+) -> String {
+    [min, p50, p90, max]
+        .into_iter()
+        .map(|value| value.map_or_else(|| "n/a".to_owned(), |number| format!("{number:.3}")))
+        .collect::<Vec<_>>()
+        .join("/")
 }
 
 pub fn print_benchmark(report: &BenchmarkReport) {
