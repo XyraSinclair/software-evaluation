@@ -383,6 +383,34 @@ cross-community edges, so $Q$ is a coordinate rather than a target. The graph is
 file-granularity only, and conservative import resolution leaves unresolved edges
 absent, so heavily unresolved code yields a partial partition.
 
+### Conductance certificate
+
+`seval deps PATH` also treats the layout profile's exact undirected internal
+file-edge set as connected components. For each component $C$ of at least three
+files within the stated node bound, it certifies a dyadic lower bound on the
+second generalized eigenvalue of $(L,D)$ without a floating eigensolver or null
+ensemble. At
+each dyadic probe $q=a/2^b$, exact arbitrary-precision rational symmetric
+elimination counts the negative eigenvalues of $2^bL-aD$. Exactly one negative
+eigenvalue means only the constant mode lies strictly below $q$, so
+$\lambda_2(C) \geq a/2^b$. The report states only that raw bound and its Cheeger
+consequence
+
+$$
+\phi(C) \geq \frac{a}{2^{b+1}},
+$$
+
+with the component's files, internal edges, degree-sum volume, and file-count
+denominator. Exact integers are authoritative; decimal values are display
+only. Components below three files are `trivial_small`, and components above
+the node bound are `size_limit`; neither case is silently omitted.
+
+This certificate is **negative evidence**: every cut of $C$ has conductance at
+least the reported bound, so no sparse cut exists below it. It cannot establish
+good design or identify a preferred decomposition. A bipartite expander can be
+highly cohesive while having poor modular structure; cohesion without
+modularity is a coordinate, not a verdict.
+
 ### Co-change layout profile
 
 `seval cochange-layout REPOSITORY` scores the *same* two directory partitions

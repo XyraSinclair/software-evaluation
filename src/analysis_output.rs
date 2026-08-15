@@ -400,6 +400,57 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
     );
 
     println!(
+        "conductance certificates: {} components; denominator-power={}; node-limit={} (negative evidence: no sparse cut exists below each bound)",
+        report.conductance_certificates.len(),
+        report.conductance_certificate_denominator_power,
+        report.conductance_certificate_node_limit,
+    );
+    for (index, certificate) in report.conductance_certificates.iter().enumerate() {
+        let status = match certificate.status {
+            software_evaluation::conductance::ConductanceCertificateStatus::Certified => {
+                "certified"
+            }
+            software_evaluation::conductance::ConductanceCertificateStatus::SizeLimit => {
+                "size_limit"
+            }
+            software_evaluation::conductance::ConductanceCertificateStatus::TrivialSmall => {
+                "trivial_small"
+            }
+        };
+        println!(
+            "  component {}: status={status}; files={}/{} (fraction={:.3}); internal-edges={}; volume={}",
+            index + 1,
+            certificate.component_file_numerator,
+            certificate.analyzed_file_denominator,
+            certificate.component_file_fraction,
+            certificate.internal_edges,
+            certificate.volume,
+        );
+        if let (
+            Some(lambda_numerator),
+            Some(lambda_power),
+            Some(lambda_display),
+            Some(phi_numerator),
+            Some(phi_power),
+            Some(phi_display),
+        ) = (
+            certificate.lambda2_lower_bound_numerator,
+            certificate.lambda2_lower_bound_denominator_power,
+            certificate.lambda2_lower_bound,
+            certificate.conductance_lower_bound_numerator,
+            certificate.conductance_lower_bound_denominator_power,
+            certificate.conductance_lower_bound,
+        ) {
+            println!(
+                "    lambda2 >= {lambda_numerator}/2^{lambda_power} ({lambda_display:.6}); phi(C) >= {phi_numerator}/2^{phi_power} ({phi_display:.6})"
+            );
+        } else {
+            println!("    lambda2=n/a; phi(C)=n/a");
+        }
+        println!("    files: {}", certificate.component_files.join(", "));
+    }
+
+    println!(
         "manifest dependencies: {} total, {} non-registry, {} risky literal sources",
         report.manifest_dependency_count,
         report.non_registry_manifest_dependency_count,

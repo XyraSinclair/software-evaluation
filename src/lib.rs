@@ -10,6 +10,7 @@ pub mod change_profile;
 pub mod cochange;
 pub mod cochange_support;
 pub mod compare;
+pub mod conductance;
 pub mod deps;
 pub mod discipline;
 pub mod duplicates;
