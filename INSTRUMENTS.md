@@ -105,8 +105,71 @@ explicit coverage field rather than silently passing as clean.
 | `seval duplicates PATH` | normalized AST leaf-token windows meeting explicit token/line thresholds | maximal non-overlapping structural clone groups, occurrences, and duplicated token/line mass | semantic equivalence, intent, whether duplication is justified, or absence of clones below the thresholds |
 | `seval api PATH` | externally reachable Rust declarations plus declarations representable under the other languages' documented lexical publicness rules | symbol rows, kinds, visibility basis, parameters, generics, adjacent documentation, and symbols/kSLOC | runtime reachability outside Rust's resolved module visibility, compatibility, stability, usability, or API quality |
 | `seval discipline PATH` | function spaces (functions, methods, closures/lambdas/arrows) in recognized source files, each construct attributed to its innermost space | per function: syntactic purity (no nonlocal write, no `&mut`/pointer parameter, no `unsafe`, no call into a documented per-language effect list) and its four components; mutation census (bindings, mutable bindings, reassignments, shadowings, max mutable live range); shape (params, bool params, statements, single-expression body, unit return, max call-chain length); error shape (`?`/Go err-return propagation, `unwrap`/`expect`, panic-like, broad and empty catches, ignored results); lexical type honesty (string-literal conditions, TS `any`, unannotated params, type-ignore comments); per file magic numbers, magic strings, and global mutable state; repo totals, pure fraction, and nearest-rank tails | semantic purity, effect reachability through unresolved calls, whether a mutation or catch is justified, type-level correctness; per-language uncovered fields report 0 by construction (see the module's limitations) |
+| `seval typespace PATH` | Rust type definitions, impls, calls, and declared boundary types; TypeScript/TSX and Python only for the T2 field/signature dynamic-state list | T1 algebraic shape, T2 dynamic-state surface, T4 endomorphic closure, T5 ownership-evasion density, and T6 newtype adoption, with the declared denominator for every count | resolved or inferred types, alias expansion, laws, justification, and local state that does not cross a declaration |
 | `seval shape PATH` | the same function spaces, with constructs attributed only to their innermost space | interface-width/interior-volume pairs, cyclomatic/cognitive pairs and gaps, maximum control nesting, branch arm-size ratios, large no-else then arms, and file/repository distributions | semantic or information-theoretic module depth, actual reader effort, whether asymmetry is justified, macro/codegen-expanded shape, or a refactoring direction |
 | `seval tests PATH` | recognized source/test files and supported framework spellings | test/source lines, discovered/ignored cases including skipped-suite ancestry, assertion-like calls, cases/kSLOC, and conservative path-aware same-stem source/test matches | execution, coverage, mutation survival, assertion meaning, correctness, or test adequacy |
+
+#### Type-space census
+
+`seval typespace PATH` is a proxy over declared type syntax. Tree-sitter sees
+spellings, not type identity: it does not expand aliases, resolve imports,
+infer omitted types, expand macros, or determine semantic equivalence. A
+rust-analyzer/HIR bridge is therefore the common route to alias defeat and
+resolved type edges. Rust coverage is complete for T1, T2, T4, T5, and T6.
+TypeScript/TSX and Python contribute only to T2 through their documented cheap
+type-mention scans; JavaScript and Go contribute no determinant counts.
+Syntax-error files remain in coverage and their error-tolerant trees are
+observed.
+
+T1 counts Rust structs, enums, unions, and aliases as all type definitions.
+An enum is data-bearing only when it has at least two variants and at least one
+variant has tuple or record payload syntax. An enum with no payload variants is
+a field-less tag enum; one-variant payload enums and aliases/unions remain in
+the reported residual so the denominator closes. For every struct, T1 counts
+fields whose declared type contains `Option` or `bool`, and reports the tail of
+structs with at least two such fields over structs with at least two fields.
+Two-variant enums can still be booleans; optional fields can be hoisted; and
+orthogonal options are legitimate in builder and configuration types.
+
+T2 examines Rust struct fields and function parameter/return declarations,
+TypeScript/TSX fields, parameters, returns, and index signatures, and Python
+annotated fields, parameters, and returns. Its denominator is identifier-like
+type-constructor leaf mentions in those positions. Rust dynamic-state entries
+are path-qualified `serde_json::Value`, `dyn Any` (including
+`Box<dyn Any>`), and `HashMap<String, _>` or `BTreeMap<String, _>` forms; an
+unqualified `Value` does not count. TypeScript entries are `any`, `unknown`,
+`Record<string, ...>`, and string index signatures. Python entries are `Any`,
+`Dict[str, Any]`, and bare `dict` annotations. Each matched listed form is a
+mention. Aliases defeat the list entirely: `type Json = Value` is a resolution
+failure, not an improvement. The count overlaps discipline's bare-`any`
+observation but is field/signature-scoped and adds container forms.
+
+T4 groups inherent and trait impl blocks by their written Rust target. Its
+denominator is explicit-`pub` methods. The numerator is public methods whose
+declared return is `Self`, the impl target, an immutable or mutable reference
+to either, or `Box`, `Option`, or the success arm of `Result` wrapping either.
+Owned, immutable-borrowed, and mutable builder returns are separate counts.
+The binary census reports matching functions over all Rust functions: it
+accepts exactly two non-receiver parameters with the same written type, by
+value or shared reference, and the same by-value return type. Syntactic
+closure establishes none of the algebraic laws.
+
+T5 counts Rust `RefCell`, `Cell`, `Mutex`, and `RwLock` leaves plus `.borrow()`,
+`.borrow_mut()`, and `.lock()` call sites as shared-mutable evidence. `Rc` and
+`Arc` leaves are a separate shared-ownership count. Clone density is `.clone()`
+calls over all call expressions. Type densities use all identifier-like leaves
+in Rust type regions as their denominator; call densities use all Rust call
+expressions. File rows and repository totals use the same rules. Necessary
+concurrency is indistinguishable from evasion, while hand-written unsafe
+interior mutability is invisible; read this beside discipline's unsafe count.
+
+T6 counts `String`, `&str`, the fixed-width integer families through 128 bits,
+`usize`, `isize`, `f32`, `f64`, and `bool` over all identifier-like type
+mentions in explicit-`pub` function parameter and public field positions of
+explicit-`pub` structs. Its supply is single-field Rust tuple structs wrapping
+one listed primitive; supply with a `pub` or restricted-`pub` inner field is
+reported separately as costume. A primitive can be the honest domain type, so
+this is a within-Rust distribution rather than a target ratio.
 
 #### Function shape profile
 

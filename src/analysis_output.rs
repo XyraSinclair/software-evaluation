@@ -8,6 +8,7 @@ use software_evaluation::discipline::{
     DisciplineReport, DisciplineSort, Tail, rank_files as rank_discipline_files,
     rank_functions as rank_discipline_functions,
 };
+use software_evaluation::typespace::TypeSpaceReport;
 use software_evaluation::duplicates::DuplicateReport;
 use software_evaluation::shape::{
     IntegerDistribution, ShapeReport, rank_functions as rank_shape_functions,
@@ -681,6 +682,104 @@ pub fn print_discipline(report: &DisciplineReport, sort: DisciplineSort, top: us
         );
     }
     print_limitations(&report.limitations);
+}
+
+pub fn print_typespace(report: &TypeSpaceReport, top: usize) {
+    println!("analyzer: {}", report.analyzer);
+    println!("root: {}", report.root);
+    println!("epistemic class: {}", report.epistemic_class);
+    println!(
+        "coverage: {} supported / {} enumerated files; {} skipped; syntax-error-files={}",
+        report.coverage.supported_files,
+        report.coverage.enumerated_files,
+        report.coverage.skipped_unsupported_files,
+        report.coverage.syntax_error_files,
+    );
+    let languages = report.coverage.files_per_language.iter()
+        .map(|(language, files)| format!("{language}={files}"))
+        .collect::<Vec<_>>().join(" ");
+    println!("files per language: {}", if languages.is_empty() { "none" } else { &languages });
+    println!("determinant coverage by language:");
+    for (language, determinants) in &report.coverage.determinants_per_language {
+        println!("  {language}: {determinants}");
+    }
+
+    let t1 = &report.t1;
+    println!("T1 algebraic type shape [proxy over declared type syntax]:");
+    println!(
+        "  data-bearing enums: {} / {} all type definitions; denominator partition: structs={} + data-bearing-enums={} + field-less-tag-enums={} + other={}",
+        t1.data_bearing_enums, t1.all_type_definitions, t1.structs, t1.data_bearing_enums,
+        t1.fieldless_tag_enums, t1.other_type_definitions,
+    );
+    println!(
+        "  Option+bool tail: {} / {} structs with >=2 fields have >=2 such fields; {} mentions over {} structs",
+        t1.structs_with_at_least_two_option_bool_fields,
+        t1.structs_with_at_least_two_fields,
+        t1.option_bool_fields,
+        t1.structs,
+    );
+
+    let t2 = &report.t2;
+    println!("T2 dynamic-state surface [proxy over declared type syntax; aliases defeat it]:");
+    println!("  {} / {} type-constructor leaf mentions in struct-field and function-signature positions", t2.dynamic_state_mentions, t2.type_constructor_leaf_mentions);
+    for (language, count) in &t2.by_language {
+        println!("  {language}: {} / {}", count.numerator, count.denominator);
+    }
+    println!("  dedupe: overlaps discipline's bare-any count; this census is signature/field-scoped and includes container forms");
+
+    let t4 = &report.t4;
+    println!("T4 endomorphic closure [proxy over declared return syntax; closure != lawfulness]:");
+    println!("  endomorphic methods: {} / {} public methods; owned={}; borrowed={}; mutant-builder={}", t4.endomorphic_methods, t4.public_methods, t4.owned_endomorphic_methods, t4.borrowed_endomorphic_methods, t4.mutant_endomorphic_methods);
+    println!("  binary closures: {} / {} Rust functions have (T,T)->T or (&T,&T)->T shape", t4.binary_closures, t4.functions_censused_for_binary_closure);
+
+    let t5 = &report.t5;
+    println!("T5 ownership-evasion density [proxy over declared/call syntax]:");
+    println!("  shared-mutable: {} type mentions + {} borrow/lock calls / {} type leaves + {} call expressions", t5.shared_mutable_type_mentions, t5.borrow_lock_calls, t5.type_constructor_leaf_mentions, t5.call_expressions);
+    println!("  shared-ownership: {} Rc/Arc type mentions / {} type leaves", t5.shared_ownership_type_mentions, t5.type_constructor_leaf_mentions);
+    println!("  clone density: {} / {} call expressions; cross-check discipline's unsafe count", t5.clone_calls, t5.call_expressions);
+
+    let t6 = &report.t6;
+    println!("T6 newtype adoption [proxy over declared type syntax; within-language distribution only]:");
+    println!("  wide primitives: {} / {} type mentions in public fn-param + pub-struct-field positions; non-primitive={}", t6.wide_primitive_mentions, t6.public_boundary_type_mentions, t6.non_primitive_mentions);
+    println!("  newtype supply: {}; costume newtypes with public inner field: {} / {}", t6.newtype_supply, t6.costume_newtypes, t6.newtype_supply);
+
+    print_typespace_tables(report, top);
+    print_limitations(&report.limitations);
+}
+
+fn print_typespace_tables(report: &TypeSpaceReport, top: usize) {
+    let mut structs = report.t1.structs_detail.iter().collect::<Vec<_>>();
+    structs.sort_by(|a, b| b.option_bool_fields.cmp(&a.option_bool_fields).then_with(|| b.fields.cmp(&a.fields)).then_with(|| (&a.path, a.line, &a.name).cmp(&(&b.path, b.line, &b.name))));
+    println!("T1 struct offenders: {} / {} shown", structs.len().min(top), structs.len());
+    for row in structs.into_iter().take(top) { println!("  {:>4} option+bool / {:>4} fields  {}:{} {}", row.option_bool_fields, row.fields, row.path, row.line, row.name); }
+
+    let mut dynamic = report.t2.items.iter().collect::<Vec<_>>();
+    dynamic.sort_by(|a, b| b.dynamic_mentions.cmp(&a.dynamic_mentions).then_with(|| (&a.path, a.line, &a.name).cmp(&(&b.path, b.line, &b.name))));
+    println!("T2 dynamic-state offenders: {} / {} shown", dynamic.len().min(top), dynamic.len());
+    for row in dynamic.into_iter().take(top) { println!("  {:<10} {:>4} / {:>4} leaves  {}:{} {}", row.language, row.dynamic_mentions, row.type_leaf_mentions, row.path, row.line, row.name); }
+
+    let mut types = report.t4.types.iter().collect::<Vec<_>>();
+    types.sort_by(|a, b| {
+        let left = a.endomorphic_methods.saturating_mul(b.public_methods);
+        let right = b.endomorphic_methods.saturating_mul(a.public_methods);
+        right.cmp(&left).then_with(|| b.endomorphic_methods.cmp(&a.endomorphic_methods)).then_with(|| (&a.path, a.line, &a.name).cmp(&(&b.path, b.line, &b.name)))
+    });
+    println!("T4 most-endomorphic types: {} / {} shown", types.len().min(top), types.len());
+    for row in types.into_iter().take(top) { println!("  {:>4} / {:>4} methods (owned={} borrowed={} mutant={})  {}:{} {}", row.endomorphic_methods, row.public_methods, row.owned_endomorphic_methods, row.borrowed_endomorphic_methods, row.mutant_endomorphic_methods, row.path, row.line, row.name); }
+    println!("T4 binary closures: {} / {} shown", report.t4.binary_items.len().min(top), report.t4.binary_items.len());
+    for row in report.t4.binary_items.iter().take(top) { println!("  {}:{} {}", row.path, row.line, row.name); }
+
+    let mut files = report.t5.files.iter().collect::<Vec<_>>();
+    files.sort_by(|a, b| (b.shared_mutable_type_mentions + b.borrow_lock_calls + b.shared_ownership_type_mentions + b.clone_calls).cmp(&(a.shared_mutable_type_mentions + a.borrow_lock_calls + a.shared_ownership_type_mentions + a.clone_calls)).then_with(|| a.path.cmp(&b.path)));
+    println!("T5 file offenders: {} / {} shown", files.len().min(top), files.len());
+    for row in files.into_iter().take(top) { println!("  smut={:>3}+{:>3} shared={:>3} clone={:>4}/{:<4} leaves={:<5} {}", row.shared_mutable_type_mentions, row.borrow_lock_calls, row.shared_ownership_type_mentions, row.clone_calls, row.call_expressions, row.type_constructor_leaf_mentions, row.path); }
+
+    let mut primitive = report.t6.primitive_items.iter().collect::<Vec<_>>();
+    primitive.sort_by(|a, b| b.primitive_mentions.cmp(&a.primitive_mentions).then_with(|| (&a.path, a.line, &a.name).cmp(&(&b.path, b.line, &b.name))));
+    println!("T6 primitive-boundary offenders: {} / {} shown", primitive.len().min(top), primitive.len());
+    for row in primitive.into_iter().take(top) { println!("  {:>4} / {:>4} mentions  {}:{} {}", row.primitive_mentions, row.type_mentions, row.path, row.line, row.name); }
+    println!("T6 newtypes: {} / {} shown", report.t6.newtypes.len().min(top), report.t6.newtypes.len());
+    for row in report.t6.newtypes.iter().take(top) { println!("  {:<7} {:<16} {}:{} {}", if row.costume { "costume" } else { "private" }, row.wrapped_type, row.path, row.line, row.name); }
 }
 
 fn print_tail(name: &str, tail: &Tail) {

@@ -9,6 +9,7 @@ use std::process::ExitCode;
 use analysis_output::{
     print_api, print_benchmark, print_cochange_layout, print_dependencies, print_discipline,
     print_duplicates, print_shape, print_symbols, print_tests,
+    print_typespace,
 };
 use change_profile_output::{render_change_profile_svg, render_change_profile_text};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -37,6 +38,7 @@ use software_evaluation::repo::{
 use software_evaluation::shape::analyze_shape;
 use software_evaluation::symbols::analyze_symbols;
 use software_evaluation::tests_analysis::analyze_tests;
+use software_evaluation::typespace::analyze_typespace;
 
 #[derive(Debug, Parser)]
 #[command(name = "seval", version, about = "Evidence-first software evaluation")]
@@ -237,6 +239,16 @@ enum Command {
         #[arg(long, value_enum, default_value_t = DisciplineSortArg::Pure)]
         sort: DisciplineSortArg,
         /// Maximum rows shown in each text table.
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Census declared type-space shape, dynamic state, closure, ownership, and newtypes.
+    Typespace {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Maximum rows shown in each determinant table.
         #[arg(long, default_value_t = 30)]
         top: usize,
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
@@ -649,6 +661,14 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             match format {
                 OutputFormat::Json => print_json(&report)?,
                 OutputFormat::Text => print_discipline(&report, sort.library(), top),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Typespace { path, top, format } => {
+            let report = analyze_typespace(&path).map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_typespace(&report, top),
             }
             Ok(ExitCode::SUCCESS)
         }
