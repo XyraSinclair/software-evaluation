@@ -72,7 +72,9 @@ cohesion (D5) — depth is a virtue only conditioned on an organized interior.
 Signature compression into opaque `Context`/`Options` blobs is countable
 (single-param functions taking a struct with >N fields).
 
-*Feasibility.* Depth from `seval api` + `seval metrics` operands: **next**.
+*Feasibility.* Interface-width × interior-volume pairs with the shallow
+tail: **have** (`seval shape`). Interface-*information* depth (`seval api`
+operands): **next**.
 Leakage: type-to-module resolution — Rust/TS tractable, Python/Go partial:
 **later**.
 
@@ -168,8 +170,8 @@ Report as distributions and tails; use as review routers, never gates.
 
 | # | Determinant | Definition sketch | Status |
 |---|---|---|---|
-| D1 | Local-complexity family | cognitive tail (**have**); **cyclomatic–cognitive gap** per function (flat 12-arm match: high cyclomatic, low cognitive, fine; nested tangle: cognitive ≫ cyclomatic, ugly) — free from existing operands; **max nesting depth** as a headline distribution (language-agnostic, un-gameable-while-staying-ugly) | have / next |
-| D2 | Branch symmetry / special-case elimination (Torvalds's "good taste") | per `match`/`switch`/`if-else` chain, pairwise AST-skeleton similarity of arm bodies (reuse clone normalization): near-identical arms ⇒ latent loop/data; one arm markedly more complex than siblings ⇒ the lurking special case. Cross-checked by clone detection (copy-paste uniformity fires there) | next |
+| D1 | Local-complexity family | cognitive tail (**have**); **cyclomatic–cognitive gap** per function (flat 12-arm match: high cyclomatic, low cognitive, fine; nested tangle: cognitive ≫ cyclomatic, ugly) and **max nesting depth** distributions: **have** (`seval shape`) | have |
+| D2 | Branch symmetry / special-case elimination (Torvalds's "good taste") | per `match`/`switch`/`if-else` chain, pairwise AST-skeleton similarity of arm bodies (reuse clone normalization): near-identical arms ⇒ latent loop/data; one arm markedly more complex than siblings ⇒ the lurking special case. Cross-checked by clone detection (copy-paste uniformity fires there). Arm-size ratio + large no-else then-arms: **have** (`seval shape`); AST-skeleton arm similarity: next | partial |
 | D3 | Type-honesty smells | `unwrap`/`expect`/`panic!`, `any`, `type: ignore`, empty catches, broad `except`, ignored `Result`s (G5's lexical half) | have (`seval discipline`) |
 | D4 | Mutation census | mutable bindings, reassignments, shadowing, mutable live range per function — cheap and language-relative; a diagnostic tail-finder, not a target (see G3) | have (`seval discipline`) |
 | D5 | Conceptual cohesion (Marcus & Poshyvanyk 2005) | within-module tightness of function identifier vocabularies vs repo baseline; sidesteps LCOM's field-resolution needs | later (embedding/LSA) |
