@@ -8,6 +8,10 @@ use serde::Serialize;
 use thiserror::Error;
 use tree_sitter::Node;
 
+use crate::conductance::{
+    CONDUCTANCE_DENOMINATOR_POWER, CONDUCTANCE_NODE_LIMIT, ConductanceCertificate,
+    conductance_certificates,
+};
 use crate::source::{SourceError, SourceFile, SourceLanguage, load_source_tree, parse_source};
 
 #[derive(Debug, Error)]
@@ -21,6 +25,8 @@ pub enum DependencyError {
     },
     #[error("cannot parse dependency manifest {path}: {message}")]
     ManifestParse { path: PathBuf, message: String },
+    #[error("dependency graph invariant failed: {0}")]
+    Invariant(String),
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -50,6 +56,11 @@ pub struct DependencyReport {
     pub condensation_depth: Option<CondensationDepthProfile>,
     pub propagation: DependencyPropagation,
     pub layout: DependencyLayout,
+    pub conductance_certificate_node_limit: usize,
+    pub conductance_certificate_denominator_power: u32,
+    /// Per-component negative evidence that no cut is sparser than its exact
+    /// Cheeger lower bound; this is a cohesion coordinate, not a design verdict.
+    pub conductance_certificates: Vec<ConductanceCertificate>,
 }
 
 /// Longest-path depth profile of the SCC-condensation DAG: the
@@ -488,7 +499,15 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
     let internal_weak = weak_components(&known, &internal_adjacency);
     let propagation =
         dependency_propagation(source_paths.len(), &cycles, &internal_weak, &reachability);
-    let layout = dependency_layout(&known, &edges);
+    let undirected_internal_edges = internal_undirected_edges(&edges);
+    let layout = dependency_layout(&known, &edges, &undirected_internal_edges);
+    let conductance_certificates = conductance_certificates(
+        &known,
+        &undirected_internal_edges,
+        CONDUCTANCE_DENOMINATOR_POWER,
+        CONDUCTANCE_NODE_LIMIT,
+    )
+    .map_err(DependencyError::Invariant)?;
     let all_ids: BTreeSet<_> = node_kinds.keys().cloned().collect();
     let all_adjacency = adjacency(&all_ids, &edges, false);
     let weak_components = weak_components(&all_ids, &all_adjacency);
@@ -573,6 +592,9 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         condensation_depth: depth_profile,
         propagation,
         layout,
+        conductance_certificate_node_limit: CONDUCTANCE_NODE_LIMIT,
+        conductance_certificate_denominator_power: CONDUCTANCE_DENOMINATOR_POWER,
+        conductance_certificates,
     })
 }
 
@@ -587,6 +609,7 @@ fn base_limitations() -> Vec<String> {
             "Go imports are external/unresolved without go.mod module-path knowledge; standard-library and third-party imports are not distinguished.".to_owned(),
             "Fan-in, fan-out, components, cycles, and depth are structural proxies and carry no quality verdict or weighting.".to_owned(),
             "Propagation is measured on the file-level internal dependency graph and depends on resolver completeness; exact transitive reachability is omitted above either the 10,000 analyzed-source-file node bound or the 100,000,000 edge-visit work upper bound while direct internal degrees and cycle measures remain available.".to_owned(),
+            format!("Conductance certificates are exact for connected components of at least three files through the {CONDUCTANCE_NODE_LIMIT}-file component bound; larger components are reported with size_limit rather than approximated. They provide negative evidence that no sparse cut exists, not a design-quality verdict."),
     ]
 }
 
@@ -789,24 +812,36 @@ fn dependency_propagation(
     }
 }
 
-fn dependency_layout(analyzed: &BTreeSet<String>, edges: &[DependencyEdge]) -> DependencyLayout {
+fn internal_undirected_edges(edges: &[DependencyEdge]) -> BTreeSet<(&str, &str)> {
+    let mut undirected = BTreeSet::new();
+    for edge in edges
+        .iter()
+        .filter(|edge| edge.classification == DependencyClassification::Internal)
+    {
+        let (source, target) = (edge.source.as_str(), edge.target.as_str());
+        if source != target {
+            undirected.insert((source.min(target), source.max(target)));
+        }
+    }
+    undirected
+}
+
+fn dependency_layout<'a>(
+    analyzed: &BTreeSet<String>,
+    edges: &'a [DependencyEdge],
+    undirected: &BTreeSet<(&'a str, &'a str)>,
+) -> DependencyLayout {
     let internal: Vec<(&str, &str)> = edges
         .iter()
         .filter(|edge| edge.classification == DependencyClassification::Internal)
         .map(|edge| (edge.source.as_str(), edge.target.as_str()))
         .collect();
-    let mut undirected: BTreeSet<(&str, &str)> = BTreeSet::new();
-    for &(source, target) in &internal {
-        if source != target {
-            undirected.insert((source.min(target), source.max(target)));
-        }
-    }
     let m = undirected.len();
     let partitions = vec![
         layout_partition(
             "top_level",
             analyzed,
-            &undirected,
+            undirected,
             &internal,
             m,
             top_level_community,
@@ -814,7 +849,7 @@ fn dependency_layout(analyzed: &BTreeSet<String>, edges: &[DependencyEdge]) -> D
         layout_partition(
             "parent_directory",
             analyzed,
-            &undirected,
+            undirected,
             &internal,
             m,
             parent_directory_community,
