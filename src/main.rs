@@ -8,7 +8,7 @@ use std::process::ExitCode;
 
 use analysis_output::{
     print_api, print_benchmark, print_cochange_layout, print_dependencies, print_discipline,
-    print_duplicates, print_tests,
+    print_duplicates, print_symbols, print_tests,
 };
 use change_profile_output::{render_change_profile_svg, render_change_profile_text};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -34,6 +34,7 @@ use software_evaluation::metrics::{
 use software_evaluation::repo::{
     GitChangeShapeProgram, RepoProfileConfig, StaticRepoShapeProgram, snapshot_git_repo,
 };
+use software_evaluation::symbols::analyze_symbols;
 use software_evaluation::tests_analysis::analyze_tests;
 
 #[derive(Debug, Parser)]
@@ -176,6 +177,17 @@ enum Command {
         #[arg(default_value = ".")]
         path: PathBuf,
         /// Maximum table rows shown in text output.
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Build a resolved lower-bound graph of named Rust symbols.
+    Symbols {
+        /// File or directory to analyze.
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Maximum rows shown in each ranked text section.
         #[arg(long, default_value_t = 30)]
         top: usize,
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
@@ -570,6 +582,14 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             match format {
                 OutputFormat::Json => print_json(&report)?,
                 OutputFormat::Text => print_dependencies(&report, top),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Symbols { path, top, format } => {
+            let report = analyze_symbols(&path).map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_symbols(&report, top),
             }
             Ok(ExitCode::SUCCESS)
         }
