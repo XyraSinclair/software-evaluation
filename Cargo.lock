@@ -1536,6 +1536,7 @@ dependencies = [
  "ignore",
  "num-bigint",
  "num-rational",
+ "num-traits",
  "percent-encoding",
  "rayon",
  "regex",

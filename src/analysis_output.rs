@@ -252,6 +252,74 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
         propagation.weak_components,
         propagation.largest_weak_component_files,
     );
+    let trophic = &report.trophic_incoherence;
+    let trophic_status = match trophic.status {
+        software_evaluation::trophic::TrophicIncoherenceStatus::Computed => "computed",
+        software_evaluation::trophic::TrophicIncoherenceStatus::SizeLimit => "size_limit",
+        software_evaluation::trophic::TrophicIncoherenceStatus::TrivialNoEdges => {
+            "trivial_no_edges"
+        }
+    };
+    let trophic_exact = trophic
+        .f0_numerator
+        .as_ref()
+        .zip(trophic.f0_denominator.as_ref())
+        .map_or_else(
+            || "n/a".to_owned(),
+            |(numerator, denominator)| format!("{numerator}/{denominator}"),
+        );
+    let path_self_check = match trophic.two_node_path_self_check {
+        software_evaluation::trophic::TrophicPathSelfCheckStatus::Verified => "verified",
+        software_evaluation::trophic::TrophicPathSelfCheckStatus::SkippedNoTwoNodePath => {
+            "skipped_no_two_node_path"
+        }
+    };
+    println!(
+        "trophic incoherence: status={trophic_status}; edge-weighted F0={trophic_exact} (display={}); directed-edges={}/{} computed; node-limit={}",
+        trophic
+            .f0
+            .map_or_else(|| "n/a".to_owned(), |value| format!("{value:.6}")),
+        trophic.computed_directed_edges,
+        trophic.total_directed_edges,
+        trophic.node_limit,
+    );
+    println!(
+        "  exact self-checks: residuals={}/{} computed components verified; two-node-path={path_self_check}",
+        trophic.residuals_verified,
+        trophic.computed_components,
+    );
+    for (index, component) in trophic.components.iter().enumerate() {
+        let status = match component.status {
+            software_evaluation::trophic::TrophicIncoherenceStatus::Computed => "computed",
+            software_evaluation::trophic::TrophicIncoherenceStatus::SizeLimit => "size_limit",
+            software_evaluation::trophic::TrophicIncoherenceStatus::TrivialNoEdges => {
+                "trivial_no_edges"
+            }
+        };
+        let exact = component
+            .f0_numerator
+            .as_ref()
+            .zip(component.f0_denominator.as_ref())
+            .map_or_else(
+                || "n/a".to_owned(),
+                |(numerator, denominator)| format!("{numerator}/{denominator}"),
+            );
+        println!(
+            "  component {}: status={status}; files={}/{} (fraction={:.3}); directed-edges={}; F0={} (display={}); files-in-cycle={}; largest-SCC={}",
+            index + 1,
+            component.component_file_numerator,
+            component.analyzed_file_denominator,
+            component.component_file_fraction,
+            component.directed_edges,
+            exact,
+            component
+                .f0
+                .map_or_else(|| "n/a".to_owned(), |value| format!("{value:.6}")),
+            component.files_in_cycle,
+            component.largest_scc_files,
+        );
+        println!("    files: {}", component.component_files.join(", "));
+    }
     if let Some(depth) = &report.condensation_depth {
         println!(
             "condensation depth: {} SCC nodes, {} edges over {} files; depth_in p50={} p90={} max={}, depth_out p50={} p90={} max={}",
