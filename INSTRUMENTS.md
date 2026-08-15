@@ -301,6 +301,51 @@ adds its own: co-change is correlation of edits (not causal coupling), squash an
 rebase rewrite the observed history, and commit granularity is Goodhart-exposed
 because splitting a coupled edit across commits lowers crossing mass for free.
 
+### Co-change support profile
+
+`seval cochange-support REPOSITORY` joins the static dependency graph and the
+bounded co-change history on one pinned file universe before comparing them.
+The static side is analyzed from committed blobs at the pinned revision, while
+the historical side uses the same no-merge, no-rename window and broad-commit
+cap as `cochange-layout`. The joined universe is the intersection of files that
+are both source-classified tracked blobs and analyzed by the static resolver;
+the report preserves the excluded sets as four counts: static-only,
+cochange-only, intersection, and union.
+
+For every unordered pair in the intersection carrying positive fixed-point
+co-change mass, the support table bins that mass by static relation:
+
+- `direct`: a resolved internal dependency edge exists in either direction;
+- `transitive_only`: one endpoint is reachable from the other, but no direct
+  edge exists;
+- `unrelated`: neither direct nor transitive support is resolved.
+
+Transitive reachability uses the same 10,000-node and 100,000,000-work caps as
+`seval deps`. If either cap fires, `transitive_only` and `unrelated` are marked
+uncomputed rather than guessed, while the direct and pending non-direct masses
+remain exact. The reverse row reports the fraction of directed
+parent-directory-crossing static edges whose unordered endpoint pair carries
+any co-change mass. All masses retain their authoritative scale-$2^{40}$
+integers beside display floats, and the three computed bins close exactly to
+the total intersected mass. Two repositories with identical static and
+co-change $Q \times Q$ coordinates can have opposite support tables.
+
+The same eligible commits also define a partition-free coupling tail. For each
+pair that co-occurs, commit Jaccard is the exact rational
+$|C_a \cap C_b| / |C_a \cup C_b|$, with numerator, denominator, and display
+float. The nearest-rank p50, p90, and maximum require at least two co-occurring
+commits, avoiding the trivial one-commit $1/1$ singleton pair. The ranked tail
+includes every co-occurring pair, ordered by Jaccard and then co-occurrence;
+each row shows both file touch counts, co-occurrence count, and union count so
+low-count values remain legible. High Jaccard identifies files that only or
+nearly only change together, a coupling shape directory-binned $Q$ cannot see.
+
+The profile inherits squash, rebase, rename, broad-commit, and commit-practice
+limits from co-change analysis. Static resolver blind spots make `unrelated` an
+over-count — for example, a path-alias import can read as unrelated. Shared
+release cadence is not causal coupling, and low-count Jaccard remains noisy;
+the distribution threshold and visible ranked denominators are the defense.
+
 ### Metric admission queue
 
 The next useful families are ordered by decision value and instrument honesty

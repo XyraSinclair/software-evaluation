@@ -2,6 +2,7 @@ use std::cmp::Reverse;
 
 use software_evaluation::api_surface::ApiReport;
 use software_evaluation::cochange::CochangeLayoutReport;
+use software_evaluation::cochange_support::{CochangeSupportReport, ExactRatio, SupportMassBin};
 use software_evaluation::benchmark::{BenchmarkReport, RunReceipt};
 use software_evaluation::deps::DependencyReport;
 use software_evaluation::discipline::{
@@ -1075,4 +1076,154 @@ pub fn print_cochange_layout(report: &CochangeLayoutReport, top: usize) {
         }
     }
     print_limitations(&report.limitations);
+}
+
+pub fn print_cochange_support(report: &CochangeSupportReport) {
+    println!("artifact: {}", report.artifact.id);
+    println!("revision: {}", report.artifact.revision);
+    println!("tree: {}", report.artifact.tree_digest);
+    println!("cochange-support analyzer={}", report.analyzer);
+    println!("static analyzer={}", report.static_analyzer);
+    let history = &report.history_coverage;
+    println!(
+        "history: requested={} streamed={} truncated={} eligible={} broad_excluded={} below_pair_threshold={} cap={}",
+        history.requested_commits,
+        history.commits_streamed,
+        history.truncated,
+        history.eligible_commits,
+        history.broad_commits_excluded,
+        history.below_pair_threshold_commits,
+        history.broad_commit_cap,
+    );
+    println!(
+        "history range: earliest={:?} latest={:?}",
+        history.earliest_committer_unix_seconds, history.latest_committer_unix_seconds
+    );
+    let universe = &report.universe_coverage;
+    println!(
+        "universe: tracked_regular={} utf8_regular={} cochange={} static={} static_only={} cochange_only={} intersection={} union={} intersection_touched={} intersection_never_touched={}",
+        universe.tracked_regular_files,
+        universe.utf8_path_regular_files,
+        universe.source_classified_tracked_blobs,
+        universe.static_analyzed_files,
+        universe.static_only_files,
+        universe.cochange_only_files,
+        universe.intersection_files,
+        universe.union_files,
+        universe.intersection_files_touched_in_history,
+        universe.intersection_files_never_touched,
+    );
+    println!(
+        "history evidence: git_version={} command={} stdout_sha256={} stdout_bytes={}",
+        history.git_version, history.command, history.stdout_sha256, history.stdout_bytes
+    );
+    let source = &report.source_provenance;
+    println!(
+        "tree evidence: git_version={} command={} stdout_sha256={} stdout_bytes={}",
+        source.git_version,
+        source.ls_tree_command,
+        source.ls_tree_stdout_sha256,
+        source.ls_tree_stdout_bytes,
+    );
+    let static_snapshot = &report.static_snapshot_provenance;
+    println!(
+        "blob evidence: git_version={} command={} request_sha256={} stdout_sha256={} stdout_bytes={}",
+        static_snapshot.git_version,
+        static_snapshot.cat_file_command,
+        static_snapshot.cat_file_request_sha256,
+        static_snapshot.cat_file_stdout_sha256,
+        static_snapshot.cat_file_stdout_bytes,
+    );
+    println!(
+        "intersected co-change mass: actual={:.9} ideal={:.9} quantization_bound={:.3e} scaled={}/{} ideal_scaled={} bound_scaled={}",
+        report.total_intersected_pair_mass,
+        report.total_intersected_pair_mass_ideal,
+        report.total_intersected_pair_mass_quantization_bound,
+        report.total_intersected_pair_mass_scaled,
+        report.weight_scale,
+        report.total_intersected_pair_mass_ideal_scaled,
+        report.total_intersected_pair_mass_quantization_bound_scaled,
+    );
+    let cross_tab = &report.support_cross_tab;
+    println!(
+        "static reachability: status={:?} node_limit={} work_upper_bound={:?} work_limit={}",
+        cross_tab.reachability_status,
+        cross_tab.reachability_node_limit,
+        cross_tab.reachability_work_upper_bound,
+        cross_tab.reachability_work_limit,
+    );
+    print_support_bin("direct", Some(&cross_tab.direct));
+    print_support_bin("transitive_only", cross_tab.transitive_only.as_ref());
+    print_support_bin("unrelated", cross_tab.unrelated.as_ref());
+    if let Some(pending) = &cross_tab.non_direct_uncomputed_mass {
+        print_support_bin("non_direct_uncomputed", Some(pending));
+    }
+    let reverse = &report.reverse_static_edge_support;
+    println!(
+        "reverse static support: {}/{} cross-directory edges carry co-change mass (fraction={}) granularity={}",
+        reverse.supported_cross_directory_edges,
+        reverse.cross_directory_edges,
+        shown_fraction(reverse.fraction),
+        reverse.directory_granularity,
+    );
+    let jaccard = &report.commit_jaccard;
+    println!(
+        "commit Jaccard: cooccurring_pairs={} distribution_pairs={} distribution_minimum_cooccurrence={} top_minimum_cooccurrence={}",
+        jaccard.cooccurring_pairs,
+        jaccard.pairs_in_distribution,
+        jaccard.distribution_minimum_cooccurrence,
+        jaccard.top_pairs_minimum_cooccurrence,
+    );
+    println!(
+        "Jaccard distribution: p50={} p90={} max={}",
+        shown_ratio(jaccard.distribution.p50.as_ref()),
+        shown_ratio(jaccard.distribution.p90.as_ref()),
+        shown_ratio(jaccard.distribution.max.as_ref()),
+    );
+    println!("top Jaccard pairs:");
+    for pair in &jaccard.top_pairs {
+        println!(
+            "  {:.6} {}/{} cooccurrence={} union={} left_commits={} right_commits={} {} <-> {}",
+            pair.jaccard.value,
+            pair.jaccard.numerator,
+            pair.jaccard.denominator,
+            pair.cooccurrence_commits,
+            pair.union_commits,
+            pair.left_commits,
+            pair.right_commits,
+            pair.left,
+            pair.right,
+        );
+    }
+    println!("interpretation: {}", report.interpretation);
+    print_limitations(&report.limitations);
+}
+
+fn print_support_bin(name: &str, bin: Option<&SupportMassBin>) {
+    match bin {
+        Some(bin) => println!(
+            "support {name}: pairs={} mass={:.9} scaled={} fraction={}",
+            bin.pairs,
+            bin.mass,
+            bin.mass_scaled,
+            shown_fraction(bin.fraction_of_total),
+        ),
+        None => println!("support {name}: uncomputed"),
+    }
+}
+
+fn shown_fraction(value: Option<f64>) -> String {
+    value.map_or_else(|| "n/a".to_owned(), |value| format!("{value:.6}"))
+}
+
+fn shown_ratio(ratio: Option<&ExactRatio>) -> String {
+    ratio.map_or_else(
+        || "n/a".to_owned(),
+        |ratio| {
+            format!(
+                "{}/{} ({:.6})",
+                ratio.numerator, ratio.denominator, ratio.value
+            )
+        },
+    )
 }

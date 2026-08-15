@@ -7,8 +7,8 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use analysis_output::{
-    print_api, print_benchmark, print_cochange_layout, print_dependencies, print_discipline,
-    print_duplicates, print_shape, print_symbols, print_tests,
+    print_api, print_benchmark, print_cochange_layout, print_cochange_support, print_dependencies,
+    print_discipline, print_duplicates, print_shape, print_symbols, print_tests,
 };
 use change_profile_output::{render_change_profile_svg, render_change_profile_text};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -17,6 +17,7 @@ use software_evaluation::audit::{AuditReport, Severity, audit_evaluation_dir};
 use software_evaluation::benchmark::{BenchmarkSpec, run_benchmark};
 use software_evaluation::change_profile::{ChangeProfileConfig, analyze_change_profile};
 use software_evaluation::cochange::{CochangeLayoutConfig, analyze_cochange_layout};
+use software_evaluation::cochange_support::{CochangeSupportConfig, analyze_cochange_support};
 use software_evaluation::compare::{CompareError, EvaluationComparison, compare_evaluation_runs};
 use software_evaluation::deps::analyze_dependencies;
 use software_evaluation::discipline::{DisciplineSort, analyze_discipline};
@@ -101,6 +102,20 @@ enum Command {
         #[arg(long, default_value_t = 500)]
         history_commits: usize,
         /// Maximum per-community rows shown per partition in text output.
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Cross-tab static dependency support and rank commit-Jaccard coupling.
+    CochangeSupport {
+        /// Clean Git repository to profile at HEAD.
+        #[arg(default_value = ".")]
+        repository: PathBuf,
+        /// Maximum non-merge commits included (a count window, newest first).
+        #[arg(long, default_value_t = 500)]
+        history_commits: usize,
+        /// Maximum Jaccard-tail pairs included in either output format.
         #[arg(long, default_value_t = 30)]
         top: usize,
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
@@ -487,6 +502,26 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             match format {
                 OutputFormat::Json => print_json(&report)?,
                 OutputFormat::Text => print_cochange_layout(&report, top),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::CochangeSupport {
+            repository,
+            history_commits,
+            top,
+            format,
+        } => {
+            let report = analyze_cochange_support(
+                &repository,
+                CochangeSupportConfig {
+                    history_commits,
+                    top,
+                },
+            )
+            .map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_cochange_support(&report),
             }
             Ok(ExitCode::SUCCESS)
         }

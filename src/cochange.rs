@@ -17,7 +17,8 @@ use thiserror::Error;
 
 use crate::kernel::ArtifactSnapshot;
 use crate::repo::{
-    RepoError, classified_source, scan_committed_regular_files, scan_file_history, snapshot_git_repo,
+    CommittedRegularFile, RepoError, classified_source, scan_committed_regular_files,
+    scan_file_history, snapshot_git_repo,
 };
 
 const ANALYZER: &str = "seval-cochange-layout-v1";
@@ -26,11 +27,11 @@ const ANALYZER: &str = "seval-cochange-layout-v1";
 /// is stored as `WEIGHT_SCALE / C(k,2)` truncated to an integer, so intra- and
 /// cross-community masses close exactly under integer addition while the
 /// per-pair truncation error stays below `C(k,2) / WEIGHT_SCALE`.
-const WEIGHT_SCALE: u128 = 1 << 40;
+pub(crate) const WEIGHT_SCALE: u128 = 1 << 40;
 
 /// Commits touching more than this many in-universe source files are counted and
 /// excluded as broad commits rather than flooding every pair with `1/C(k,2)`.
-const BROAD_COMMIT_CAP: usize = 100;
+pub(crate) const BROAD_COMMIT_CAP: usize = 100;
 
 /// Configuration for the bounded, no-merge co-change history sample.
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -48,14 +49,17 @@ impl Default for CochangeLayoutConfig {
 
 impl CochangeLayoutConfig {
     fn validate(&self) -> Result<(), CochangeLayoutError> {
-        if (1..=10_000).contains(&self.history_commits) {
-            Ok(())
-        } else {
-            Err(CochangeLayoutError::InvalidConfig(format!(
-                "history_commits must be in 1..=10_000, got {}",
-                self.history_commits
-            )))
-        }
+        validate_history_commits(self.history_commits).map_err(CochangeLayoutError::InvalidConfig)
+    }
+}
+
+pub(crate) fn validate_history_commits(history_commits: usize) -> Result<(), String> {
+    if (1..=10_000).contains(&history_commits) {
+        Ok(())
+    } else {
+        Err(format!(
+            "history_commits must be in 1..=10_000, got {history_commits}"
+        ))
     }
 }
 
@@ -178,6 +182,218 @@ pub struct CochangeCommunity {
     /// Raw scaled-integer twins of the two masses above (authoritative).
     pub intra_weight_scaled: u128,
     pub cross_weight_scaled: u128,
+}
+
+pub(crate) struct PinnedCochangeInput {
+    pub(crate) artifact: ArtifactSnapshot,
+    pub(crate) tree_files: Vec<CommittedRegularFile>,
+    pub(crate) tracked_regular_files: usize,
+    pub(crate) utf8_path_regular_files: usize,
+    pub(crate) source_universe: BTreeSet<String>,
+    commits: Vec<PinnedCommit>,
+    history_requested: usize,
+    history_truncated: bool,
+    history_git_version: String,
+    history_command: String,
+    history_stdout_sha256: String,
+    history_stdout_bytes: u64,
+    source_git_version: String,
+    source_command: String,
+    source_stdout_sha256: String,
+    source_stdout_bytes: u64,
+}
+
+struct PinnedCommit {
+    committer_unix_seconds: i64,
+    files: BTreeSet<String>,
+}
+
+pub(crate) struct EligibleCochangeCommit {
+    pub(crate) members: Vec<usize>,
+    pub(crate) unit_mass: u128,
+}
+
+pub(crate) struct CochangeAccumulation {
+    pub(crate) paths: Vec<String>,
+    pub(crate) eligible_commits: Vec<EligibleCochangeCommit>,
+    pub(crate) total_mass: u128,
+    pub(crate) ideal_mass: u128,
+    pub(crate) files_touched_in_history: usize,
+    pub(crate) broad_commits_excluded: usize,
+    pub(crate) below_pair_threshold_commits: usize,
+    pub(crate) earliest_committer_unix_seconds: Option<i64>,
+    pub(crate) latest_committer_unix_seconds: Option<i64>,
+}
+
+impl PinnedCochangeInput {
+    pub(crate) fn accumulate(
+        &self,
+        universe: &BTreeSet<String>,
+    ) -> Result<CochangeAccumulation, CochangeLayoutError> {
+        let paths = universe.iter().cloned().collect::<Vec<_>>();
+        let index: BTreeMap<&str, usize> = paths
+            .iter()
+            .enumerate()
+            .map(|(index, path)| (path.as_str(), index))
+            .collect();
+        let mut touched = vec![false; paths.len()];
+        let mut eligible_commits = Vec::new();
+        let mut total_mass = 0u128;
+        let mut ideal_mass = 0u128;
+        let mut broad_commits_excluded = 0usize;
+        let mut below_pair_threshold_commits = 0usize;
+        let mut earliest = None;
+        let mut latest = None;
+
+        for commit in &self.commits {
+            earliest = Some(
+                earliest.map_or(commit.committer_unix_seconds, |value: i64| {
+                    value.min(commit.committer_unix_seconds)
+                }),
+            );
+            latest = Some(latest.map_or(commit.committer_unix_seconds, |value: i64| {
+                value.max(commit.committer_unix_seconds)
+            }));
+            let members = commit
+                .files
+                .iter()
+                .filter_map(|path| index.get(path.as_str()).copied())
+                .collect::<Vec<_>>();
+            for &member in &members {
+                touched[member] = true;
+            }
+            let k = members.len();
+            if k < 2 {
+                below_pair_threshold_commits += 1;
+                continue;
+            }
+            if k > BROAD_COMMIT_CAP {
+                broad_commits_excluded += 1;
+                continue;
+            }
+            let k = k as u128;
+            let pairs = k * (k - 1) / 2;
+            let unit_mass = WEIGHT_SCALE / pairs;
+            total_mass = checked_add(total_mass, unit_mass * pairs, "total pair mass")?;
+            ideal_mass = checked_add(ideal_mass, WEIGHT_SCALE, "ideal pair mass")?;
+            eligible_commits.push(EligibleCochangeCommit { members, unit_mass });
+        }
+
+        if eligible_commits.len() + broad_commits_excluded + below_pair_threshold_commits
+            != self.commits.len()
+        {
+            return Err(CochangeLayoutError::Invariant(
+                "commit disposition counts do not close to the streamed total".to_owned(),
+            ));
+        }
+
+        Ok(CochangeAccumulation {
+            paths,
+            eligible_commits,
+            total_mass,
+            ideal_mass,
+            files_touched_in_history: touched.iter().filter(|value| **value).count(),
+            broad_commits_excluded,
+            below_pair_threshold_commits,
+            earliest_committer_unix_seconds: earliest,
+            latest_committer_unix_seconds: latest,
+        })
+    }
+
+    pub(crate) fn history_coverage(
+        &self,
+        accumulation: &CochangeAccumulation,
+    ) -> CochangeHistoryCoverage {
+        CochangeHistoryCoverage {
+            requested_commits: self.history_requested,
+            commits_streamed: self.commits.len(),
+            truncated: self.history_truncated,
+            eligible_commits: accumulation.eligible_commits.len(),
+            broad_commits_excluded: accumulation.broad_commits_excluded,
+            broad_commit_cap: BROAD_COMMIT_CAP,
+            below_pair_threshold_commits: accumulation.below_pair_threshold_commits,
+            earliest_committer_unix_seconds: accumulation.earliest_committer_unix_seconds,
+            latest_committer_unix_seconds: accumulation.latest_committer_unix_seconds,
+            git_version: self.history_git_version.clone(),
+            command: self.history_command.clone(),
+            stdout_sha256: self.history_stdout_sha256.clone(),
+            stdout_bytes: self.history_stdout_bytes,
+        }
+    }
+
+    pub(crate) fn source_provenance(&self) -> CochangeSourceProvenance {
+        CochangeSourceProvenance {
+            git_version: self.source_git_version.clone(),
+            ls_tree_command: self.source_command.clone(),
+            ls_tree_stdout_sha256: self.source_stdout_sha256.clone(),
+            ls_tree_stdout_bytes: self.source_stdout_bytes,
+        }
+    }
+
+    pub(crate) fn verify_unchanged(&self) -> Result<(), CochangeLayoutError> {
+        let after = snapshot_git_repo(&self.artifact.root)?;
+        if after == self.artifact {
+            Ok(())
+        } else {
+            Err(CochangeLayoutError::SnapshotDrift {
+                before_revision: self.artifact.revision.clone(),
+                before_tree: self.artifact.tree_digest.clone(),
+                after_revision: after.revision,
+                after_tree: after.tree_digest,
+            })
+        }
+    }
+}
+
+pub(crate) fn load_pinned_cochange(
+    root: &Path,
+    history_commits: usize,
+) -> Result<PinnedCochangeInput, CochangeLayoutError> {
+    validate_history_commits(history_commits).map_err(CochangeLayoutError::InvalidConfig)?;
+    let artifact = snapshot_git_repo(root)?;
+    let tree_scan = scan_committed_regular_files(&artifact)?;
+    let tracked_regular_files = tree_scan.files.len();
+    let mut utf8_path_regular_files = 0usize;
+    let mut source_universe = BTreeSet::new();
+    for entry in &tree_scan.files {
+        if let Ok(path) = std::str::from_utf8(&entry.path) {
+            utf8_path_regular_files += 1;
+            if classified_source(&entry.path) {
+                source_universe.insert(path.to_owned());
+            }
+        }
+    }
+    let history = scan_file_history(&artifact, history_commits)?;
+    let commits = history
+        .commits
+        .into_iter()
+        .map(|commit| PinnedCommit {
+            committer_unix_seconds: commit.committer_unix_seconds,
+            files: commit
+                .files
+                .into_keys()
+                .filter_map(|path| String::from_utf8(path).ok())
+                .collect(),
+        })
+        .collect();
+    Ok(PinnedCochangeInput {
+        artifact,
+        tree_files: tree_scan.files,
+        tracked_regular_files,
+        utf8_path_regular_files,
+        source_universe,
+        commits,
+        history_requested: history_commits,
+        history_truncated: history.truncated,
+        history_git_version: history.git_version,
+        history_command: history.command,
+        history_stdout_sha256: history.stdout_sha256,
+        history_stdout_bytes: history.stdout_bytes,
+        source_git_version: tree_scan.git_version,
+        source_command: tree_scan.command,
+        source_stdout_sha256: tree_scan.stdout_sha256,
+        source_stdout_bytes: tree_scan.stdout_bytes,
+    })
 }
 
 #[derive(Default)]
@@ -303,103 +519,34 @@ pub fn analyze_cochange_layout(
     config: CochangeLayoutConfig,
 ) -> Result<CochangeLayoutReport, CochangeLayoutError> {
     config.validate()?;
-    let artifact = snapshot_git_repo(root)?;
-
-    // Universe: every tracked regular blob with a UTF-8 path that the repo-lexical
-    // classifier calls source. Unlike the change-profile current side, no
-    // language-parser support is required — a source-classified path in any
-    // language participates.
-    let tree_scan = scan_committed_regular_files(&artifact)?;
-    let tracked_regular_files = tree_scan.files.len();
-    let mut utf8_path_regular_files = 0usize;
-    let mut universe: BTreeSet<String> = BTreeSet::new();
-    for entry in &tree_scan.files {
-        if let Ok(path) = std::str::from_utf8(&entry.path) {
-            utf8_path_regular_files += 1;
-            if classified_source(&entry.path) {
-                universe.insert(path.to_owned());
-            }
-        }
-    }
-    let paths = universe.iter().cloned().collect::<Vec<_>>();
-    let index: BTreeMap<&str, usize> = paths
-        .iter()
-        .enumerate()
-        .map(|(i, path)| (path.as_str(), i))
-        .collect();
+    let pinned = load_pinned_cochange(root, config.history_commits)?;
+    let accumulation = pinned.accumulate(&pinned.source_universe)?;
+    let paths = &accumulation.paths;
 
     let mut partitions = [
-        PartitionAccumulator::new("top_level", top_level_community, &paths),
-        PartitionAccumulator::new("parent_directory", parent_directory_community, &paths),
+        PartitionAccumulator::new("top_level", top_level_community, paths),
+        PartitionAccumulator::new("parent_directory", parent_directory_community, paths),
     ];
 
-    let history = scan_file_history(&artifact, config.history_commits)?;
-    let commits_streamed = history.commits.len();
-    let mut eligible_commits = 0usize;
-    let mut broad_commits_excluded = 0usize;
-    let mut below_pair_threshold_commits = 0usize;
-    let mut earliest = None;
-    let mut latest = None;
-    let mut touched = vec![false; paths.len()];
-    let mut total_mass: u128 = 0;
-    let mut ideal_mass: u128 = 0;
-
-    for commit in &history.commits {
-        earliest = Some(earliest.map_or(commit.committer_unix_seconds, |v: i64| {
-            v.min(commit.committer_unix_seconds)
-        }));
-        latest = Some(latest.map_or(commit.committer_unix_seconds, |v: i64| {
-            v.max(commit.committer_unix_seconds)
-        }));
-
-        let mut members: BTreeSet<usize> = BTreeSet::new();
-        for path in commit.files.keys() {
-            if let Ok(text) = std::str::from_utf8(path)
-                && let Some(&i) = index.get(text)
-            {
-                members.insert(i);
-            }
-        }
-        for &i in &members {
-            touched[i] = true;
-        }
-        let k = members.len();
-        if k < 2 {
-            below_pair_threshold_commits += 1;
-            continue;
-        }
-        if k > BROAD_COMMIT_CAP {
-            broad_commits_excluded += 1;
-            continue;
-        }
-        eligible_commits += 1;
-        let k_u128 = k as u128;
-        let pairs = k_u128 * (k_u128 - 1) / 2;
-        let unit = WEIGHT_SCALE / pairs;
-        total_mass = checked_add(total_mass, unit * pairs, "total pair mass")?;
-        ideal_mass = checked_add(ideal_mass, WEIGHT_SCALE, "ideal pair mass")?;
+    for commit in &accumulation.eligible_commits {
+        let k = commit.members.len() as u128;
         for accumulator in &mut partitions {
             let mut counts: BTreeMap<String, u128> = BTreeMap::new();
-            for &i in &members {
-                *counts.entry((accumulator.community_of)(&paths[i])).or_default() += 1;
+            for &member in &commit.members {
+                *counts
+                    .entry((accumulator.community_of)(&paths[member]))
+                    .or_default() += 1;
             }
-            accumulator.add_commit(&counts, unit, k_u128)?;
+            accumulator.add_commit(&counts, commit.unit_mass, k)?;
         }
     }
-
-    if eligible_commits + broad_commits_excluded + below_pair_threshold_commits != commits_streamed {
-        return Err(CochangeLayoutError::Invariant(
-            "commit disposition counts do not close to the streamed total".to_owned(),
-        ));
-    }
-    let files_touched_in_history = touched.iter().filter(|t| **t).count();
 
     let partitions = partitions
         .into_iter()
-        .map(|accumulator| accumulator.finish(total_mass))
+        .map(|accumulator| accumulator.finish(accumulation.total_mass))
         .collect::<Result<Vec<_>, _>>()?;
     for partition in &partitions {
-        let closed = unit_weight(total_mass);
+        let closed = unit_weight(accumulation.total_mass);
         if (partition.intra_weight + partition.cross_weight - closed).abs() > 1.0e-6 {
             return Err(CochangeLayoutError::Invariant(format!(
                 "partition {} intra plus cross did not close to total pair mass",
@@ -408,50 +555,29 @@ pub fn analyze_cochange_layout(
         }
     }
 
-    let after = snapshot_git_repo(&artifact.root)?;
-    if after != artifact {
-        return Err(CochangeLayoutError::SnapshotDrift {
-            before_revision: artifact.revision,
-            before_tree: artifact.tree_digest,
-            after_revision: after.revision,
-            after_tree: after.tree_digest,
-        });
-    }
+    pinned.verify_unchanged()?;
+    let history_coverage = pinned.history_coverage(&accumulation);
+    let source_provenance = pinned.source_provenance();
+    let source_classified_files = pinned.source_universe.len();
+    let files_touched_in_history = accumulation.files_touched_in_history;
+    let total_mass = accumulation.total_mass;
+    let ideal_mass = accumulation.ideal_mass;
 
     Ok(CochangeLayoutReport {
-        artifact,
+        artifact: pinned.artifact,
         analyzer: ANALYZER.to_owned(),
-        history_coverage: CochangeHistoryCoverage {
-            requested_commits: config.history_commits,
-            commits_streamed,
-            truncated: history.truncated,
-            eligible_commits,
-            broad_commits_excluded,
-            broad_commit_cap: BROAD_COMMIT_CAP,
-            below_pair_threshold_commits,
-            earliest_committer_unix_seconds: earliest,
-            latest_committer_unix_seconds: latest,
-            git_version: history.git_version,
-            command: history.command,
-            stdout_sha256: history.stdout_sha256,
-            stdout_bytes: history.stdout_bytes,
-        },
-        source_provenance: CochangeSourceProvenance {
-            git_version: tree_scan.git_version,
-            ls_tree_command: tree_scan.command,
-            ls_tree_stdout_sha256: tree_scan.stdout_sha256,
-            ls_tree_stdout_bytes: tree_scan.stdout_bytes,
-        },
+        history_coverage,
+        source_provenance,
         universe_coverage: UniverseCoverage {
-            tracked_regular_files,
-            utf8_path_regular_files,
-            source_classified_files: paths.len(),
+            tracked_regular_files: pinned.tracked_regular_files,
+            utf8_path_regular_files: pinned.utf8_path_regular_files,
+            source_classified_files,
             files_touched_in_history,
-            files_never_touched: paths.len() - files_touched_in_history,
+            files_never_touched: source_classified_files - files_touched_in_history,
         },
         weight_scale: WEIGHT_SCALE as u64,
         total_pair_weight: unit_weight(total_mass),
-        total_pair_weight_ideal: eligible_commits as f64,
+        total_pair_weight_ideal: accumulation.eligible_commits.len() as f64,
         total_pair_weight_quantization_bound: unit_weight(ideal_mass - total_mass),
         total_pair_weight_scaled: total_mass,
         total_pair_weight_ideal_scaled: ideal_mass,
@@ -461,7 +587,7 @@ pub fn analyze_cochange_layout(
     })
 }
 
-fn unit_weight(mass: u128) -> f64 {
+pub(crate) fn unit_weight(mass: u128) -> f64 {
     mass as f64 / WEIGHT_SCALE as f64
 }
 

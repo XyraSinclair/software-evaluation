@@ -8,6 +8,7 @@ pub mod audit;
 pub mod benchmark;
 pub mod change_profile;
 pub mod cochange;
+pub mod cochange_support;
 pub mod compare;
 pub mod deps;
 pub mod discipline;
