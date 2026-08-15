@@ -47,6 +47,7 @@ pub struct DependencyReport {
     pub weak_components: Vec<Vec<String>>,
     pub condensation_maximum_depth: Option<usize>,
     pub propagation: DependencyPropagation,
+    pub layout: DependencyLayout,
 }
 
 pub const REACHABILITY_NODE_LIMIT: usize = 10_000;
@@ -67,6 +68,60 @@ pub struct DependencyPropagation {
     pub cyclic_source_file_fraction: Option<f64>,
     pub largest_cyclic_component_files: usize,
     pub largest_cyclic_component_fraction: Option<f64>,
+}
+
+/// Directory-layout profile over the internal dependency graph: how well the
+/// on-disk tree partitions the graph, as a coordinate rather than a verdict.
+#[derive(Debug, Clone, Serialize)]
+pub struct DependencyLayout {
+    /// Analyzed source files, i.e. the nodes considered for the layout graph.
+    pub analyzed_files: usize,
+    /// Unique internal edges after dropping self-loops and collapsing each
+    /// `a ↔ b` reciprocal pair into one undirected edge; the modularity `m`.
+    pub internal_undirected_edges: usize,
+    /// Exactly two rows: `top_level` (community = first path component; root
+    /// files share community `"."`) and `parent_directory` (community =
+    /// immediate parent directory path; root files share community `"."`).
+    pub partitions: Vec<LayoutPartition>,
+    /// Honest constraints on what the layout profile establishes.
+    pub limitations: Vec<String>,
+}
+
+/// One directory partition of the internal graph and its Newman–Girvan score.
+#[derive(Debug, Clone, Serialize)]
+pub struct LayoutPartition {
+    /// Partition granularity: `top_level` or `parent_directory`.
+    pub granularity: String,
+    /// Distinct communities (directory buckets) present in this partition.
+    pub communities: usize,
+    /// Undirected internal edges whose endpoints share a community.
+    pub intra_community_edges: usize,
+    /// Undirected internal edges whose endpoints lie in different communities.
+    pub cross_community_edges: usize,
+    /// `cross / (intra + cross)`; `None` when there are no undirected edges.
+    pub cross_community_edge_fraction: Option<f64>,
+    /// Newman–Girvan modularity `Q = Σ_c [ e_c/m − (d_c/2m)² ]` with `m`
+    /// undirected edges, `e_c` edges inside `c`, `d_c` the degree sum of nodes
+    /// in `c`; `None` when `m = 0`.
+    pub modularity: Option<f64>,
+    /// Per-community rows, descending by crossing-edge count then path.
+    pub rows: Vec<LayoutCommunity>,
+}
+
+/// One community (directory bucket) within a layout partition.
+#[derive(Debug, Clone, Serialize)]
+pub struct LayoutCommunity {
+    /// Community key: first path component (`top_level`) or immediate parent
+    /// directory path (`parent_directory`); `"."` for root-level files.
+    pub path: String,
+    /// Analyzed files assigned to this community.
+    pub files: usize,
+    /// Undirected internal edges with both endpoints inside this community.
+    pub intra_edges: usize,
+    /// Directed internal edges with source inside and target outside.
+    pub out_edges: usize,
+    /// Directed internal edges with target inside and source outside.
+    pub in_edges: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -307,6 +362,7 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         .cloned()
         .collect();
     let propagation = dependency_propagation(source_paths.len(), &cycles, &reachability);
+    let layout = dependency_layout(&known, &edges);
     let all_ids: BTreeSet<_> = node_kinds.keys().cloned().collect();
     let all_adjacency = adjacency(&all_ids, &edges, false);
     let weak_components = weak_components(&all_ids, &all_adjacency);
@@ -385,6 +441,7 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         nodes, edges, strongly_connected_components: sccs, cycles, weak_components,
         condensation_maximum_depth: depth,
         propagation,
+        layout,
     })
 }
 
@@ -480,6 +537,146 @@ fn dependency_propagation(
         cyclic_source_file_fraction: source_fraction(cyclic_source_files),
         largest_cyclic_component_files,
         largest_cyclic_component_fraction: source_fraction(largest_cyclic_component_files),
+    }
+}
+
+fn dependency_layout(analyzed: &BTreeSet<String>, edges: &[DependencyEdge]) -> DependencyLayout {
+    let internal: Vec<(&str, &str)> = edges
+        .iter()
+        .filter(|edge| edge.classification == DependencyClassification::Internal)
+        .map(|edge| (edge.source.as_str(), edge.target.as_str()))
+        .collect();
+    let mut undirected: BTreeSet<(&str, &str)> = BTreeSet::new();
+    for &(source, target) in &internal {
+        if source != target {
+            undirected.insert((source.min(target), source.max(target)));
+        }
+    }
+    let m = undirected.len();
+    let partitions = vec![
+        layout_partition(
+            "top_level",
+            analyzed,
+            &undirected,
+            &internal,
+            m,
+            top_level_community,
+        ),
+        layout_partition(
+            "parent_directory",
+            analyzed,
+            &undirected,
+            &internal,
+            m,
+            parent_directory_community,
+        ),
+    ];
+    DependencyLayout {
+        analyzed_files: analyzed.len(),
+        internal_undirected_edges: m,
+        partitions,
+        limitations: vec![
+            "The layout graph is file-granularity only; symbol- and declaration-level coupling inside a file is invisible to it.".to_owned(),
+            "Import resolution is conservative, so unresolved edges are absent from the graph and heavily unresolved code makes the partition partial.".to_owned(),
+            "Modularity Q compares the directory partition to a configuration null model; it says nothing about which partition is correct, only how much this one concentrates edges beyond chance.".to_owned(),
+            "A single community scores near zero by construction, and over-splitting inflates cross-community edges; Q is a coordinate, not a target.".to_owned(),
+        ],
+    }
+}
+
+#[derive(Default)]
+struct CommunityAgg {
+    files: usize,
+    intra_edges: usize,
+    degree_sum: usize,
+    out_edges: usize,
+    in_edges: usize,
+}
+
+fn layout_partition(
+    granularity: &str,
+    analyzed: &BTreeSet<String>,
+    undirected: &BTreeSet<(&str, &str)>,
+    internal: &[(&str, &str)],
+    m: usize,
+    community_of: impl Fn(&str) -> String,
+) -> LayoutPartition {
+    let community: BTreeMap<&str, String> = analyzed
+        .iter()
+        .map(|p| (p.as_str(), community_of(p)))
+        .collect();
+    let mut aggs: BTreeMap<String, CommunityAgg> = BTreeMap::new();
+    for path in analyzed {
+        aggs.entry(community[path.as_str()].clone()).or_default().files += 1;
+    }
+    let mut intra_total = 0usize;
+    let mut cross_total = 0usize;
+    for &(a, b) in undirected {
+        let (ca, cb) = (&community[a], &community[b]);
+        if ca == cb {
+            intra_total += 1;
+            let agg = aggs.get_mut(ca).unwrap();
+            agg.intra_edges += 1;
+            agg.degree_sum += 2;
+        } else {
+            cross_total += 1;
+            aggs.get_mut(ca).unwrap().degree_sum += 1;
+            aggs.get_mut(cb).unwrap().degree_sum += 1;
+        }
+    }
+    for &(source, target) in internal {
+        let (cs, ct) = (&community[source], &community[target]);
+        if cs != ct {
+            aggs.get_mut(cs).unwrap().out_edges += 1;
+            aggs.get_mut(ct).unwrap().in_edges += 1;
+        }
+    }
+    let modularity = (m != 0).then(|| {
+        aggs.values()
+            .map(|agg| {
+                agg.intra_edges as f64 / m as f64
+                    - (agg.degree_sum as f64 / (2.0 * m as f64)).powi(2)
+            })
+            .sum()
+    });
+    let cross_community_edge_fraction =
+        (m != 0).then(|| cross_total as f64 / (intra_total + cross_total) as f64);
+    let mut rows: Vec<LayoutCommunity> = aggs
+        .into_iter()
+        .map(|(path, agg)| LayoutCommunity {
+            path,
+            files: agg.files,
+            intra_edges: agg.intra_edges,
+            out_edges: agg.out_edges,
+            in_edges: agg.in_edges,
+        })
+        .collect();
+    rows.sort_by(|a, b| {
+        let (a_cross, b_cross) = (a.out_edges + a.in_edges, b.out_edges + b.in_edges);
+        b_cross.cmp(&a_cross).then_with(|| a.path.cmp(&b.path))
+    });
+    LayoutPartition {
+        granularity: granularity.to_owned(),
+        communities: rows.len(),
+        intra_community_edges: intra_total,
+        cross_community_edges: cross_total,
+        cross_community_edge_fraction,
+        modularity,
+        rows,
+    }
+}
+
+fn top_level_community(path: &str) -> String {
+    match path.split_once('/') {
+        Some((first, _)) => first.to_owned(),
+        None => ".".to_owned(),
+    }
+}
+
+fn parent_directory_community(path: &str) -> String {
+    match path.rsplit_once('/') {
+        Some((directory, _)) => directory.to_owned(),
+        None => ".".to_owned(),
     }
 }
 

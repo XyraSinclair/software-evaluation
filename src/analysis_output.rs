@@ -74,6 +74,35 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
             propagation.largest_cyclic_component_files.to_string()
         },
     );
+    let layout = &report.layout;
+    println!(
+        "layout: {} analyzed files, {} internal undirected edges",
+        layout.analyzed_files, layout.internal_undirected_edges,
+    );
+    for partition in &layout.partitions {
+        println!(
+            "  {}: communities={}, intra={}, cross={} (fraction={}), modularity Q={}",
+            partition.granularity,
+            partition.communities,
+            partition.intra_community_edges,
+            partition.cross_community_edges,
+            optional(partition.cross_community_edge_fraction),
+            optional(partition.modularity),
+        );
+        if !partition.rows.is_empty() {
+            println!(
+                "    {:<40} {:>6} {:>6} {:>6} {:>6}",
+                "PATH", "FILES", "INTRA", "OUT", "IN"
+            );
+            for row in partition.rows.iter().take(top) {
+                println!(
+                    "    {:<40} {:>6} {:>6} {:>6} {:>6}",
+                    row.path, row.files, row.intra_edges, row.out_edges, row.in_edges,
+                );
+            }
+        }
+    }
+
     println!(
         "manifest dependencies: {} total, {} non-registry, {} risky literal sources",
         report.manifest_dependency_count,

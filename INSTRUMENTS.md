@@ -149,6 +149,33 @@ SCCs as discrete components. For artifact comparisons, use aligned profile rows
 or slope lines with raw deltas; do not use a radar chart, traffic light, shared
 bar scale, or area encoding that implies unlike units are commensurate.
 
+### Directory layout profile
+
+Over the same unique resolved internal edges as the propagation profile, treated
+as an undirected simple graph (self-loops dropped, each reciprocal $a \leftrightarrow b$
+collapsed to one edge with $m$ the resulting edge count):
+
+- Two directory partitions are scored: `top_level` (a file's community is its
+  first path component; root files share community `.`) and `parent_directory`
+  (community is the immediate parent directory path).
+- Per partition it reports the intra- and cross-community undirected edge counts,
+  their cross fraction (null when $m = 0$), and Newman–Girvan modularity
+  $Q = \sum_c \left[ e_c/m - (d_c/2m)^2 \right]$ with $e_c$ the edges inside
+  community $c$ and $d_c$ the degree sum of its nodes (null when $m = 0$).
+- Per-community rows carry the file count, intra-community edges, and the
+  directed out/in edges that cross the community boundary.
+- The closure $\text{intra} + \text{cross} = m$ holds for every partition.
+
+This establishes whether the on-disk tree is a faithful map of actual coupling:
+high $Q$ with a low cross fraction means folders concentrate the edges; a legacy
+layout over a well-connected graph shows the opposite. It cannot say which
+partition is right — $Q$ compares the directory partition only to a configuration
+null model ([Newman & Girvan, 2004](https://doi.org/10.1103/PhysRevE.69.026113)),
+a single community scores near zero by construction, and over-splitting inflates
+cross-community edges, so $Q$ is a coordinate rather than a target. The graph is
+file-granularity only, and conservative import resolution leaves unresolved edges
+absent, so heavily unresolved code yields a partial partition.
+
 ### Metric admission queue
 
 The next useful families are ordered by decision value and instrument honesty

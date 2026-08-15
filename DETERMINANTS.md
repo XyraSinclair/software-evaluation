@@ -114,7 +114,9 @@ the graph is right and the folders are a legacy accident, that is the finding.
 model and a single cluster scores badly; over-splitting inflates cross-edges.
 Natural interior optimum: among the most Goodhart-resistant here.
 
-*Feasibility.* From `seval deps` output, file granularity: **next**. Symbol
+*Feasibility.* Directory-partition Q, cross-directory edge fraction, and cycle
+membership at file granularity: **have** (`seval deps` layout + propagation
+profiles). Detected-community (Louvain) comparison: **next**. Symbol
 granularity: **later**.
 
 ### G5. Invariants live in the types (illegal states unrepresentable)
