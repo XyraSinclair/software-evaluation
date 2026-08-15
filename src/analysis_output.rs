@@ -74,6 +74,16 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
             propagation.largest_cyclic_component_files.to_string()
         },
     );
+    println!(
+        "mutual reachability: {}/{} ordered same-component pairs (fraction={})",
+        propagation.mutually_reachable_pairs,
+        propagation
+            .possible_nonself_pairs
+            .map_or_else(|| "n/a".to_owned(), |value| value.to_string()),
+        propagation
+            .mutual_reachability_fraction
+            .map_or_else(|| "n/a".to_owned(), |value| format!("{value:.3}")),
+    );
     let layout = &report.layout;
     println!(
         "layout: {} analyzed files, {} internal undirected edges",

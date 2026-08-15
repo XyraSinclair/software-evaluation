@@ -63,6 +63,12 @@ pub struct DependencyPropagation {
     pub reachable_nonself_pairs: Option<usize>,
     pub possible_nonself_pairs: Option<usize>,
     pub nonself_propagation_fraction: Option<f64>,
+    /// Ordered pairs (u, v), u != v, with u and v in the same strongly connected
+    /// component: sum over SCC sizes s of s * (s - 1). Exact from Tarjan output.
+    pub mutually_reachable_pairs: usize,
+    /// mutually_reachable_pairs over n * (n - 1); None for fewer than two files.
+    /// The fraction of ordered file pairs with no one-directional reading order.
+    pub mutual_reachability_fraction: Option<f64>,
     pub cyclic_components: usize,
     pub cyclic_source_files: usize,
     pub cyclic_source_file_fraction: Option<f64>,
@@ -522,6 +528,13 @@ fn dependency_propagation(
             (possible != 0).then_some(reachable as f64 / possible as f64)
         });
     let source_fraction = |count| (source_files != 0).then_some(count as f64 / source_files as f64);
+    let mutually_reachable_pairs = cycles
+        .iter()
+        .map(|component| component.len() * (component.len() - 1))
+        .sum::<usize>();
+    let mutual_possible = source_files.checked_mul(source_files.saturating_sub(1));
+    let mutual_reachability_fraction = mutual_possible
+        .and_then(|possible| (possible != 0).then_some(mutually_reachable_pairs as f64 / possible as f64));
 
     DependencyPropagation {
         source_files,
@@ -532,6 +545,8 @@ fn dependency_propagation(
         reachable_nonself_pairs,
         possible_nonself_pairs,
         nonself_propagation_fraction,
+        mutually_reachable_pairs,
+        mutual_reachability_fraction,
         cyclic_components: cycles.len(),
         cyclic_source_files,
         cyclic_source_file_fraction: source_fraction(cyclic_source_files),

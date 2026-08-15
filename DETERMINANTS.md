@@ -184,6 +184,57 @@ Report as distributions and tails; use as review routers, never gates.
 | D14 | Encapsulation | public field fraction; `pub` vs `pub(crate)` | next |
 | — | Clones, dependency topology, API surface, tests inventory, git change shape | — | have |
 
+## Graph invariants — the adjudicated set
+
+Triangulated 2026-08-15 across three independent seats (GPT-5.6 Sol, Claude
+Opus, Gemini) on the question "the deepest, simplest graph/spectral invariants
+of quality." Unanimous verdict: **spectral scalars are the wrong shape of
+number for this tool** — reported eigenvalues behave like means, need a null
+ensemble to mean anything, carry a floating-point determinism tax, and their
+eigenvectors are genuinely non-unique under the twin nodes generated code
+creates (Davis–Kahan). Spectral machinery earns one narrow role: as an
+internal *algorithm* (a partitioner/separator finder) whose reported output is
+an integer witness. Killed as headlines, 3/3 seats: λ₂ as a value, spectral
+radius (zero on every DAG regardless of reach), von Neumann entropy, Estrada /
+natural connectivity, Kirchhoff / effective resistance, eigengap module count,
+principal-angle tree alignment (dominated by Q), motif censuses as verdicts
+(Valverde & Solé 2005 found size/duplication explains most motif prevalence),
+persistent homology on unweighted code graphs (β₀ = c, β₁ = m − n + c — it
+*is* components plus circuit rank; H1 of a chosen filtration is a complicated
+summary of the chosen weight).
+
+Undirected circuit rank b₁ = m − n + c died in adjudication despite one seat
+ranking it first: it conflates diamonds (benign reconvergent reuse) with
+feedback, is fully determined by (n, m, c) so a degree-preserving null gives
+exactly the same value, and McCabe 1976 is the cautionary precedent (cyclomatic
+complexity *is* the circuit rank of the CFG, with the same bluntness).
+Measured on this repo's src graph as a smoke test, b₁ convicted itself:
+undirected n=26, m=23, c=3 gives b₁=0 — "a forest" — while the directed graph
+holds a 7-file SCC (F↔ = 42/650 = 0.065). Reciprocal import pairs collapse to
+single undirected edges, so b₁ cannot see exactly the feedback that matters.
+
+What survives, in implementation order:
+
+| # | Invariant | One number, one meaning | Status |
+|---|---|---|---|
+| 1 | **Mutual-reachability fraction** F↔ = Σᵢ sᵢ(sᵢ−1) / n(n−1) over SCC sizes sᵢ, per relation (imports now; calls/types later) | the fraction of ordered pairs with no one-directional explanation — "how much of this can never be read in isolation"; exact integers, decomposes the existing propagation fraction into mutual vs one-way; one 100-node SCC ≫ fifty 2-cycles, correctly. Known confounder to name in reports: Rust `mod.rs` parent↔child declaration edges create reciprocal pairs (this repo's 7-file SCC is exactly its `service/` module). Empirical backing: MacCormack & Sturtevant 2016, Oyetoyan et al. 2013 | have (`seval deps` propagation) |
+| 2 | **Co-change directory Q** — weighted Newman Q of the *same* directory partition over the git co-change graph, each k-file commit contributing total pair mass 1 (1/C(k,2) per pair) | does the tree contain actual maintenance activity, not just declared imports (Geipel & Schweitzer 2012: static deps and co-change diverge badly). Read beside static Q as a 2-D shape, never subtracted into a congruence score: high/low = clean-looking layout that maintenance crosses; low/high = imports cross but changes stay local | next (operands exist: git + partition) |
+| 3 | **Symbol working-set reachability tail** — per function, distinct definitions transitively reachable in the resolved call/type graph, p90 over (n−1), traversed via SCC condensation; never shown without the cognitive tail (the joint surface is G1) | the direct operationalization of reader working set; helper-soup raises it while lowering local complexity — the pair polices itself | later (symbol graph, #1 in queue) |
+| 4 | **Balanced separator witness** — smallest found vertex set whose removal leaves components ≤ 2n/3; articulation points exactly first, then spectral sweep (normalized Laplacian) as internal machinery; report the *node list* and component sizes as an upper-bound witness, never "the treewidth", λ₂ as solver provenance only | recursive decomposability = the structural form of deep modules; a 1-node separator that is a god-object is caught by reading its G2 interface-information beside it | later (experimental) |
+| 5 | **Feedback-arc fraction** (min FAS via deterministic Eades–Lin–Smyth / |E|) and **trophic incoherence F** (single sparse CG solve, MacKay–Johnson–Sansom 2020) — the edge-deletion and layering complements of F↔; trophic coherence has never been tried on software (finding, not citation) | how much wiring must break to layer the system; how far the acyclic remainder is from clean stratification (the tangle SCCs cannot see) | later (validation-gated research arm) |
+| 6 | **Size-stratified AST DAG ratio** — hash-cons every subtree (structural equality confirmed on hash match), report |DAG|/|tree| as a *curve* over minimum subtree size k, alpha-normalized identifiers primary, generated files excluded | global structural-repetition superset of clone windows; the raw scalar is dominated by trivial leaves and by grammar verbosity — the curve is the honest object. One seat would ship it, one would gate it as a corpus experiment; adjudicated: research arm, never a headline, never called Kolmogorov anything | later (experimental) |
+
+Determinism doctrine for this family: integer and rational invariants are
+preferred not merely for float-safety but because they are self-interpreting —
+an eigenvalue means nothing until compared to a Monte-Carlo null, which
+reintroduces the RNG the tool avoids. The entire surviving set needs zero
+eigensolver and zero BLAS except the separator's internal sweep (dodgeable
+with a combinatorial multilevel partitioner) and trophic F's fixed-tolerance
+CG. Null models, when needed offline: degree-preserving configuration
+rewiring (Maslov–Sneppen), never Erdős–Rényi — beating a homogeneous random
+graph is flattery, not evidence. Exact rational forms exist for both Q's
+(signed integer numerator over 4m²; fixed-point weights for co-change).
+
 ## Ruled out or downranked
 
 | Determinant | Reason |

@@ -187,14 +187,16 @@ sets this order):
    This is the common substrate under the generative determinants (reader
    working set, effect depth, module depth, tree-vs-graph modularity) and
    therefore leads the queue.
-2. Directory-partition modularity and cycle membership over the existing
-   resolved file graph; module depth from existing API/metrics operands;
-   branch symmetry and cyclomatic–cognitive gap from existing operands.
-3. Import native runtime coverage artifacts as executed/coverable counts and
+2. Mutual-reachability fraction from existing SCC sizes; weighted co-change
+   directory modularity beside the static layout profile (both operand-ready;
+   see DETERMINANTS.md "Graph invariants").
+3. Module depth from existing API/metrics operands; branch symmetry and
+   cyclomatic–cognitive gap from existing operands.
+4. Import native runtime coverage artifacts as executed/coverable counts and
    uncovered locations with run provenance; coverage is not correctness.
-4. Add TCC/LCC method-state cohesion only for languages and constructs where
+5. Add TCC/LCC method-state cohesion only for languages and constructs where
    instance-field access can be resolved, preserving method-pair denominators.
-5. Add build/test queue and execution tails when CI telemetry is available;
+6. Add build/test queue and execution tails when CI telemetry is available;
    those measure developer friction, not intrinsic source quality.
 
 Universal smell thresholds, letter grades, weighted maintainability scores,
