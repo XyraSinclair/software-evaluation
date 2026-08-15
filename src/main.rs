@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use analysis_output::{
-    print_api, print_benchmark, print_dependencies, print_duplicates, print_tests,
+    print_api, print_benchmark, print_dependencies, print_discipline, print_duplicates, print_tests,
 };
 use change_profile_output::{render_change_profile_svg, render_change_profile_text};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -17,6 +17,7 @@ use software_evaluation::benchmark::{BenchmarkSpec, run_benchmark};
 use software_evaluation::change_profile::{ChangeProfileConfig, analyze_change_profile};
 use software_evaluation::compare::{CompareError, EvaluationComparison, compare_evaluation_runs};
 use software_evaluation::deps::analyze_dependencies;
+use software_evaluation::discipline::{DisciplineSort, analyze_discipline};
 use software_evaluation::duplicates::{DuplicateConfig, analyze_duplicates};
 use software_evaluation::info::{PlanReport, PlanSpec, plan};
 use software_evaluation::kernel::{
@@ -199,6 +200,19 @@ enum Command {
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
         format: OutputFormat,
     },
+    /// Inventory per-function structural discipline (effects, mutation, shape, errors, types).
+    Discipline {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Metric used to rank the file and function tables.
+        #[arg(long, value_enum, default_value_t = DisciplineSortArg::Pure)]
+        sort: DisciplineSortArg,
+        /// Maximum rows shown in each text table.
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
     /// Benchmark an exact argv repeatedly and emit resource receipts.
     Bench {
         /// Warmup invocations, excluded from measured distributions.
@@ -239,6 +253,29 @@ struct RepoComparisonReport {
 enum OutputFormat {
     Text,
     Json,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum DisciplineSortArg {
+    Pure,
+    Mutable,
+    LiveRange,
+    Chain,
+    Errors,
+    Params,
+}
+
+impl DisciplineSortArg {
+    fn library(self) -> DisciplineSort {
+        match self {
+            Self::Pure => DisciplineSort::Pure,
+            Self::Mutable => DisciplineSort::Mutable,
+            Self::LiveRange => DisciplineSort::LiveRange,
+            Self::Chain => DisciplineSort::Chain,
+            Self::Errors => DisciplineSort::Errors,
+            Self::Params => DisciplineSort::Params,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -537,6 +574,19 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             match format {
                 OutputFormat::Json => print_json(&report)?,
                 OutputFormat::Text => print_tests(&report, top),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Discipline {
+            path,
+            sort,
+            top,
+            format,
+        } => {
+            let report = analyze_discipline(&path).map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_discipline(&report, sort.library(), top),
             }
             Ok(ExitCode::SUCCESS)
         }

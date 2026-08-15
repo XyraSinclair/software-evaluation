@@ -67,6 +67,7 @@ $ cargo run --release -- deps /path/to/repo
 $ cargo run --release -- duplicates /path/to/repo --min-tokens 40 --min-lines 5
 $ cargo run --release -- api /path/to/repo --top 100
 $ cargo run --release -- tests /path/to/repo --top 100
+$ cargo run --release -- discipline /path/to/repo --sort pure --top 30
 $ cargo run --release -- bench --warmup 1 --runs 20 -- ./program --exact-arg
 ```
 

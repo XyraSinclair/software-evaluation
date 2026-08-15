@@ -9,6 +9,7 @@ pub mod benchmark;
 pub mod change_profile;
 pub mod compare;
 pub mod deps;
+pub mod discipline;
 pub mod duplicates;
 pub mod info;
 pub mod kernel;

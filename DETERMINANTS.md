@@ -97,7 +97,7 @@ non-locality.
 passed as arguments, wall-clock through a parameter).
 
 *Feasibility.* Per-function syntactic purity, nonlocal writes, mut params,
-effect calls: **next** (`seval discipline`). Depth profile and reachable
+effect calls: **have** (`seval discipline`). Depth profile and reachable
 mutable state: **later** (symbol graph).
 
 ### G4. The tree tells the truth about the graph (Hickey: decomplect)
@@ -134,7 +134,7 @@ with no constructor discipline; `any → unknown` everywhere. Tree-sitter cannot
 tell constraint from costume — the lexical version is a proxy for a proxy and
 the report must say so.
 
-*Feasibility.* Lexical: **next** (`seval discipline`). Real: **later** (type
+*Feasibility.* Lexical: **have** (`seval discipline`, partial). Real: **later** (type
 checker).
 
 ### G6. Uniformity — one concept, one place, one spelling
@@ -168,11 +168,11 @@ Report as distributions and tails; use as review routers, never gates.
 |---|---|---|---|
 | D1 | Local-complexity family | cognitive tail (**have**); **cyclomatic–cognitive gap** per function (flat 12-arm match: high cyclomatic, low cognitive, fine; nested tangle: cognitive ≫ cyclomatic, ugly) — free from existing operands; **max nesting depth** as a headline distribution (language-agnostic, un-gameable-while-staying-ugly) | have / next |
 | D2 | Branch symmetry / special-case elimination (Torvalds's "good taste") | per `match`/`switch`/`if-else` chain, pairwise AST-skeleton similarity of arm bodies (reuse clone normalization): near-identical arms ⇒ latent loop/data; one arm markedly more complex than siblings ⇒ the lurking special case. Cross-checked by clone detection (copy-paste uniformity fires there) | next |
-| D3 | Type-honesty smells | `unwrap`/`expect`/`panic!`, `any`, `type: ignore`, empty catches, broad `except`, ignored `Result`s (G5's lexical half) | next |
-| D4 | Mutation census | mutable bindings, reassignments, shadowing, mutable live range per function — cheap and language-relative; a diagnostic tail-finder, not a target (see G3) | next |
+| D3 | Type-honesty smells | `unwrap`/`expect`/`panic!`, `any`, `type: ignore`, empty catches, broad `except`, ignored `Result`s (G5's lexical half) | have (`seval discipline`) |
+| D4 | Mutation census | mutable bindings, reassignments, shadowing, mutable live range per function — cheap and language-relative; a diagnostic tail-finder, not a target (see G3) | have (`seval discipline`) |
 | D5 | Conceptual cohesion (Marcus & Poshyvanyk 2005) | within-module tightness of function identifier vocabularies vs repo baseline; sidesteps LCOM's field-resolution needs | later (embedding/LSA) |
-| D6 | Unit-return without disclosure | unit-returning functions whose signature has no `&mut`/receiver and whose body has effect calls (hidden effect); `fn f(&mut self) -> ()` is honest — the signature *is* the disclosure | next |
-| D7 | Magic literals; global mutable state | numeric/string literals outside const/config/test files (excluding 0/1/-1/2); `static mut`, module-level reassigned bindings, `global` writes | next |
+| D6 | Unit-return without disclosure | unit-returning functions whose signature has no `&mut`/receiver and whose body has effect calls (hidden effect); `fn f(&mut self) -> ()` is honest — the signature *is* the disclosure | have (derivable from `seval discipline` JSON: unit_return ∧ mut_params=0 ∧ effect_calls>0) |
+| D7 | Magic literals; global mutable state | numeric/string literals outside const/config/test files (excluding 0/1/-1/2); `static mut`, module-level reassigned bindings, `global` writes | have (`seval discipline`, file level; magic strings are a volume, not a smell count) |
 | D8 | Commented-out code; TODO/FIXME/HACK density | comment bodies that parse as code; markers per kSLOC with blame age | next |
 | D9 | Dead private code | unreferenced non-public definitions | later (symbol graph) |
 | D10 | Rework / hidden co-change coupling | lines rewritten within N days; fix-after-fix chains; revert rate; co-change far apart in tree (**have** the co-change half). Best-validated signals in the literature (Nagappan & Ball 2005; Hassan 2009) — against *defects*, not beauty. Evolvability axis only; never near a beauty claim | have / later |

@@ -3,6 +3,10 @@ use std::cmp::Reverse;
 use software_evaluation::api_surface::ApiReport;
 use software_evaluation::benchmark::{BenchmarkReport, RunReceipt};
 use software_evaluation::deps::DependencyReport;
+use software_evaluation::discipline::{
+    DisciplineReport, DisciplineSort, Tail, rank_files as rank_discipline_files,
+    rank_functions as rank_discipline_functions,
+};
 use software_evaluation::duplicates::DuplicateReport;
 use software_evaluation::tests_analysis::TestReport;
 
@@ -325,6 +329,152 @@ pub fn print_tests(report: &TestReport, top: usize) {
     );
     print_paths("unmatched test files", &report.unmatched_test_files, top);
     print_limitations(&report.limitations);
+}
+
+pub fn print_discipline(report: &DisciplineReport, sort: DisciplineSort, top: usize) {
+    let coverage = &report.coverage;
+    println!("analyzer: {}", report.analyzer);
+    println!("root: {}", report.root);
+    println!("sort: {}", discipline_sort_name(sort));
+    println!(
+        "coverage: {} supported / {} enumerated files; {} skipped; {} functions; syntax-error-files={}",
+        coverage.supported_files,
+        coverage.enumerated_files,
+        coverage.skipped_unsupported_files,
+        coverage.functions_total,
+        coverage.syntax_error_files,
+    );
+    let languages = coverage
+        .functions_per_language
+        .iter()
+        .map(|row| format!("{}={}", row.language.name(), row.functions))
+        .collect::<Vec<_>>()
+        .join(" ");
+    println!(
+        "functions per language: {}",
+        if languages.is_empty() { "none".to_owned() } else { languages }
+    );
+    println!(
+        "purity: {} / {} syntactically pure (fraction={})",
+        coverage.pure_functions,
+        coverage.functions_total,
+        optional(coverage.pure_fraction),
+    );
+    let totals = &coverage.totals;
+    println!(
+        "effect totals: {} nonlocal-writes, {} mut-params, {} unsafe-blocks, {} effect-calls",
+        totals.nonlocal_writes, totals.mut_params, totals.unsafe_blocks, totals.effect_calls,
+    );
+    println!(
+        "mutation totals: {} bindings, {} mutable, {} reassignments, {} shadowings",
+        totals.bindings, totals.mutable_bindings, totals.reassignments, totals.shadowings,
+    );
+    println!(
+        "error totals: {} try-propagations, {} unwrap/expect, {} panic-like, {} broad-catches, {} empty-catches, {} ignored-results",
+        totals.try_propagations,
+        totals.unwrap_expect,
+        totals.panic_like,
+        totals.broad_catches,
+        totals.empty_catches,
+        totals.ignored_results,
+    );
+    println!(
+        "type totals: {} string-literal-conditions, {} any-annotations, {} unannotated-params, {} type-ignores",
+        totals.string_literal_conditions,
+        totals.any_annotations,
+        totals.unannotated_params,
+        totals.type_ignores,
+    );
+    println!(
+        "file totals: {} magic-numbers, {} magic-strings, {} global-mutable-state",
+        totals.magic_numbers, totals.magic_strings, totals.global_mutable_state,
+    );
+    println!("repo tails (nearest-rank p50/p90/p99):");
+    println!("  {:<28} {:>6} {:>6} {:>6}", "METRIC", "P50", "P90", "P99");
+    for (name, tail) in [
+        ("mutable_bindings", &coverage.tails.mutable_bindings),
+        (
+            "max_mutable_live_range_lines",
+            &coverage.tails.max_mutable_live_range_lines,
+        ),
+        ("max_call_chain_len", &coverage.tails.max_call_chain_len),
+        ("params", &coverage.tails.params),
+    ] {
+        print_tail(name, tail);
+    }
+
+    let files = rank_discipline_files(report, sort, top);
+    println!("files: {} / {} shown", files.len(), report.files.len());
+    println!(
+        "  {:<12} {:>6} {:>6} {:>7} {:>6} {:>6} {:>6} {:>6} PATH",
+        "LANG", "FUNCS", "EFFECT", "NONLOC", "MUT", "CHAIN", "ERRS", "PARAMS"
+    );
+    for file in files {
+        let sums = &file.sums;
+        println!(
+            "  {:<12} {:>6} {:>6} {:>7} {:>6} {:>6} {:>6} {:>6} {}",
+            file.language.name(),
+            file.functions,
+            sums.effect_calls,
+            sums.nonlocal_writes,
+            sums.mutable_bindings,
+            sums.max_call_chain_len,
+            sums.unwrap_expect + sums.panic_like + sums.broad_catches + sums.empty_catches + sums.ignored_results,
+            sums.params,
+            file.path,
+        );
+    }
+
+    let functions = rank_discipline_functions(report, sort, top);
+    println!(
+        "function hotspots: {} / {} shown",
+        functions.len(),
+        report.functions.len()
+    );
+    println!(
+        "  {:<12} {:>5} {:<7} {:>4} {:>4} {:>5} {:>4} {:>5} {:>4} LOCATION / NAME",
+        "LANG", "PURE", "EFFECT", "NLW", "MUT", "RANGE", "CHN", "ERRS", "PRM"
+    );
+    for function in functions {
+        println!(
+            "  {:<12} {:>5} {:>7} {:>4} {:>4} {:>5} {:>4} {:>5} {:>4} {}:{} {}",
+            function.language.name(),
+            if function.syntactically_pure { "yes" } else { "no" },
+            function.effect_calls,
+            function.nonlocal_writes,
+            function.mutable_bindings,
+            function.max_mutable_live_range_lines,
+            function.max_call_chain_len,
+            function.unwrap_expect
+                + function.panic_like
+                + function.broad_catches
+                + function.empty_catches
+                + function.ignored_results,
+            function.params,
+            function.path,
+            function.start_line,
+            function.name,
+        );
+    }
+    print_limitations(&report.limitations);
+}
+
+fn print_tail(name: &str, tail: &Tail) {
+    println!(
+        "  {:<28} {:>6} {:>6} {:>6}",
+        name, tail.p50, tail.p90, tail.p99
+    );
+}
+
+fn discipline_sort_name(sort: DisciplineSort) -> &'static str {
+    match sort {
+        DisciplineSort::Pure => "pure",
+        DisciplineSort::Mutable => "mutable",
+        DisciplineSort::LiveRange => "live-range",
+        DisciplineSort::Chain => "chain",
+        DisciplineSort::Errors => "errors",
+        DisciplineSort::Params => "params",
+    }
 }
 
 pub fn print_benchmark(report: &BenchmarkReport) {

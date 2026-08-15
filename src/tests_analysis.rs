@@ -210,7 +210,7 @@ fn components(path: &str) -> impl Iterator<Item = &str> {
     path.split('/')
 }
 
-fn classify_file(file: &SourceFile) -> FileRole {
+pub(crate) fn classify_file(file: &SourceFile) -> FileRole {
     let path = file.path.to_ascii_lowercase();
     let name = path.rsplit('/').next().unwrap_or(&path);
     let in_dir = |wanted: &[&str]| components(&path).any(|part| wanted.contains(&part));

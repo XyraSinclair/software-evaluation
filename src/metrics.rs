@@ -832,7 +832,7 @@ fn distribution(mut values: Vec<f64>) -> Distribution {
     }
 }
 
-fn nearest_rank(values: &[f64], percentile: usize) -> Option<f64> {
+pub(crate) fn nearest_rank(values: &[f64], percentile: usize) -> Option<f64> {
     if values.is_empty() || percentile == 0 || percentile > 100 {
         return None;
     }

@@ -104,6 +104,7 @@ explicit coverage field rather than silently passing as clean.
 | `seval deps PATH` | import declarations in recognized source plus direct dependency rows in Cargo, npm, Python, requirements, and Go manifests | declaration evidence, conservative internal resolution, all-edge and resolved-internal fan-in/out, SCCs, cycles, components, condensation depth, and bounded exact non-self transitive reachability | runtime loading, feature/alias/build-condition resolution, transitive/lockfile dependencies, causal change impact, or architectural quality |
 | `seval duplicates PATH` | normalized AST leaf-token windows meeting explicit token/line thresholds | maximal non-overlapping structural clone groups, occurrences, and duplicated token/line mass | semantic equivalence, intent, whether duplication is justified, or absence of clones below the thresholds |
 | `seval api PATH` | externally reachable Rust declarations plus declarations representable under the other languages' documented lexical publicness rules | symbol rows, kinds, visibility basis, parameters, generics, adjacent documentation, and symbols/kSLOC | runtime reachability outside Rust's resolved module visibility, compatibility, stability, usability, or API quality |
+| `seval discipline PATH` | function spaces (functions, methods, closures/lambdas/arrows) in recognized source files, each construct attributed to its innermost space | per function: syntactic purity (no nonlocal write, no `&mut`/pointer parameter, no `unsafe`, no call into a documented per-language effect list) and its four components; mutation census (bindings, mutable bindings, reassignments, shadowings, max mutable live range); shape (params, bool params, statements, single-expression body, unit return, max call-chain length); error shape (`?`/Go err-return propagation, `unwrap`/`expect`, panic-like, broad and empty catches, ignored results); lexical type honesty (string-literal conditions, TS `any`, unannotated params, type-ignore comments); per file magic numbers, magic strings, and global mutable state; repo totals, pure fraction, and nearest-rank tails | semantic purity, effect reachability through unresolved calls, whether a mutation or catch is justified, type-level correctness; per-language uncovered fields report 0 by construction (see the module's limitations) |
 | `seval tests PATH` | recognized source/test files and supported framework spellings | test/source lines, discovered/ignored cases including skipped-suite ancestry, assertion-like calls, cases/kSLOC, and conservative path-aware same-stem source/test matches | execution, coverage, mutation survival, assertion meaning, correctness, or test adequacy |
 
 Every report names its analyzer, enumerated/analyzed/skipped counts, evidence
@@ -159,17 +160,14 @@ sets this order):
    This is the common substrate under the generative determinants (reader
    working set, effect depth, module depth, tree-vs-graph modularity) and
    therefore leads the queue.
-2. Per-function structural discipline (`seval discipline`): syntactic purity
-   and effect calls, mutation census, shape, error-handling shape, lexical
-   type-honesty — the cheap tree-sitter half of DETERMINANTS G3/G5/G6.
-3. Directory-partition modularity and cycle membership over the existing
+2. Directory-partition modularity and cycle membership over the existing
    resolved file graph; module depth from existing API/metrics operands;
    branch symmetry and cyclomatic–cognitive gap from existing operands.
-4. Import native runtime coverage artifacts as executed/coverable counts and
+3. Import native runtime coverage artifacts as executed/coverable counts and
    uncovered locations with run provenance; coverage is not correctness.
-5. Add TCC/LCC method-state cohesion only for languages and constructs where
+4. Add TCC/LCC method-state cohesion only for languages and constructs where
    instance-field access can be resolved, preserving method-pair denominators.
-6. Add build/test queue and execution tails when CI telemetry is available;
+5. Add build/test queue and execution tails when CI telemetry is available;
    those measure developer friction, not intrinsic source quality.
 
 Universal smell thresholds, letter grades, weighted maintainability scores,
