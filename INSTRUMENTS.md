@@ -101,7 +101,7 @@ explicit coverage field rather than silently passing as clean.
 | `seval functions PATH` | AST function spaces, including analyzer-recognized closures | deterministic hotspot rankings by cognitive/cyclomatic complexity, SLOC, arguments, exits, maintainability, or Halstead effort | whether a hotspot is wrong, unjustified, or worth changing |
 | `seval files PATH` | recognized source files | deterministic file-level hotspot rankings on the same dimensions | architectural boundaries, ownership, coupling, or fitness-to-intent |
 | `seval metrics-compare LEFT RIGHT` | independently analyzed sides; files match only at identical root-relative path and language | raw and normalized `right - left` deltas, function-tail shifts, and matched/left-only/right-only file partitions | an overall winner or any intrinsic good/bad direction |
-| `seval deps PATH` | import declarations in recognized source plus direct dependency rows in Cargo, npm, Python, requirements, and Go manifests | declaration evidence, conservative internal resolution, all-edge and resolved-internal fan-in/out, SCCs, cycles, components, condensation depth, and bounded exact non-self transitive reachability | runtime loading, feature/alias/build-condition resolution, transitive/lockfile dependencies, causal change impact, or architectural quality |
+| `seval deps PATH` | import declarations in recognized source plus direct dependency rows in Cargo, npm, Python, requirements, and Go manifests | declaration evidence, conservative internal resolution, all-edge and resolved-internal fan-in/out, SCCs, cycles, components, condensation depth, bounded exact non-self transitive reachability, directory modularity, and a detected-community witness | runtime loading, feature/alias/build-condition resolution, transitive/lockfile dependencies, causal change impact, an optimal community partition, or architectural quality |
 | `seval duplicates PATH` | normalized AST leaf-token windows meeting explicit token/line thresholds | maximal non-overlapping structural clone groups, occurrences, and duplicated token/line mass | semantic equivalence, intent, whether duplication is justified, or absence of clones below the thresholds |
 | `seval api PATH` | externally reachable Rust declarations plus declarations representable under the other languages' documented lexical publicness rules | symbol rows, kinds, visibility basis, parameters, generics, adjacent documentation, and symbols/kSLOC | runtime reachability outside Rust's resolved module visibility, compatibility, stability, usability, or API quality |
 | `seval discipline PATH` | function spaces (functions, methods, closures/lambdas/arrows) in recognized source files, each construct attributed to its innermost space | per function: syntactic purity (no nonlocal write, no `&mut`/pointer parameter, no `unsafe`, no call into a documented per-language effect list) and its four components; mutation census (bindings, mutable bindings, reassignments, shadowings, max mutable live range); shape (params, bool params, statements, single-expression body, unit return, max call-chain length); error shape (`?`/Go err-return propagation, `unwrap`/`expect`, panic-like, broad and empty catches, ignored results); lexical type honesty (string-literal conditions, TS `any`, unannotated params, type-ignore comments); per file magic numbers, magic strings, and global mutable state; repo totals, pure fraction, and nearest-rank tails | semantic purity, effect reachability through unresolved calls, whether a mutation or catch is justified, type-level correctness; per-language uncovered fields report 0 by construction (see the module's limitations) |
@@ -316,13 +316,31 @@ collapsed to one edge with $m$ the resulting edge count):
 - Two directory partitions are scored: `top_level` (a file's community is its
   first path component; root files share community `.`) and `parent_directory`
   (community is the immediate parent directory path).
+- A third `detected_louvain` partition is a heuristic witness over that same
+  graph. Louvain processes nodes in path order, considers communities in ordered
+  identifier order, keeps the first community when exact gains tie, repeats
+  passes until no move improves Q, and aggregates until fixpoint. Every ΔQ
+  comparison uses the exact integer numerator over the common `4m²`
+  denominator; f64 exists for display only. The resulting Q is a witness lower
+  bound on attainable modularity, never an optimum.
 - Per partition it reports the intra- and cross-community undirected edge counts,
   their cross fraction (null when $m = 0$), and Newman–Girvan modularity
   $Q = \sum_c \left[ e_c/m - (d_c/2m)^2 \right]$ with $e_c$ the edges inside
   community $c$ and $d_c$ the degree sum of its nodes (null when $m = 0$).
 - Per-community rows carry the file count, intra-community edges, and the
   directed out/in edges that cross the community boundary.
+- Detected-community rows also break membership down by top-level directory,
+  name the deterministic majority directory, and report purity as the exact
+  majority/member pair.
 - The closure $\text{intra} + \text{cross} = m$ holds for every partition.
+
+Layout headroom is the exact common-denominator difference
+$Q_{detected}-Q_{parent\_directory}$. Positive headroom establishes that the
+observed coupling admits a partition more modular than the folder layout: that
+is evidence that folders may be a legacy accident rather than a faithful map.
+It establishes attainability only. Louvain's resolution limit can merge small
+real communities, small graphs make Q noisy, and a witness search that finds no
+headroom proves nothing about whether a better partition exists.
 
 The directed crossing edges also expose two boundary coordinates. Per community,
 `boundary_in_files` and `boundary_out_files` count distinct member files touched
