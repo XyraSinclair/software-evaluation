@@ -3,7 +3,7 @@
 //! This module observes type spellings in declarations and signatures. It does
 //! not resolve aliases, infer types, expand macros, or establish algebraic laws.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use serde::Serialize;
@@ -29,6 +29,7 @@ pub struct TypeSpaceReport {
     pub coverage: TypeSpaceCoverage,
     pub t1: AlgebraicShape,
     pub t2: DynamicState,
+    pub t3: SignatureParametricity,
     pub t4: EndomorphicClosure,
     pub t5: OwnershipEvasion,
     pub t6: NewtypeAdoption,
@@ -89,6 +90,29 @@ pub struct DynamicItemRow {
     pub language: String,
     pub dynamic_mentions: u64,
     pub type_leaf_mentions: u64,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct SignatureParametricity {
+    pub public_functions: u64,
+    pub generic_public_functions: u64,
+    pub return_parametric_public_functions: u64,
+    pub abstract_type_leaf_mentions: u64,
+    pub concrete_type_leaf_mentions: u64,
+    pub signature_type_leaf_mentions: u64,
+    pub generic_parameters: u64,
+    pub generic_washing_parameters: u64,
+    pub bounds_per_parameter: IntegerDistribution,
+    #[serde(skip)]
+    bound_counts: Vec<u64>,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct IntegerDistribution {
+    pub min: u64,
+    pub p50: u64,
+    pub p90: u64,
+    pub max: u64,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -189,6 +213,11 @@ struct OwnershipFileRowBuilder {
     type_constructor_leaf_mentions: u64,
 }
 
+#[derive(Clone, Default)]
+struct GenericParameter {
+    bounds: Vec<String>,
+}
+
 pub fn analyze_typespace(input: &Path) -> Result<TypeSpaceReport, TypeSpaceError> {
     let tree = load_source_tree(input)?;
     let mut report = TypeSpaceReport {
@@ -206,7 +235,7 @@ pub fn analyze_typespace(input: &Path) -> Result<TypeSpaceReport, TypeSpaceError
                     "python".to_owned(),
                     "T2 dynamic-state field/signature list only".to_owned(),
                 ),
-                ("rust".to_owned(), "T1,T2,T4,T5,T6".to_owned()),
+                ("rust".to_owned(), "T1,T2,T3,T4,T5,T6".to_owned()),
                 (
                     "typescript".to_owned(),
                     "T2 dynamic-state field/signature list only".to_owned(),
@@ -216,6 +245,7 @@ pub fn analyze_typespace(input: &Path) -> Result<TypeSpaceReport, TypeSpaceError
         },
         t1: AlgebraicShape::default(),
         t2: DynamicState::default(),
+        t3: SignatureParametricity::default(),
         t4: EndomorphicClosure::default(),
         t5: OwnershipEvasion::default(),
         t6: NewtypeAdoption::default(),
@@ -262,6 +292,7 @@ pub fn analyze_typespace(input: &Path) -> Result<TypeSpaceReport, TypeSpaceError
     }
     report.t1.structs_detail.sort_by(location_order_struct);
     report.t2.items.sort_by(location_order_dynamic);
+    report.t3.bounds_per_parameter = integer_distribution(&mut report.t3.bound_counts);
     report.t4.types.sort_by(location_order_endo);
     report.t4.binary_items.sort_by(location_order);
     report.t5.files.sort_by(|a, b| a.path.cmp(&b.path));
@@ -275,6 +306,7 @@ fn limitations() -> Vec<String> {
         "All determinants are proxies over declared type syntax; aliases, imports, inference, macros, and semantic equivalence are unresolved until a rust-analyzer/HIR bridge.".to_owned(),
         "T1: two-variant enums can still encode booleans; optional fields can be hoisted; builder/config structs can legitimately contain orthogonal options.".to_owned(),
         "T2: aliases defeat the list entirely (for example `type Json = Value`); serialization and interpreter domains legitimately use dynamic state. This overlaps discipline's bare-any count but is field/signature-scoped and includes container forms.".to_owned(),
+        "T3: Rust itself breaks parametricity through mechanisms including TypeId, downcast, and specialization, so even a resolved implementation remains a proxy. Generic-washing and bound soup are measured explicitly; a domain CLI can legitimately sit near zero, so compare only within-language distributions and never treat the fractions as targets.".to_owned(),
         "T4: syntactic closure does not establish identity, associativity, or any other law; mutable builder returns are reported separately.".to_owned(),
         "T5: the census cannot distinguish necessary concurrency from ownership evasion; hand-written unsafe interior mutability is missed, so cross-check discipline's unsafe count.".to_owned(),
         "T6: a primitive can be the honest domain representation; compare distributions within Rust rather than treating the ratio as a target.".to_owned(),
@@ -301,7 +333,7 @@ fn walk_rust(
             return;
         }
         "function_item" => {
-            collect_rust_signature(file, node, report);
+            collect_rust_signature(file, node, &BTreeMap::new(), report);
             collect_binary_closure(file, node, None, report);
         }
         "field_declaration" | "ordered_field_declaration" => {
@@ -429,6 +461,7 @@ fn collect_impl(file: &SourceFile, node: Node<'_>, report: &mut TypeSpaceReport)
         return;
     };
     let target = compact(text(file, target_node));
+    let impl_parameters = declared_type_parameters(file, node);
     let mut row = EndomorphicTypeRow {
         path: file.path.clone(),
         line: line(node),
@@ -445,7 +478,7 @@ fn collect_impl(file: &SourceFile, node: Node<'_>, report: &mut TypeSpaceReport)
             if method.kind() != "function_item" {
                 continue;
             }
-            collect_rust_signature(file, method, report);
+            collect_rust_signature(file, method, &impl_parameters, report);
             collect_binary_closure(file, method, Some(&target), report);
             if !rust_is_pub(file, method) {
                 continue;
@@ -593,21 +626,224 @@ fn collect_binary_closure(
     }
 }
 
-fn collect_rust_signature(file: &SourceFile, node: Node<'_>, report: &mut TypeSpaceReport) {
+fn collect_rust_signature(
+    file: &SourceFile,
+    node: Node<'_>,
+    inherited_parameters: &BTreeMap<String, GenericParameter>,
+    report: &mut TypeSpaceReport,
+) {
     let name = field_text(file, node, "name").unwrap_or_else(|| "<anonymous>".to_owned());
+    let is_public = rust_is_pub(file, node);
+    let mut parameters = inherited_parameters.clone();
+    merge_generic_parameters(&mut parameters, declared_type_parameters(file, node));
+    let mut signature_regions = Vec::new();
+    let mut anonymous_parameters = Vec::new();
     if let Some(params) = node.child_by_field_name("parameters") {
         let mut cursor = params.walk();
         for param in params.named_children(&mut cursor) {
             if let Some(ty) = param.child_by_field_name("type") {
                 collect_dynamic_region(file, ty, &name, report);
-                if rust_is_pub(file, node) {
+                if is_public {
                     collect_primitive_region(file, ty, &name, line(node), report);
+                    signature_regions.push(ty);
+                    collect_argument_impl_traits(file, ty, &mut anonymous_parameters);
                 }
             }
         }
     }
+    for (index, parameter) in anonymous_parameters.into_iter().enumerate() {
+        parameters.insert(format!("<impl-trait-{index}>"), parameter);
+    }
+    let mut return_type = None;
     if let Some(ret) = node.child_by_field_name("return_type") {
         collect_dynamic_region(file, ret, &name, report);
+        if is_public {
+            signature_regions.push(ret);
+            return_type = Some(ret);
+        }
+    }
+    if is_public {
+        collect_signature_parametricity(file, &signature_regions, return_type, &parameters, report);
+    }
+}
+
+fn declared_type_parameters(
+    file: &SourceFile,
+    node: Node<'_>,
+) -> BTreeMap<String, GenericParameter> {
+    let mut parameters = BTreeMap::new();
+    if let Some(type_parameters) = node.child_by_field_name("type_parameters") {
+        let mut cursor = type_parameters.walk();
+        for parameter in type_parameters.named_children(&mut cursor) {
+            if parameter.kind() != "type_parameter" {
+                continue;
+            }
+            let Some(name) = parameter.child_by_field_name("name") else {
+                continue;
+            };
+            let bounds = parameter
+                .child_by_field_name("bounds")
+                .map_or_else(Vec::new, |bounds| trait_bounds(file, bounds));
+            parameters.insert(text(file, name).to_owned(), GenericParameter { bounds });
+        }
+    }
+    let mut cursor = node.walk();
+    for clause in node.named_children(&mut cursor) {
+        if clause.kind() != "where_clause" {
+            continue;
+        }
+        let mut clause_cursor = clause.walk();
+        for predicate in clause.named_children(&mut clause_cursor) {
+            let Some(left) = predicate.child_by_field_name("left") else {
+                continue;
+            };
+            let key = compact(text(file, left));
+            let Some(parameter) = parameters.get_mut(&key) else {
+                continue;
+            };
+            if let Some(bounds) = predicate.child_by_field_name("bounds") {
+                parameter.bounds.extend(trait_bounds(file, bounds));
+            }
+        }
+    }
+    parameters
+}
+
+fn merge_generic_parameters(
+    target: &mut BTreeMap<String, GenericParameter>,
+    source: BTreeMap<String, GenericParameter>,
+) {
+    for (name, parameter) in source {
+        target
+            .entry(name)
+            .or_default()
+            .bounds
+            .extend(parameter.bounds);
+    }
+}
+
+fn collect_argument_impl_traits(
+    file: &SourceFile,
+    node: Node<'_>,
+    out: &mut Vec<GenericParameter>,
+) {
+    if node.kind() == "abstract_type" {
+        let bounds = node
+            .child_by_field_name("trait")
+            .map_or_else(Vec::new, |bounds| trait_bounds(file, bounds));
+        out.push(GenericParameter { bounds });
+        return;
+    }
+    visit_named(node, |child| collect_argument_impl_traits(file, child, out));
+}
+
+fn trait_bounds(file: &SourceFile, node: Node<'_>) -> Vec<String> {
+    if !matches!(node.kind(), "trait_bounds" | "bounded_type") {
+        return vec![compact(text(file, node))];
+    }
+    let mut bounds = Vec::new();
+    let mut cursor = node.walk();
+    for child in node.named_children(&mut cursor) {
+        if !matches!(child.kind(), "lifetime" | "use_bounds") {
+            bounds.push(compact(text(file, child)));
+        }
+    }
+    bounds
+}
+
+fn collect_signature_parametricity(
+    file: &SourceFile,
+    signature_regions: &[Node<'_>],
+    return_type: Option<Node<'_>>,
+    parameters: &BTreeMap<String, GenericParameter>,
+    report: &mut TypeSpaceReport,
+) {
+    let parameter_names = parameters.keys().cloned().collect::<BTreeSet<_>>();
+    let mut abstract_mentions = 0_u64;
+    let mut total_mentions = 0_u64;
+    for region in signature_regions {
+        let identifiers = type_identifiers(text(file, *region));
+        abstract_mentions += identifiers
+            .iter()
+            .filter(|identifier| parameter_names.contains(*identifier))
+            .count() as u64;
+        total_mentions += identifiers.len() as u64;
+    }
+    let anonymous_parameters = parameters
+        .keys()
+        .filter(|name| name.starts_with("<impl-trait-"))
+        .count() as u64;
+    abstract_mentions += anonymous_parameters;
+    total_mentions += anonymous_parameters;
+
+    let t3 = &mut report.t3;
+    t3.public_functions += 1;
+    t3.abstract_type_leaf_mentions += abstract_mentions;
+    t3.concrete_type_leaf_mentions += total_mentions.saturating_sub(abstract_mentions);
+    t3.signature_type_leaf_mentions += total_mentions;
+    if parameters.is_empty() {
+        return;
+    }
+
+    t3.generic_public_functions += 1;
+    let return_parametric = return_type.is_some_and(|return_type| {
+        has_descendant_kind(return_type, "abstract_type")
+            || type_identifiers(text(file, return_type))
+                .iter()
+                .any(|identifier| parameter_names.contains(identifier))
+    });
+    t3.return_parametric_public_functions += u64::from(return_parametric);
+    t3.generic_parameters += parameters.len() as u64;
+    for parameter in parameters.values() {
+        t3.bound_counts.push(parameter.bounds.len() as u64);
+        t3.generic_washing_parameters += u64::from(
+            parameter
+                .bounds
+                .iter()
+                .any(|bound| is_generic_washing_bound(bound, &parameter_names)),
+        );
+    }
+}
+
+fn is_generic_washing_bound(bound: &str, generic_names: &BTreeSet<String>) -> bool {
+    let bound = bound.trim_start_matches('?');
+    let Some(open) = bound.find('<') else {
+        return false;
+    };
+    let Some(arguments) = bound
+        .get(open + 1..)
+        .and_then(|rest| rest.strip_suffix('>'))
+    else {
+        return false;
+    };
+    let path = &bound[..open];
+    let constructor = path.rsplit("::").next().unwrap_or(path);
+    if !matches!(constructor, "Into" | "AsRef" | "From" | "TryInto")
+        || split_top_level(arguments).len() != 1
+    {
+        return false;
+    }
+    !lexical_identifiers(arguments)
+        .iter()
+        .any(|(identifier, _)| generic_names.contains(identifier))
+}
+
+fn integer_distribution(values: &mut [u64]) -> IntegerDistribution {
+    if values.is_empty() {
+        return IntegerDistribution::default();
+    }
+    values.sort_unstable();
+    let p50_index = values.len().div_ceil(2).saturating_sub(1);
+    let p90_index = values
+        .len()
+        .saturating_mul(9)
+        .div_ceil(10)
+        .saturating_sub(1);
+    IntegerDistribution {
+        min: values[0],
+        p50: values[p50_index],
+        p90: values[p90_index],
+        max: values[values.len() - 1],
     }
 }
 
@@ -865,6 +1101,20 @@ fn type_leaf_count(raw: &str) -> u64 {
 }
 
 fn type_identifiers(raw: &str) -> Vec<String> {
+    lexical_identifiers(raw)
+        .into_iter()
+        .filter(|(current, trailing)| {
+            !matches!(
+                current.as_str(),
+                "dyn" | "mut" | "const" | "pub" | "where" | "impl" | "fn"
+            ) && !trailing.starts_with("::")
+                && !trailing.starts_with('.')
+        })
+        .map(|(current, _)| current)
+        .collect()
+}
+
+fn lexical_identifiers(raw: &str) -> Vec<(String, &str)> {
     let mut out = Vec::new();
     let chars = raw.char_indices().collect::<Vec<_>>();
     let mut cursor = 0;
@@ -891,16 +1141,8 @@ fn type_identifiers(raw: &str) -> Vec<String> {
         let end = chars.get(cursor).map_or(raw.len(), |(index, _)| *index);
         let current = &raw[start..end];
         let trailing = &raw[end..];
-        if current != "_"
-            && !matches!(
-                current,
-                "dyn" | "mut" | "const" | "pub" | "where" | "impl" | "fn"
-            )
-            && !current.chars().all(|c| c.is_ascii_digit())
-            && !trailing.starts_with("::")
-            && !trailing.starts_with('.')
-        {
-            out.push(current.to_owned());
+        if current != "_" && !current.chars().all(|c| c.is_ascii_digit()) {
+            out.push((current.to_owned(), trailing));
         }
     }
     out
@@ -1028,6 +1270,15 @@ fn has_ancestor(mut node: Node<'_>, kind: &str) -> bool {
         node = parent;
     }
     false
+}
+
+fn has_descendant_kind(node: Node<'_>, kind: &str) -> bool {
+    if node.kind() == kind {
+        return true;
+    }
+    let mut found = false;
+    visit_named(node, |child| found |= has_descendant_kind(child, kind));
+    found
 }
 
 fn item_name(file: &SourceFile, node: Node<'_>) -> String {

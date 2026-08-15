@@ -116,7 +116,7 @@ explicit coverage field rather than silently passing as clean.
 spellings, not type identity: it does not expand aliases, resolve imports,
 infer omitted types, expand macros, or determine semantic equivalence. A
 rust-analyzer/HIR bridge is therefore the common route to alias defeat and
-resolved type edges. Rust coverage is complete for T1, T2, T4, T5, and T6.
+resolved type edges. Rust coverage is complete for T1 through T6.
 TypeScript/TSX and Python contribute only to T2 through their documented cheap
 type-mention scans; JavaScript and Go contribute no determinant counts.
 Syntax-error files remain in coverage and their error-tolerant trees are
@@ -144,6 +144,22 @@ unqualified `Value` does not count. TypeScript entries are `any`, `unknown`,
 mention. Aliases defeat the list entirely: `type Json = Value` is a resolution
 failure, not an improvement. The count overlaps discipline's bare-`any`
 observation but is field/signature-scoped and adds container forms.
+
+T3 examines explicit-`pub` Rust functions and explicit-`pub` impl methods. Its
+signature denominator is identifier-like type leaves in parameters and returns;
+the abstract partition is mentions of function- or enclosing-impl type
+parameters, with argument-position `impl Trait` counted as an anonymous generic
+parameter. Lifetimes and const parameters are excluded. The return split counts
+generic public functions whose return mentions one of those parameters or uses
+return-position `impl Trait`, and separately closes generic over all public
+functions. Inline and `where` trait bounds form a nearest-rank integer
+min/p50/p90/max distribution per generic parameter. The generic-washing subset
+counts parameters with textual `Into`, `AsRef`, `From`, or `TryInto` bounds whose
+argument mentions no in-scope type parameter. Rust can still break parametricity
+through `TypeId`, downcast, and specialization, so resolution would not make this
+more than a proxy. Bound soup is measured, not presumed bad; a domain CLI can
+legitimately sit near zero, and the fractions are within-Rust distributions,
+never targets.
 
 T4 groups inherent and trait impl blocks by their written Rust target. Its
 denominator is explicit-`pub` methods. The numerator is public methods whose
