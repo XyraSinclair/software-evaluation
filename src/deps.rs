@@ -74,6 +74,19 @@ pub struct DependencyPropagation {
     pub cyclic_source_file_fraction: Option<f64>,
     pub largest_cyclic_component_files: usize,
     pub largest_cyclic_component_fraction: Option<f64>,
+    /// Weakly connected components of the internal dependency graph.
+    pub weak_components: usize,
+    pub largest_weak_component_files: usize,
+    pub largest_weak_component_fraction: Option<f64>,
+    /// Mutual reachability restated inside the weak component where it is
+    /// worst: the global n*(n-1) denominator dilutes a tangle embedded in a
+    /// large repository of unrelated files, so the same sum s*(s-1) is also
+    /// reported over W*(W-1) of its own weak component. Argmax is exact
+    /// (integer cross-multiplication), ties broken toward the larger
+    /// component.
+    pub worst_weak_component_mutually_reachable_pairs: usize,
+    pub worst_weak_component_files: usize,
+    pub worst_weak_component_mutual_reachability_fraction: Option<f64>,
 }
 
 /// Directory-layout profile over the internal dependency graph: how well the
@@ -367,7 +380,9 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         })
         .cloned()
         .collect();
-    let propagation = dependency_propagation(source_paths.len(), &cycles, &reachability);
+    let internal_weak = weak_components(&known, &internal_adjacency);
+    let propagation =
+        dependency_propagation(source_paths.len(), &cycles, &internal_weak, &reachability);
     let layout = dependency_layout(&known, &edges);
     let all_ids: BTreeSet<_> = node_kinds.keys().cloned().collect();
     let all_adjacency = adjacency(&all_ids, &edges, false);
@@ -506,6 +521,7 @@ fn transitive_internal_degrees(adjacency: &[Vec<usize>]) -> ReachabilityComputat
 fn dependency_propagation(
     source_files: usize,
     cycles: &[Vec<String>],
+    internal_weak: &[Vec<String>],
     reachability: &ReachabilityComputation,
 ) -> DependencyPropagation {
     let cyclic_source_files = cycles.iter().map(Vec::len).sum();
@@ -536,6 +552,43 @@ fn dependency_propagation(
     let mutual_reachability_fraction = mutual_possible
         .and_then(|possible| (possible != 0).then_some(mutually_reachable_pairs as f64 / possible as f64));
 
+    let largest_weak_component_files = internal_weak.iter().map(Vec::len).max().unwrap_or(0);
+    let member_component: BTreeMap<&str, usize> = internal_weak
+        .iter()
+        .enumerate()
+        .flat_map(|(index, files)| files.iter().map(move |file| (file.as_str(), index)))
+        .collect();
+    let mut component_pairs = vec![0usize; internal_weak.len()];
+    for component in cycles {
+        if let Some(&index) = component.first().and_then(|f| member_component.get(f.as_str())) {
+            component_pairs[index] += component.len() * (component.len() - 1);
+        }
+    }
+    // Argmax of pairs/(W*(W-1)) by exact integer cross-multiplication; ties
+    // toward the larger component, then earlier (sorted) component order.
+    let mut worst: Option<(usize, usize)> = None; // (pairs, files)
+    for (index, files) in internal_weak.iter().enumerate() {
+        let w = files.len();
+        if w < 2 {
+            continue;
+        }
+        let pairs = component_pairs[index];
+        let better = match worst {
+            None => true,
+            Some((best_pairs, best_w)) => {
+                let lhs = (pairs as u128) * (best_w as u128) * (best_w as u128 - 1);
+                let rhs = (best_pairs as u128) * (w as u128) * (w as u128 - 1);
+                lhs > rhs || (lhs == rhs && w > best_w)
+            }
+        };
+        if better {
+            worst = Some((pairs, w));
+        }
+    }
+    let (worst_pairs, worst_files) = worst.unwrap_or((0, 0));
+    let worst_fraction =
+        (worst_files >= 2).then(|| worst_pairs as f64 / (worst_files * (worst_files - 1)) as f64);
+
     DependencyPropagation {
         source_files,
         reachability_status: reachability.status,
@@ -552,6 +605,12 @@ fn dependency_propagation(
         cyclic_source_file_fraction: source_fraction(cyclic_source_files),
         largest_cyclic_component_files,
         largest_cyclic_component_fraction: source_fraction(largest_cyclic_component_files),
+        weak_components: internal_weak.len(),
+        largest_weak_component_files,
+        largest_weak_component_fraction: source_fraction(largest_weak_component_files),
+        worst_weak_component_mutually_reachable_pairs: worst_pairs,
+        worst_weak_component_files: worst_files,
+        worst_weak_component_mutual_reachability_fraction: worst_fraction,
     }
 }
 
@@ -1554,7 +1613,12 @@ mod tests {
         assert_eq!(reachability.outgoing, None);
 
         let serialized =
-            serde_json::to_value(dependency_propagation(adjacency.len(), &[], &reachability))
+            serde_json::to_value(dependency_propagation(
+                adjacency.len(),
+                &[],
+                &[],
+                &reachability,
+            ))
                 .expect("serialize skipped reachability profile");
         assert_eq!(
             serialized["reachability_status"],

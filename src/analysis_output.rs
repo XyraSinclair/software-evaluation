@@ -85,6 +85,22 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
             .mutual_reachability_fraction
             .map_or_else(|| "n/a".to_owned(), |value| format!("{value:.3}")),
     );
+    println!(
+        "  within worst weak component: {}/{} pairs over {} files (fraction={}); {} weak components, largest {} files",
+        propagation.worst_weak_component_mutually_reachable_pairs,
+        if propagation.worst_weak_component_files >= 2 {
+            (propagation.worst_weak_component_files * (propagation.worst_weak_component_files - 1))
+                .to_string()
+        } else {
+            "n/a".to_owned()
+        },
+        propagation.worst_weak_component_files,
+        propagation
+            .worst_weak_component_mutual_reachability_fraction
+            .map_or_else(|| "n/a".to_owned(), |value| format!("{value:.3}")),
+        propagation.weak_components,
+        propagation.largest_weak_component_files,
+    );
     let layout = &report.layout;
     println!(
         "layout: {} analyzed files, {} internal undirected edges",
