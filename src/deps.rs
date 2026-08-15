@@ -13,6 +13,7 @@ use crate::conductance::{
     conductance_certificates,
 };
 use crate::source::{SourceError, SourceFile, SourceLanguage, load_source_tree, parse_source};
+use crate::trophic::{TROPHIC_NODE_LIMIT, TrophicIncoherenceReport, trophic_incoherence};
 
 #[derive(Debug, Error)]
 pub enum DependencyError {
@@ -55,6 +56,9 @@ pub struct DependencyReport {
     pub condensation_maximum_depth: Option<usize>,
     pub condensation_depth: Option<CondensationDepthProfile>,
     pub propagation: DependencyPropagation,
+    /// Exact improved trophic incoherence over weak components of the directed
+    /// internal file graph: a layering coordinate, not a design verdict.
+    pub trophic_incoherence: TrophicIncoherenceReport,
     pub layout: DependencyLayout,
     pub conductance_certificate_node_limit: usize,
     pub conductance_certificate_denominator_power: u32,
@@ -543,6 +547,18 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
     let internal_weak = weak_components(&known, &internal_adjacency);
     let propagation =
         dependency_propagation(source_paths.len(), &cycles, &internal_weak, &reachability);
+    let directed_internal_edges = edges
+        .iter()
+        .filter(|edge| edge.classification == DependencyClassification::Internal)
+        .map(|edge| (edge.source.as_str(), edge.target.as_str()))
+        .collect::<BTreeSet<_>>();
+    let trophic_incoherence = trophic_incoherence(
+        &known,
+        &directed_internal_edges,
+        &sccs,
+        TROPHIC_NODE_LIMIT,
+    )
+    .map_err(DependencyError::Invariant)?;
     let undirected_internal_edges = internal_undirected_edges(&edges);
     let layout = dependency_layout(&known, &edges, &undirected_internal_edges);
     let conductance_certificates = conductance_certificates(
@@ -635,6 +651,7 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         condensation_maximum_depth: depth_profile.as_ref().map(|profile| profile.depth_in_max),
         condensation_depth: depth_profile,
         propagation,
+        trophic_incoherence,
         layout,
         conductance_certificate_node_limit: CONDUCTANCE_NODE_LIMIT,
         conductance_certificate_denominator_power: CONDUCTANCE_DENOMINATOR_POWER,
@@ -653,6 +670,7 @@ fn base_limitations() -> Vec<String> {
             "Go imports are external/unresolved without go.mod module-path knowledge; standard-library and third-party imports are not distinguished.".to_owned(),
             "Fan-in, fan-out, components, cycles, and depth are structural proxies and carry no quality verdict or weighting.".to_owned(),
             "Propagation is measured on the file-level internal dependency graph and depends on resolver completeness; exact transitive reachability is omitted above either the 10,000 analyzed-source-file node bound or the 100,000,000 edge-visit work upper bound while direct internal degrees and cycle measures remain available.".to_owned(),
+            format!("Improved trophic incoherence is exact for weakly connected components of the directed internal file graph through the {TROPHIC_NODE_LIMIT}-file component bound; larger edge-bearing components are reported with size_limit and make the repository mean unavailable rather than approximated. It measures layered feed-forward structure versus recirculation, not design quality."),
             format!("Conductance certificates are exact for connected components of at least three files through the {CONDUCTANCE_NODE_LIMIT}-file component bound; larger components are reported with size_limit rather than approximated. They provide negative evidence that no sparse cut exists, not a design-quality verdict."),
     ]
 }

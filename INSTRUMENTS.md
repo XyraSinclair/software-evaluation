@@ -101,7 +101,7 @@ explicit coverage field rather than silently passing as clean.
 | `seval functions PATH` | AST function spaces, including analyzer-recognized closures | deterministic hotspot rankings by cognitive/cyclomatic complexity, SLOC, arguments, exits, maintainability, or Halstead effort | whether a hotspot is wrong, unjustified, or worth changing |
 | `seval files PATH` | recognized source files | deterministic file-level hotspot rankings on the same dimensions | architectural boundaries, ownership, coupling, or fitness-to-intent |
 | `seval metrics-compare LEFT RIGHT` | independently analyzed sides; files match only at identical root-relative path and language | raw and normalized `right - left` deltas, function-tail shifts, and matched/left-only/right-only file partitions | an overall winner or any intrinsic good/bad direction |
-| `seval deps PATH` | import declarations in recognized source plus direct dependency rows in Cargo, npm, Python, requirements, and Go manifests | declaration evidence, conservative internal resolution, all-edge and resolved-internal fan-in/out, SCCs, cycles, components, condensation depth, bounded exact non-self transitive reachability, directory modularity, and a detected-community witness | runtime loading, feature/alias/build-condition resolution, transitive/lockfile dependencies, causal change impact, an optimal community partition, or architectural quality |
+| `seval deps PATH` | import declarations in recognized source plus direct dependency rows in Cargo, npm, Python, requirements, and Go manifests | declaration evidence, conservative internal resolution, all-edge and resolved-internal fan-in/out, SCCs, cycles, components, condensation depth, bounded exact non-self transitive reachability, exact improved trophic incoherence, directory modularity, and a detected-community witness | runtime loading, feature/alias/build-condition resolution, transitive/lockfile dependencies, causal change impact, an optimal community partition, or architectural quality |
 | `seval duplicates PATH` | normalized AST leaf-token windows meeting explicit token/line thresholds | maximal non-overlapping structural clone groups, occurrences, and duplicated token/line mass | semantic equivalence, intent, whether duplication is justified, or absence of clones below the thresholds |
 | `seval api PATH` | externally reachable Rust declarations plus declarations representable under the other languages' documented lexical publicness rules | symbol rows, kinds, visibility basis, parameters, generics, adjacent documentation, and symbols/kSLOC | runtime reachability outside Rust's resolved module visibility, compatibility, stability, usability, or API quality |
 | `seval discipline PATH` | function spaces (functions, methods, closures/lambdas/arrows) in recognized source files, each construct attributed to its innermost space | per function: syntactic purity (no nonlocal write, no `&mut`/pointer parameter, no `unsafe`, no call into a documented per-language effect list) and its four components; mutation census (bindings, mutable bindings, reassignments, shadowings, max mutable live range); shape (params, bool params, statements, single-expression body, unit return, max call-chain length); error shape (`?`/Go err-return propagation, `unwrap`/`expect`, panic-like, broad and empty catches, ignored results); lexical type honesty (string-literal conditions, TS `any`, unannotated params, type-ignore comments); per file magic numbers, magic strings, and global mutable state; repo totals, pure fraction, and nearest-rank tails | semantic purity, effect reachability through unresolved calls, whether a mutation or catch is justified, type-level correctness; per-language uncovered fields report 0 by construction (see the module's limitations) |
@@ -382,6 +382,50 @@ a single community scores near zero by construction, and over-splitting inflates
 cross-community edges, so $Q$ is a coordinate rather than a target. The graph is
 file-granularity only, and conservative import resolution leaves unresolved edges
 absent, so heavily unresolved code yields a partial partition.
+
+### Improved trophic incoherence
+
+`seval deps PATH` computes the MacKay, Johnson, and Asllani (2020) improved
+trophic incoherence $F_0$ independently on every weakly connected component of
+the directed internal file graph that contains an edge. With directed adjacency
+$A$, in/out degrees $d^{in},d^{out}$, and
+
+$$
+\Lambda = \operatorname{diag}(d^{in}+d^{out}) - A - A^T,
+\qquad
+v = d^{in}-d^{out},
+$$
+
+the improved trophic levels solve $\Lambda h=v$ after fixing one component
+level to zero. The implementation forms the integer system and solves it by
+deterministic Gaussian elimination over arbitrary-precision rationals. It then
+reports
+
+$$
+F_0 = \frac{1}{m}\sum_{i\to j}(h_j-h_i-1)^2,
+$$
+
+exactly as decimal-string numerator and denominator, with f64 only for display.
+The repository value is the exact edge-weighted mean, equivalently the total
+squared error over all directed internal edges. Every solved component checks
+$\Lambda h-v=0$ exactly and $0\leq F_0\leq1$; a present two-file, one-edge weak
+component also checks the path identity $F_0=0$. Components without edges are
+`trivial_no_edges`. An edge-bearing component above the stated node bound is
+`size_limit`, and its omission makes the repository mean unavailable rather
+than approximate.
+
+$F_0=0$ establishes perfectly layered feed-forward wiring: every dependency
+edge advances exactly one improved trophic level. $F_0=1$ is the balanced,
+undirectable endpoint. Values between them are a coordinate from layered
+pipelines toward entangled recirculation, not a verdict: a pipeline can
+legitimately be coherent, while an event system or peer protocol can
+legitimately be incoherent. Read the value beside files-in-cycle and largest SCC.
+Johnson et al. (2014) and Johnson and Jones (2017) connect low trophic
+incoherence with low loop mass and small leading eigenvalues, so the trophic,
+condensation/cycle, and conductance rows are one cross-instrument family. The
+software graph is only the conservatively resolved file-import graph; $F_0$
+cannot establish runtime direction, semantic layering, architectural quality,
+the cause or harm of a cycle, or anything about unresolved and external edges.
 
 ### Conductance certificate
 

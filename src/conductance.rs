@@ -179,7 +179,7 @@ fn certificate_row(
     }
 }
 
-fn connected_components(
+pub(crate) fn connected_components(
     analyzed: &BTreeSet<String>,
     undirected_edges: &BTreeSet<(&str, &str)>,
 ) -> Result<Vec<Vec<String>>, String> {
@@ -439,4 +439,66 @@ fn swap_symmetric(matrix: &mut [Vec<BigRational>], left: usize, right: usize) {
     for row in matrix {
         row.swap(left, right);
     }
+}
+
+pub(crate) fn solve_exact_linear_system(
+    mut coefficients: Vec<Vec<BigRational>>,
+    mut right_hand_side: Vec<BigRational>,
+) -> Result<Vec<BigRational>, String> {
+    let dimension = coefficients.len();
+    if right_hand_side.len() != dimension || coefficients.iter().any(|row| row.len() != dimension) {
+        return Err(
+            "exact linear system must be square with a matching right-hand side".to_owned(),
+        );
+    }
+
+    for column in 0..dimension {
+        let Some(pivot_row) = (column..dimension)
+            .find(|&row| rational_sign(&coefficients[row][column]) != Sign::NoSign)
+        else {
+            return Err(format!(
+                "exact linear system is singular at column {column}"
+            ));
+        };
+        coefficients.swap(column, pivot_row);
+        right_hand_side.swap(column, pivot_row);
+        let pivot = coefficients[column][column].clone();
+        let pivot_trailing = coefficients[column]
+            .iter()
+            .skip(column + 1)
+            .cloned()
+            .collect::<Vec<_>>();
+
+        for row in (column + 1)..dimension {
+            if rational_sign(&coefficients[row][column]) == Sign::NoSign {
+                continue;
+            }
+            let factor = coefficients[row][column].clone() / pivot.clone();
+            coefficients[row][column] = BigRational::from_integer(BigInt::from(0));
+            for (coefficient, pivot_coefficient) in coefficients[row]
+                .iter_mut()
+                .skip(column + 1)
+                .zip(&pivot_trailing)
+            {
+                *coefficient = coefficient.clone()
+                    - factor.clone() * pivot_coefficient.clone();
+            }
+            right_hand_side[row] =
+                right_hand_side[row].clone() - factor * right_hand_side[column].clone();
+        }
+    }
+
+    let mut solution = vec![BigRational::from_integer(BigInt::from(0)); dimension];
+    for row in (0..dimension).rev() {
+        let mut remainder = right_hand_side[row].clone();
+        for column in (row + 1)..dimension {
+            remainder -= coefficients[row][column].clone() * solution[column].clone();
+        }
+        let pivot = coefficients[row][row].clone();
+        if rational_sign(&pivot) == Sign::NoSign {
+            return Err(format!("exact linear system is singular at row {row}"));
+        }
+        solution[row] = remainder / pivot;
+    }
+    Ok(solution)
 }
