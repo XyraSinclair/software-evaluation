@@ -429,6 +429,47 @@ Everything above is **nomination, not validation** — B4 (refactor-delta)
 remains the gate. What B3 changes: the next corpus must stratify by size,
 and `symbol_working_set_p90` earns priority in the B4 mining.
 
+### B3 second pass — the self-edge defect and the Johnson cross-read (2026-08-15)
+
+Adversarial use of the corpus caught a second instrument defect: 23 of 30
+repos carried phantom self-loop edges — a bare crate-name `use` next to a
+same-named file (`examples/atty.rs` containing `use atty`) and `mod.rs`
+files referenced through their own `crate::` path both resolved to the
+declaring file. Self-import is impossible in every covered language's
+semantics; the loops forced F₀ = 1/1 on atty and inflated files-in-cycle
+across the corpus. Fixed at the resolution layer (a self-target resolution
+is discarded and the declaration falls through to external/unresolved);
+target scoping (examples/tests as separate crates) remains a disclosed
+limitation. All deps-derived numbers below and in the read-out above were
+recomputed post-fix; every B1 demotion stands (files-in-cycle moved
+−0.42 → −0.63 raw and stays a size casualty at −0.28 partialed).
+
+**The Johnson cross-read — rows 6/7/8 confirmed as one family.** Over the
+24 corpus repos with fully computed F₀ (three size_limit, three
+trivial/no-edge):
+
+- **F₀ vs files-in-cycle: ρ = +0.919, and +0.881 with SLOC partialed.**
+  Trophic incoherence and cycle mass are computed by disjoint machinery —
+  an exact rational linear solve versus Tarjan SCC membership — and Johnson
+  et al.'s looplessness↔coherence prediction binds them tightly on real
+  dependency graphs, independent of size. This is the strongest
+  cross-instrument consistency evidence the suite has.
+- F₀ vs φ lower bound: ρ = −0.788 (−0.674 partialed) — recirculating
+  components are exactly the ones whose spectral certificate is weak.
+  Consistent with the loop-spectrum half of the prior, though φ's implicit
+  size scaling makes this the softer read.
+- F₀ vs depth p90: ρ = +0.425 — mild, as expected: condensation depth
+  measures the DAG skeleton, F₀ measures deviation from it.
+- F₀ vs class: rb = −0.622 collapsing to −0.23 under SLOC — F₀ is *not*
+  a health verdict on this corpus, and per doctrine never claimed to be.
+
+The family reading: F₀, cycle mass, and the spectral certificate
+triangulate one latent property — how far the file graph is from a layered
+feed-forward architecture — from three independent formalisms that agree
+on real code. Extremes on the corpus: five repos are exactly F₀ = 0/1
+(perfectly layered; four abandoned small utilities plus url), stdweb is
+F₀ = 0.822 with 68.5% of files in cycles.
+
 B4 — **the standing gate, unchanged:** refactor-delta mining. Do coordinates
 move the predicted direction across accepted refactorings (MacCormack's
 Mozilla observation, systematized)? Until then, nothing here claims validity —
