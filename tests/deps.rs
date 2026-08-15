@@ -588,11 +588,11 @@ fn smallest_dependency_graphs_prove_null_zero_cycle_and_dedup_semantics() {
             Some(0),
             Some(0),
             None,
-            1,
-            1,
-            Some(1.0),
-            1,
-            Some(1.0),
+            0,
+            0,
+            Some(0.0),
+            0,
+            Some(0.0),
         ),
         (
             "two-cycle",
@@ -681,7 +681,8 @@ fn smallest_dependency_graphs_prove_null_zero_cycle_and_dedup_semantics() {
             self_node.direct_internal_in_degree,
             self_node.direct_internal_out_degree
         ),
-        (Some(1), Some(1))
+        (Some(0), Some(0)),
+        "a self-resolving import is a resolver artifact and must not become an internal edge"
     );
     assert_eq!(
         (
@@ -689,7 +690,7 @@ fn smallest_dependency_graphs_prove_null_zero_cycle_and_dedup_semantics() {
             self_node.transitive_internal_out_count
         ),
         (Some(0), Some(0)),
-        "transitive counts exclude self even through a cycle"
+        "no phantom self-cycle may appear in transitive counts"
     );
 }
 

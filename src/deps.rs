@@ -432,7 +432,14 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
     let mut grouped: BTreeMap<(String, String, DependencyClassification), Vec<DependencyEvidence>> =
         BTreeMap::new();
     for (file, declaration) in &declarations {
-        let resolved = resolve(file, declaration, &known);
+        // A resolved target equal to the declaring file is always a resolver
+        // artifact, not a real import: no covered language lets a file import
+        // itself by its own module name (Rust `use atty` inside a file named
+        // atty.rs refers to the crate, not the file). Self-loops would poison
+        // cycle counts, files-in-cycle, and trophic incoherence, so the
+        // resolution is discarded and the declaration falls through to the
+        // external/unresolved classification chain.
+        let resolved = resolve(file, declaration, &known).filter(|path| path != &file.path);
         let (target, class) = match resolved {
             Some(path) => (path, DependencyClassification::Internal),
             None if is_external(declaration) => (
@@ -667,6 +674,7 @@ fn base_limitations() -> Vec<String> {
             "Rust resolves only mod declarations and direct crate/self/super filesystem module paths; use aliases, re-exports, and extern-prelude names can remain unresolved.".to_owned(),
             "Python resolves only an exact matching .py file or package __init__.py; imported attributes and environment packages are not inferred.".to_owned(),
             "JavaScript and TypeScript resolve only relative paths using an explicit deterministic suffix/index search; bare specifiers are external.".to_owned(),
+            "Compilation targets are not scoped: examples, tests, and benches share one file namespace with src, so a bare crate-name use next to a same-named file can resolve to a phantom sibling edge; only the self-edge case is suppressed.".to_owned(),
             "Go imports are external/unresolved without go.mod module-path knowledge; standard-library and third-party imports are not distinguished.".to_owned(),
             "Fan-in, fan-out, components, cycles, and depth are structural proxies and carry no quality verdict or weighting.".to_owned(),
             "Propagation is measured on the file-level internal dependency graph and depends on resolver completeness; exact transitive reachability is omitted above either the 10,000 analyzed-source-file node bound or the 100,000,000 edge-visit work upper bound while direct internal degrees and cycle measures remain available.".to_owned(),
