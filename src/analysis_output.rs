@@ -204,7 +204,7 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
         propagation.reachability_work_limit,
     );
     println!(
-        "internal cycles: {} cyclic components, {}/{} cyclic source files, largest={} source files",
+        "internal cycles: {} cyclic components, files-in-cycle fraction={}/{} (display={}), largest={} source files",
         propagation.cyclic_components,
         if propagation.source_files == 0 {
             "n/a".to_owned()
@@ -216,6 +216,9 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
         } else {
             propagation.source_files.to_string()
         },
+        propagation
+            .cyclic_source_file_fraction
+            .map_or_else(|| "n/a".to_owned(), |value| format!("{value:.3}")),
         if propagation.source_files == 0 {
             "n/a".to_owned()
         } else {
@@ -283,13 +286,20 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
     );
     for partition in &layout.partitions {
         println!(
-            "  {}: communities={}, intra={}, cross={} (fraction={}), modularity Q={}",
+            "  {} [{}]: communities={}, intra={}, cross={} (fraction={}), modularity Q={} (exact={}/{})",
             partition.granularity,
+            partition.epistemic_class,
             partition.communities,
             partition.intra_community_edges,
             partition.cross_community_edges,
             optional(partition.cross_community_edge_fraction),
             optional(partition.modularity),
+            partition
+                .modularity_numerator
+                .map_or_else(|| "n/a".to_owned(), |value| value.to_string()),
+            partition
+                .modularity_denominator
+                .map_or_else(|| "n/a".to_owned(), |value| value.to_string()),
         );
         if !partition.rows.is_empty() {
             println!(
@@ -300,6 +310,33 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
                 println!(
                     "    {:<40} {:>6} {:>6} {:>6} {:>6}",
                     row.path, row.files, row.intra_edges, row.out_edges, row.in_edges,
+                );
+            }
+        }
+        if partition.granularity == "detected_louvain" && !partition.rows.is_empty() {
+            println!("    directory purity (exact majority/FILES; membership by top-level directory):");
+            println!(
+                "    {:<40} {:<20} {:>10}  MEMBERSHIP",
+                "COMMUNITY", "MAJORITY", "PURITY"
+            );
+            for row in partition.rows.iter().take(top) {
+                let membership = row
+                    .top_level_directory_membership
+                    .iter()
+                    .map(|entry| format!("{}={}", entry.directory, entry.files))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                println!(
+                    "    {:<40} {:<20} {:>10}  {}",
+                    row.path,
+                    row.majority_top_level_directory.as_deref().unwrap_or("n/a"),
+                    row.directory_purity_numerator
+                        .zip(row.directory_purity_denominator)
+                        .map_or_else(
+                            || "n/a".to_owned(),
+                            |(numerator, denominator)| format!("{numerator}/{denominator}"),
+                        ),
+                    membership,
                 );
             }
         }
@@ -342,6 +379,25 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
             }
         }
     }
+    let headroom = &layout.headroom;
+    let exact_headroom = headroom
+        .numerator_negative
+        .zip(headroom.numerator_magnitude)
+        .zip(headroom.denominator)
+        .map_or_else(
+            || "n/a".to_owned(),
+            |((negative, magnitude), denominator)| {
+                let sign = if negative && magnitude != 0 { "-" } else { "" };
+                format!("{sign}{magnitude}/{denominator}")
+            },
+        );
+    println!(
+        "layout headroom: Q_{} - Q_{} = {} (display={}); heuristic witness lower bound, not optimum",
+        headroom.witness_granularity,
+        headroom.baseline_granularity,
+        exact_headroom,
+        optional(headroom.modularity_difference),
+    );
 
     println!(
         "manifest dependencies: {} total, {} non-registry, {} risky literal sources",

@@ -134,19 +134,32 @@ pub struct DependencyLayout {
     /// Unique internal edges after dropping self-loops and collapsing each
     /// `a ↔ b` reciprocal pair into one undirected edge; the modularity `m`.
     pub internal_undirected_edges: usize,
-    /// Exactly two rows: `top_level` (community = first path component; root
-    /// files share community `"."`) and `parent_directory` (community =
-    /// immediate parent directory path; root files share community `"."`).
+    /// Three deterministic rows: `top_level` (community = first path
+    /// component; root files share community `"."`), `parent_directory`
+    /// (community = immediate parent directory path; root files share
+    /// community `"."`), and `detected_louvain` (a heuristic witness found by
+    /// fixed-order Louvain with exact-integer move comparisons).
     pub partitions: Vec<LayoutPartition>,
+    /// Exact witness headroom `Q_detected_louvain - Q_parent_directory` over
+    /// the common `4m²` denominator. This establishes an attainable
+    /// improvement over the directory partition, not an optimum.
+    pub headroom: LayoutHeadroom,
     /// Honest constraints on what the layout profile establishes.
     pub limitations: Vec<String>,
 }
 
-/// One directory partition of the internal graph and its Newman–Girvan score.
+/// One fixed or detected partition of the internal graph and its
+/// Newman–Girvan score.
 #[derive(Debug, Clone, Serialize)]
 pub struct LayoutPartition {
-    /// Partition granularity: `top_level` or `parent_directory`.
+    /// Partition granularity: `top_level`, `parent_directory`, or
+    /// `detected_louvain`.
     pub granularity: String,
+    /// `fixed_directory_partition` for observed directory buckets;
+    /// `heuristic_witness` for Louvain. The latter uses exact arithmetic to
+    /// evaluate a heuristically found partition: its Q is a witness lower
+    /// bound on attainable modularity, never a claim of optimality.
+    pub epistemic_class: String,
     /// Distinct communities (directory buckets) present in this partition.
     pub communities: usize,
     /// Undirected internal edges whose endpoints share a community.
@@ -205,7 +218,8 @@ pub struct LayoutEdgeWitness {
 #[derive(Debug, Clone, Serialize)]
 pub struct LayoutCommunity {
     /// Community key: first path component (`top_level`) or immediate parent
-    /// directory path (`parent_directory`); `"."` for root-level files.
+    /// directory path (`parent_directory`), with `"."` for root-level files;
+    /// detected communities use stable path-order ordinals.
     pub path: String,
     /// Analyzed files assigned to this community.
     pub files: usize,
@@ -227,6 +241,36 @@ pub struct LayoutCommunity {
     /// Member file paths in that greedy witness, descending by crossing count
     /// with path as the deterministic tie-break.
     pub boundary_cover_90_file_paths: Vec<String>,
+    /// Top-level-directory membership counts for a detected community, sorted
+    /// by directory. Empty for the two directory partitions.
+    pub top_level_directory_membership: Vec<LayoutDirectoryMembership>,
+    /// Lexicographically first directory among those tied for the largest
+    /// detected-community membership. `None` for directory partitions.
+    pub majority_top_level_directory: Option<String>,
+    /// Exact majority-directory purity numerator and denominator. Both are
+    /// `None` for directory partitions; the f64 is display only.
+    pub directory_purity_numerator: Option<usize>,
+    pub directory_purity_denominator: Option<usize>,
+    pub directory_purity: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LayoutDirectoryMembership {
+    pub directory: String,
+    pub files: usize,
+}
+
+/// Exact signed layout-headroom difference. Sign plus magnitude avoids an
+/// overflowing `i128` subtraction when two individually representable Q
+/// numerators have opposite signs.
+#[derive(Debug, Clone, Serialize)]
+pub struct LayoutHeadroom {
+    pub witness_granularity: String,
+    pub baseline_granularity: String,
+    pub modularity_difference: Option<f64>,
+    pub numerator_negative: Option<bool>,
+    pub numerator_magnitude: Option<u128>,
+    pub denominator: Option<u128>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -802,28 +846,53 @@ fn dependency_layout(analyzed: &BTreeSet<String>, edges: &[DependencyEdge]) -> D
         }
     }
     let m = undirected.len();
+    let top_level = analyzed
+        .iter()
+        .map(|path| (path.as_str(), top_level_community(path)))
+        .collect::<BTreeMap<_, _>>();
+    let parent_directory = analyzed
+        .iter()
+        .map(|path| (path.as_str(), parent_directory_community(path)))
+        .collect::<BTreeMap<_, _>>();
+    let detected = detected_louvain_partition(analyzed, &undirected, m);
+    let top_level_partition = layout_partition(
+        "top_level",
+        analyzed,
+        &undirected,
+        &internal,
+        m,
+        &top_level,
+        false,
+    );
+    let parent_directory_partition = layout_partition(
+        "parent_directory",
+        analyzed,
+        &undirected,
+        &internal,
+        m,
+        &parent_directory,
+        false,
+    );
+    let detected_partition = layout_partition(
+        "detected_louvain",
+        analyzed,
+        &undirected,
+        &internal,
+        m,
+        &detected,
+        true,
+    );
+    let headroom = layout_headroom(&detected_partition, &parent_directory_partition);
     let partitions = vec![
-        layout_partition(
-            "top_level",
-            analyzed,
-            &undirected,
-            &internal,
-            m,
-            top_level_community,
-        ),
-        layout_partition(
-            "parent_directory",
-            analyzed,
-            &undirected,
-            &internal,
-            m,
-            parent_directory_community,
-        ),
+        top_level_partition,
+        parent_directory_partition,
+        detected_partition,
     ];
     DependencyLayout {
         analyzed_files: analyzed.len(),
         internal_undirected_edges: m,
         partitions,
+        headroom,
         limitations: vec![
             "The layout graph is file-granularity only; symbol- and declaration-level coupling inside a file is invisible to it.".to_owned(),
             "Import resolution is conservative, so unresolved edges are absent from the graph and heavily unresolved code makes the partition partial.".to_owned(),
@@ -831,7 +900,297 @@ fn dependency_layout(analyzed: &BTreeSet<String>, edges: &[DependencyEdge]) -> D
             "A single community scores near zero by construction, and over-splitting inflates cross-community edges; Q is a coordinate, not a target.".to_owned(),
             "Boundary endpoint dispersion counts file-level crossing endpoints, not exported symbols or interface information; a concentrated god façade can therefore look favorable and must be read beside interface evidence.".to_owned(),
             "Boundary direction inconsistency is a coordinate, not a target: bidirectional peer protocols are a legitimate source of quotient-level two-way coupling.".to_owned(),
+            "Detected Louvain Q is a heuristic witness lower bound on attainable modularity, not an optimum; the resolution limit can merge small real communities, small graphs make Q noisy, and failure to find headroom proves nothing.".to_owned(),
         ],
+    }
+}
+
+#[derive(Debug)]
+struct LouvainNode {
+    original_members: BTreeSet<usize>,
+    self_edges: usize,
+    degree: usize,
+    neighbors: BTreeMap<usize, usize>,
+}
+
+fn detected_louvain_partition<'a>(
+    analyzed: &'a BTreeSet<String>,
+    undirected: &BTreeSet<(&str, &str)>,
+    m: usize,
+) -> BTreeMap<&'a str, String> {
+    let paths = analyzed.iter().map(String::as_str).collect::<Vec<_>>();
+    let path_index = paths
+        .iter()
+        .enumerate()
+        .map(|(index, path)| (*path, index))
+        .collect::<BTreeMap<_, _>>();
+    let mut graph = paths
+        .iter()
+        .enumerate()
+        .map(|(index, _)| {
+            (
+                index,
+                LouvainNode {
+                    original_members: BTreeSet::from([index]),
+                    self_edges: 0,
+                    degree: 0,
+                    neighbors: BTreeMap::new(),
+                },
+            )
+        })
+        .collect::<BTreeMap<_, _>>();
+    for &(left, right) in undirected {
+        let (Some(&left_index), Some(&right_index)) =
+            (path_index.get(left), path_index.get(right))
+        else {
+            unreachable!("layout edge endpoints come from the analyzed path set")
+        };
+        let Some(left_node) = graph.get_mut(&left_index) else {
+            unreachable!("analyzed path index must name a Louvain node")
+        };
+        left_node.neighbors.insert(right_index, 1);
+        left_node.degree += 1;
+        let Some(right_node) = graph.get_mut(&right_index) else {
+            unreachable!("analyzed path index must name a Louvain node")
+        };
+        right_node.neighbors.insert(left_index, 1);
+        right_node.degree += 1;
+    }
+
+    loop {
+        let (assignments, moved) = louvain_local_moves(&graph, m);
+        if !moved {
+            break;
+        }
+        graph = aggregate_louvain_graph(&graph, &assignments);
+    }
+
+    let mut detected = BTreeMap::new();
+    for (ordinal, node) in graph.values().enumerate() {
+        let community = format!("community_{:04}", ordinal + 1);
+        for &member in &node.original_members {
+            let Some(path) = paths.get(member) else {
+                unreachable!("aggregated Louvain members retain original path indices")
+            };
+            detected.insert(*path, community.clone());
+        }
+    }
+    detected
+}
+
+fn louvain_local_moves(
+    graph: &BTreeMap<usize, LouvainNode>,
+    m: usize,
+) -> (BTreeMap<usize, usize>, bool) {
+    let mut assignments = graph.keys().map(|&id| (id, id)).collect::<BTreeMap<_, _>>();
+    let mut community_degrees = graph
+        .iter()
+        .map(|(&id, node)| (id, node.degree))
+        .collect::<BTreeMap<_, _>>();
+    let mut moved_at_all = false;
+    loop {
+        let mut moved_this_pass = false;
+        for (&node_id, node) in graph {
+            let Some(&current) = assignments.get(&node_id) else {
+                unreachable!("every Louvain node has a current community")
+            };
+            let mut links_by_community = BTreeMap::<usize, usize>::new();
+            for (&neighbor, &weight) in &node.neighbors {
+                let Some(&neighbor_community) = assignments.get(&neighbor) else {
+                    unreachable!("every Louvain neighbor has a current community")
+                };
+                *links_by_community.entry(neighbor_community).or_insert(0) += weight;
+            }
+            let links_current = links_by_community.get(&current).copied().unwrap_or(0);
+            let Some(&current_degree) = community_degrees.get(&current) else {
+                unreachable!("every active Louvain community has a degree sum")
+            };
+            let mut best_community = current;
+            let mut best_delta = 0i128;
+            // BTree iteration plus strict `>` retains the first (smallest-id)
+            // community when exact gains tie.
+            for (&candidate, &links_candidate) in &links_by_community {
+                if candidate == current {
+                    continue;
+                }
+                let Some(&candidate_degree) = community_degrees.get(&candidate) else {
+                    unreachable!("neighbor community must have a degree sum")
+                };
+                let delta = louvain_move_delta(
+                    m,
+                    node.degree,
+                    current_degree,
+                    candidate_degree,
+                    links_current,
+                    links_candidate,
+                );
+                if delta > best_delta {
+                    best_delta = delta;
+                    best_community = candidate;
+                }
+            }
+            if best_community != current {
+                let Some(degree) = community_degrees.get_mut(&current) else {
+                    unreachable!("source Louvain community must have a degree sum")
+                };
+                *degree -= node.degree;
+                let Some(degree) = community_degrees.get_mut(&best_community) else {
+                    unreachable!("target Louvain community must have a degree sum")
+                };
+                *degree += node.degree;
+                assignments.insert(node_id, best_community);
+                moved_this_pass = true;
+                moved_at_all = true;
+            }
+        }
+        if !moved_this_pass {
+            break;
+        }
+    }
+    (assignments, moved_at_all)
+}
+
+fn louvain_move_delta(
+    m: usize,
+    node_degree: usize,
+    current_degree: usize,
+    candidate_degree: usize,
+    links_current: usize,
+    links_candidate: usize,
+) -> i128 {
+    // This is the exact change in the existing 4m² modularity numerator.
+    // No cross-product or f64 enters the comparison. The caller has already
+    // materialized every directed edge in Vec<(&str, &str)>; because a Vec
+    // allocation is at most isize::MAX bytes and that element is at least 8
+    // bytes, m < 2^60 on 64-bit targets (far smaller on 32-bit). Each term
+    // below is bounded by 8m² and their absolute sum by 24m² < i128::MAX.
+    let m = m as i128;
+    let degree = node_degree as i128;
+    let current_degree = current_degree as i128;
+    let candidate_degree = candidate_degree as i128;
+    4 * m * (links_candidate as i128 - links_current as i128)
+        + 2 * degree * (current_degree - candidate_degree)
+        - 2 * degree * degree
+}
+
+fn aggregate_louvain_graph(
+    graph: &BTreeMap<usize, LouvainNode>,
+    assignments: &BTreeMap<usize, usize>,
+) -> BTreeMap<usize, LouvainNode> {
+    let mut assigned_nodes = BTreeMap::<usize, Vec<usize>>::new();
+    for (&node, &community) in assignments {
+        assigned_nodes.entry(community).or_default().push(node);
+    }
+    let mut old_to_new = BTreeMap::new();
+    let mut aggregated = BTreeMap::new();
+    for nodes in assigned_nodes.values() {
+        let mut original_members = BTreeSet::new();
+        for node_id in nodes {
+            let Some(node) = graph.get(node_id) else {
+                unreachable!("assigned Louvain node must exist")
+            };
+            original_members.extend(node.original_members.iter().copied());
+        }
+        let Some(&new_id) = original_members.first() else {
+            unreachable!("a Louvain community cannot be empty")
+        };
+        for &old_id in nodes {
+            old_to_new.insert(old_id, new_id);
+        }
+        aggregated.insert(
+            new_id,
+            LouvainNode {
+                original_members,
+                self_edges: 0,
+                degree: 0,
+                neighbors: BTreeMap::new(),
+            },
+        );
+    }
+    for (&old_id, node) in graph {
+        let Some(&new_id) = old_to_new.get(&old_id) else {
+            unreachable!("every old Louvain node maps to an aggregate")
+        };
+        let Some(new_node) = aggregated.get_mut(&new_id) else {
+            unreachable!("aggregate Louvain node must exist")
+        };
+        new_node.self_edges += node.self_edges;
+        for (&old_neighbor, &weight) in &node.neighbors {
+            if old_id >= old_neighbor {
+                continue;
+            }
+            let Some(&new_neighbor) = old_to_new.get(&old_neighbor) else {
+                unreachable!("every old Louvain neighbor maps to an aggregate")
+            };
+            if new_id == new_neighbor {
+                let Some(new_node) = aggregated.get_mut(&new_id) else {
+                    unreachable!("aggregate Louvain node must exist")
+                };
+                new_node.self_edges += weight;
+            } else {
+                let Some(new_node) = aggregated.get_mut(&new_id) else {
+                    unreachable!("aggregate Louvain node must exist")
+                };
+                *new_node.neighbors.entry(new_neighbor).or_insert(0) += weight;
+                let Some(neighbor_node) = aggregated.get_mut(&new_neighbor) else {
+                    unreachable!("neighbor aggregate Louvain node must exist")
+                };
+                *neighbor_node.neighbors.entry(new_id).or_insert(0) += weight;
+            }
+        }
+    }
+    for node in aggregated.values_mut() {
+        node.degree = 2 * node.self_edges + node.neighbors.values().sum::<usize>();
+    }
+    aggregated
+}
+
+fn layout_headroom(
+    detected: &LayoutPartition,
+    parent_directory: &LayoutPartition,
+) -> LayoutHeadroom {
+    // All partitions score the same graph, so their exact Q denominators are
+    // identical: subtract numerators directly instead of cross-multiplying.
+    // Each numerator has magnitude at most 4m² and the difference at most
+    // 8m². The materialized Vec<(&str, &str)> bounds m below 2^60 on 64-bit
+    // targets, so the sign-plus-u128 magnitude is wider than this bound even
+    // where a signed i128 subtraction of opposite-signed values could fail.
+    let exact = detected
+        .modularity_numerator
+        .zip(parent_directory.modularity_numerator)
+        .zip(detected.modularity_denominator)
+        .map(|((detected_numerator, directory_numerator), denominator)| {
+            let (negative, magnitude) = signed_i128_difference(
+                detected_numerator,
+                directory_numerator,
+            );
+            (negative, magnitude, denominator)
+        });
+    LayoutHeadroom {
+        witness_granularity: detected.granularity.clone(),
+        baseline_granularity: parent_directory.granularity.clone(),
+        modularity_difference: exact.map(|(negative, magnitude, denominator)| {
+            let value = magnitude as f64 / denominator as f64;
+            if negative { -value } else { value }
+        }),
+        numerator_negative: exact.map(|(negative, _, _)| negative),
+        numerator_magnitude: exact.map(|(_, magnitude, _)| magnitude),
+        denominator: exact.map(|(_, _, denominator)| denominator),
+    }
+}
+
+fn signed_i128_difference(left: i128, right: i128) -> (bool, u128) {
+    match (left.is_negative(), right.is_negative()) {
+        (false, false) => (
+            left < right,
+            (left as u128).abs_diff(right as u128),
+        ),
+        (true, true) => (
+            left < right,
+            left.unsigned_abs().abs_diff(right.unsigned_abs()),
+        ),
+        (false, true) => (false, left as u128 + right.unsigned_abs()),
+        (true, false) => (true, left.unsigned_abs() + right as u128),
     }
 }
 
@@ -845,6 +1204,7 @@ struct CommunityAgg {
     boundary_in_files: BTreeSet<String>,
     boundary_out_files: BTreeSet<String>,
     boundary_endpoint_counts: BTreeMap<String, usize>,
+    top_level_directory_membership: BTreeMap<String, usize>,
 }
 
 #[derive(Default)]
@@ -861,18 +1221,21 @@ fn layout_partition(
     undirected: &BTreeSet<(&str, &str)>,
     internal: &[(&str, &str)],
     m: usize,
-    community_of: impl Fn(&str) -> String,
+    community: &BTreeMap<&str, String>,
+    annotate_directory_purity: bool,
 ) -> LayoutPartition {
-    let community: BTreeMap<&str, String> = analyzed
-        .iter()
-        .map(|p| (p.as_str(), community_of(p)))
-        .collect();
     let mut aggs: BTreeMap<String, CommunityAgg> = BTreeMap::new();
     for path in analyzed {
         let Some(path_community) = community.get(path.as_str()) else {
             unreachable!("analyzed file must belong to its constructed layout partition")
         };
-        aggs.entry(path_community.clone()).or_default().files += 1;
+        let agg = aggs.entry(path_community.clone()).or_default();
+        agg.files += 1;
+        if annotate_directory_purity {
+            *agg.top_level_directory_membership
+                .entry(top_level_community(path))
+                .or_insert(0) += 1;
+        }
     }
     let mut intra_total = 0usize;
     let mut cross_total = 0usize;
@@ -1048,6 +1411,27 @@ fn layout_partition(
                 boundary_out_files: agg.boundary_out_files.len(),
                 boundary_cover_90_files: boundary_cover_90_file_paths.len(),
                 boundary_cover_90_file_paths,
+                majority_top_level_directory: agg
+                    .top_level_directory_membership
+                    .iter()
+                    .max_by(|left, right| left.1.cmp(right.1).then_with(|| right.0.cmp(left.0)))
+                    .map(|(directory, _)| directory.clone()),
+                directory_purity_numerator: agg
+                    .top_level_directory_membership
+                    .values()
+                    .max()
+                    .copied(),
+                directory_purity_denominator: annotate_directory_purity.then_some(agg.files),
+                directory_purity: agg
+                    .top_level_directory_membership
+                    .values()
+                    .max()
+                    .map(|majority| *majority as f64 / agg.files as f64),
+                top_level_directory_membership: agg
+                    .top_level_directory_membership
+                    .into_iter()
+                    .map(|(directory, files)| LayoutDirectoryMembership { directory, files })
+                    .collect(),
             }
         })
         .collect();
@@ -1057,6 +1441,12 @@ fn layout_partition(
     });
     LayoutPartition {
         granularity: granularity.to_owned(),
+        epistemic_class: if annotate_directory_purity {
+            "heuristic_witness"
+        } else {
+            "fixed_directory_partition"
+        }
+        .to_owned(),
         communities: rows.len(),
         intra_community_edges: intra_total,
         cross_community_edges: cross_total,
