@@ -105,7 +105,63 @@ explicit coverage field rather than silently passing as clean.
 | `seval duplicates PATH` | normalized AST leaf-token windows meeting explicit token/line thresholds | maximal non-overlapping structural clone groups, occurrences, and duplicated token/line mass | semantic equivalence, intent, whether duplication is justified, or absence of clones below the thresholds |
 | `seval api PATH` | externally reachable Rust declarations plus declarations representable under the other languages' documented lexical publicness rules | symbol rows, kinds, visibility basis, parameters, generics, adjacent documentation, and symbols/kSLOC | runtime reachability outside Rust's resolved module visibility, compatibility, stability, usability, or API quality |
 | `seval discipline PATH` | function spaces (functions, methods, closures/lambdas/arrows) in recognized source files, each construct attributed to its innermost space | per function: syntactic purity (no nonlocal write, no `&mut`/pointer parameter, no `unsafe`, no call into a documented per-language effect list) and its four components; mutation census (bindings, mutable bindings, reassignments, shadowings, max mutable live range); shape (params, bool params, statements, single-expression body, unit return, max call-chain length); error shape (`?`/Go err-return propagation, `unwrap`/`expect`, panic-like, broad and empty catches, ignored results); lexical type honesty (string-literal conditions, TS `any`, unannotated params, type-ignore comments); per file magic numbers, magic strings, and global mutable state; repo totals, pure fraction, and nearest-rank tails | semantic purity, effect reachability through unresolved calls, whether a mutation or catch is justified, type-level correctness; per-language uncovered fields report 0 by construction (see the module's limitations) |
+| `seval shape PATH` | the same function spaces, with constructs attributed only to their innermost space | interface-width/interior-volume pairs, cyclomatic/cognitive pairs and gaps, maximum control nesting, branch arm-size ratios, large no-else then arms, and file/repository distributions | semantic or information-theoretic module depth, actual reader effort, whether asymmetry is justified, macro/codegen-expanded shape, or a refactoring direction |
 | `seval tests PATH` | recognized source/test files and supported framework spellings | test/source lines, discovered/ignored cases including skipped-suite ancestry, assertion-like calls, cases/kSLOC, and conservative path-aware same-stem source/test matches | execution, coverage, mutation survival, assertion meaning, correctness, or test adequacy |
+
+#### Function shape profile
+
+`seval shape PATH` analyzes the same Rust, Python, JavaScript,
+TypeScript/TSX, and Go function spaces as `seval discipline`: named functions,
+methods, closures, lambdas, and arrows. A nested function owns its constructs;
+the enclosing function does not count them. Syntax-error trees remain in the
+file and function denominators and are flagged. All counters are exact for the
+observed error-tolerant AST. Their claims about module depth, cognitive burden,
+nesting burden, branch uniformity, and reader experience are proxies.
+
+The interface-depth observation is always the pair
+`(interface_width, interior_volume)`, never their quotient.
+`interface_width` is the number of declared value parameters excluding a
+receiver, plus declared type/const/lifetime parameters, plus one for a
+non-unit return, plus one for a method receiver (`self`, `cls`, `this`, or a Go
+receiver). A Rust return is non-unit when its declared type is not `()`; a Go
+result clause is non-unit; a TypeScript return annotation is non-unit unless it
+is `void`; and untyped Python/JavaScript is non-unit when a value-return or
+expression-bodied lambda/arrow is present. `interior_volume` uses the
+`seval discipline` statement-kind tables: Rust expression statements and
+`let`; Python statement nodes; JavaScript/TypeScript statement nodes and local
+declarations; Go statement nodes and short/var/const declarations. The shallow
+corner denominator is every function; its numerator is functions with positive
+volume and `interface_width >= interior_volume`.
+
+Cyclomatic complexity starts at 1. Each `if`/`else if`, loop, and catch adds 1;
+each logical `&&`, `||`, `and`, or `or` operator adds 1; and every
+match/switch/select arm, including a default arm, adds 1. Cognitive complexity
+uses one stated Campbell/SonarSource-style convention: each `if`, loop, catch,
+or whole match/switch/select adds `1 + current control-nesting depth`; an
+`else if` stays at its chain's depth; each first boolean operator and each
+change between `and`/`or` operator sequences adds `1 + current control-nesting
+depth`; and each lexical same-name call adds 1 for recursion. `else` alone does
+not increment it. The function's reported gap is
+`cognitive - cyclomatic`. This intentionally leaves a flat many-arm dispatch
+with high cyclomatic complexity and a small or negative gap while nested logic
+raises the gap. This rule set is one published convention among several, so
+analyzer version and rules are part of the observation.
+
+Maximum nesting counts active branch, loop, catch, match/switch/select, and
+standalone lexical-block levels. A construct's wrapper body block does not add
+a second level, and `else if` does not deepen the chain merely by spelling.
+Expression nesting does not count.
+
+Branch symmetry observes every complete `if`/`else if`/`else` chain and every
+match/switch/select. An arm's size is its recursively contained statement count,
+excluding nested function spaces. Empty arms are excluded from the ratio. When
+at least two arms contain a statement, the construct ratio is largest arm over
+smallest arm; the per-function value is the maximum such ratio. Separately, an
+`if` chain with no final `else` increments `no_else_large_then_arms` when its
+then arm contains at least eight statements. Reports retain raw per-function
+points, min/p50/p90/max file and repository distributions with observation
+denominators, shallow-corner count/denominator, and per-language file/function
+denominators. Empty distributions are null, not zero.
 
 Every report names its analyzer, enumerated/analyzed/skipped counts, evidence
 rows, and explicit limitations. JSON preserves raw rows; text defaults to

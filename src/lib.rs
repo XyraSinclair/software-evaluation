@@ -16,6 +16,7 @@ pub mod info;
 pub mod kernel;
 pub mod metrics;
 pub mod repo;
+pub mod shape;
 
 pub mod service;
 pub mod source;
