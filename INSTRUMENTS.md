@@ -107,6 +107,7 @@ explicit coverage field rather than silently passing as clean.
 | `seval discipline PATH` | function spaces (functions, methods, closures/lambdas/arrows) in recognized source files, each construct attributed to its innermost space | per function: syntactic purity (no nonlocal write, no `&mut`/pointer parameter, no `unsafe`, no call into a documented per-language effect list) and its four components; mutation census (bindings, mutable bindings, reassignments, shadowings, max mutable live range); shape (params, bool params, statements, single-expression body, unit return, max call-chain length); error shape (`?`/Go err-return propagation, `unwrap`/`expect`, panic-like, broad and empty catches, ignored results); lexical type honesty (string-literal conditions, TS `any`, unannotated params, type-ignore comments); per file magic numbers, magic strings, and global mutable state; repo totals, pure fraction, and nearest-rank tails | semantic purity, effect reachability through unresolved calls, whether a mutation or catch is justified, type-level correctness; per-language uncovered fields report 0 by construction (see the module's limitations) |
 | `seval typespace PATH` | Rust type definitions, impls, calls, and declared boundary types; TypeScript/TSX and Python only for the T2 field/signature dynamic-state list | T1 algebraic shape, T2 dynamic-state surface, T4 endomorphic closure, T5 ownership-evasion density, and T6 newtype adoption, with the declared denominator for every count | resolved or inferred types, alias expansion, laws, justification, and local state that does not cross a declaration |
 | `seval shape PATH` | the same function spaces, with constructs attributed only to their innermost space | interface-width/interior-volume pairs, cyclomatic/cognitive pairs and gaps, maximum control nesting, branch arm-size ratios, large no-else then arms, and file/repository distributions | semantic or information-theoretic module depth, actual reader effort, whether asymmetry is justified, macro/codegen-expanded shape, or a refactoring direction |
+| `seval symbols PATH` | Rust files only; every reference lands in a four-way resolution ledger (same-file, unique-crate, ambiguous, external-or-unresolved) that closes to the reference total | a symbol-level call/type-use graph under a never-guess resolver: identity nodes, SCCs, mutual reachability, forward-reachable working-set distribution, transitive fan-in tails | anything about the ~72% of references the conservative resolver declines (trait dispatch, macro-generated symbols, cross-crate identity, aliased imports); reader comprehension effort |
 | `seval tests PATH` | recognized source/test files and supported framework spellings | test/source lines, discovered/ignored cases including skipped-suite ancestry, assertion-like calls, cases/kSLOC, and conservative path-aware same-stem source/test matches | execution, coverage, mutation survival, assertion meaning, correctness, or test adequacy |
 
 #### Type-space census
@@ -230,6 +231,29 @@ Every report names its analyzer, enumerated/analyzed/skipped counts, evidence
 rows, and explicit limitations. JSON preserves raw rows; text defaults to
 bounded tables. Run optimized builds (`cargo run --release -- ...`) for
 representative latency.
+
+#### Symbol working-set profile
+
+`seval symbols PATH` builds a Rust-only symbol graph with tree-sitter: named
+declarations become identity nodes, and call plus type-use references become
+directed edges only when resolution is certain. The resolver never guesses:
+a reference resolves same-file or to a unique crate-wide name, and everything
+else is counted where it stands — ambiguous (multiple candidates) or
+external-or-unresolved — so the four ledger classes sum to the reference
+total and the resolution fraction is an honest numerator over an honest
+denominator, not a coverage claim. On this repository roughly a quarter of
+references resolve; the number is reported, never hidden.
+
+Over the resolved graph: Tarjan SCCs with a size histogram, mutual
+reachability over ordered same-component pairs, and the forward-reachable
+working-set distribution (for each node, how many symbols are reachable —
+nearest-rank min/p50/p90/max under the same bounded-computation status
+pattern as `seval deps`), plus transitive fan-in tails naming the
+load-bearing symbols. What it cannot establish: any property of the
+unresolved references, trait-object or macro-expanded flow, or that a large
+working set is a defect — `main` legitimately reaches almost everything.
+The rust-analyzer/HIR bridge is the named investment that would lift
+resolution past this ceiling.
 
 ### Dependency propagation profile
 
