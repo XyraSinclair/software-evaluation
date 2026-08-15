@@ -366,6 +366,69 @@ adoption cannot be the separator), full instrument suite + git outcome proxies
 only — HEAD structure post-dates the outcome for abandoned repos, and the
 read is stated as association, never cause.
 
+### B3 read-out (2026-08-15, n=30: 14 abandoned × 16 active)
+
+Statistics: Mann–Whitney rank-biserial (rb) per coordinate vs class, Spearman
+ρ, and Spearman partial ρ controlling SLOC rank (battery B1). All exact ranks
+over the table at `~/projects/scratch/seval-corpus-2026-08-15/table.jsonl`
+(30 rows, 240/240 instrument cells). Everything below is cross-sectional
+association at HEAD, never cause; abandoned HEADs are frozen at abandonment.
+
+**Finding 0 — the corpus design is size-confounded, and the battery caught
+it.** SLOC separates the classes at rb = −0.911 (functions −0.893): in this
+famous-crates sample, abandoned Rust crates are small single-purpose
+utilities (atty, tempdir, quick-error — finished, absorbed into std, or
+superseded) while the active class is large frameworks (tokio, diesel,
+clap). Popularity ranges overlapped as designed; sizes did not. Consequence:
+raw class associations are uninformative, and B1 partialing has little
+residual class variance to work with — survivors and casualties alike are
+weak evidence. This is itself a result: in the Rust ecosystem, abandonment
+of well-known crates is dominated by scope (small crates complete or get
+superseded), not by structural decay. A follow-up corpus must be
+size-stratified.
+
+**Finding 1 — El Emam's prior confirmed wholesale.** Fourteen coordinates
+showed raw class associations |ρ| ≥ 0.3 (deeper condensations, more cycles,
+higher modularity Q, larger working sets, lower φ certificates in active
+repos — "more of everything structural"); every one of them collapses below
+|ρ|=0.3 after SLOC partialing except `cochange_layout_q` (−0.65 raw →
+−0.32 partialed). The demotion list (detected-Louvain Q, transitive-only
+mass, φ lower bound, parent-directory Q, working-set p90, layout headroom,
+depth p90/max, files-in-cycle, worst-WCC F↔, mutual-reach, cognitive gap,
+shallow-corner, direction inconsistency) is recorded so no future reading of
+this corpus can mistake them for class discriminators.
+
+**Finding 2 — the fix-share axis is the clean one.** `fix_share` (share of
+window commits whose subject matches fix/bug) is nearly size-free
+(ρ_SLOC = +0.19) and class-free (medians 0.140 abandoned vs 0.152 active),
+so it dodges both confounds. On it:
+
+- `symbol_working_set_p90` — ρ = +0.40, SLOC-partialed +0.38, and positive
+  **within both classes** (+0.25 abandoned, +0.48 active). Files that force
+  large reader working sets co-occur with fix-heavy histories. The single
+  best nomination this corpus produces, and prior-consistent (comprehension
+  load ↔ defect proxies; Hall 2011, Sjøberg 2013 both point at
+  size/effort-of-understanding over smells).
+- `t5_clone_density` — ρ = +0.40, partialed +0.37, but sign-unstable within
+  class (+0.59 abandoned, +0.01 active): the association lives entirely in
+  the abandoned half. Weak nomination.
+- `cochange_layout_q` — the sole B1 class survivor also trends positive vs
+  fix_share within both classes (+0.37, +0.17). Its two reads point opposite
+  directions (lower Q in abandoned repos; higher Q with higher fix-share),
+  which is what a coordinate, not a verdict, looks like. History-based
+  lineage (Gall, D'Ambros, Nagappan) says keep watching it.
+
+**Finding 3 — no-signal results are results.** Discipline (pure fraction,
+unwrap/panic per function), typespace T1/T2/T6, nesting p90, and symbol
+resolution showed no class or fix-share association beyond noise at n=30.
+Sjøberg's smells-fail-controlled-tests prior predicted exactly this for the
+discipline/shape arms. `revert_share` has tiny numerators and
+anti-correlates with size (ρ = −0.44); no claims from it.
+
+Everything above is **nomination, not validation** — B4 (refactor-delta)
+remains the gate. What B3 changes: the next corpus must stratify by size,
+and `symbol_working_set_p90` earns priority in the B4 mining.
+
 B4 — **the standing gate, unchanged:** refactor-delta mining. Do coordinates
 move the predicted direction across accepted refactorings (MacCormack's
 Mozilla observation, systematized)? Until then, nothing here claims validity —
