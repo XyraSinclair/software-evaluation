@@ -294,20 +294,22 @@ bridge (below).
 |---|---|---|---|---|---|
 | T1 | **Algebraic type shape** — sums where the domain branches | generative | data-bearing enums / all type defs; per-struct Option+bool field count, tail of structs with ≥2 (/ structs with ≥2 fields) | two-variant enums that are still bools; hoisting optionals into a sub-struct; builder/config crates (orthogonal optionals are legitimate — read beside T4's builder split) | discipline counts bool *params* only; this is type-definition-scoped |
 | T2 | **Dynamic-state surface** — `HashMap<String,Value>`, `dyn Any`, `Record<string,any>`, `interface{}` in fields + public signatures | diagnostic | dynamic-state mentions / type-constructor leaves in those positions | `type Json = Value` aliasing blinds it entirely (resolution failure, not improvement); serialization libs/interpreters where `Value` *is* the domain | adds container forms discipline's bare-`any` count misses; report only the increment |
-| T3 | **Signature parametricity degree** — theorems for free | generative | abstract type positions / signature type leaves; return-parametric fraction; trait-bounds per parameter as deflator | generic-washing (`T: Into<Concrete>`); async Rust bound soup; a domain CLI is legitimately near zero — within-language distribution only. Proxy even under rustc: Rust breaks parametricity (TypeId, downcast, specialization) | `seval api` has generics counts; ratio/split/deflator new |
+| T3 | **Signature parametricity degree** — theorems for free | generative | abstract type positions / signature type leaves; return-parametric fraction; trait-bounds per parameter as deflator | generic-washing (`T: Into<Concrete>`); async Rust bound soup; a domain CLI is legitimately near zero — within-language distribution only. Proxy even under rustc: Rust breaks parametricity (TypeId, downcast, specialization) | `seval typespace` T3 adds the abstract/concrete partition, return-parametric split, nearest-rank bounds distribution, and conversion-to-concrete generic-washing census; `seval api` supplies only coarse generics counts |
 | T4 | **Endomorphic closure** — the API is an algebra | generative | Self-returning public methods / public methods per impl; owned-endo split from `&mut Self` builder-endo; `(T,T)→T` monoid census | setter-chain builders (separated); closure ≠ lawfulness — laws are property-testing territory, never static | none; new |
 | T5 | **Ownership-evasion density** — the compiler-*evaded* mutation half of G3 | diagnostic | `RefCell/Cell/Mutex/RwLock` mentions + borrow/lock sites, `Rc/Arc` separately, `.clone()` / call expressions | hand-rolled `unsafe` interior mutability dodges it (discipline's unsafe count rises — cross-check); concurrent servers legitimately live here | discipline counts compiler-*checked* mutation only; this is the aliased half |
 | T6 | **Newtype adoption vs primitive obsession** | generative | bare wide-primitive mentions / public signature type mentions; newtype supply; `pub`-field newtypes counted as costume | numeric/parser code where the primitive is the domain; distribution only | G5 named it *later*; distinct from T1 (leaf width, not composite shape) |
 
-Implemented 2026-08-15 as `seval typespace` (T1, T2, T4, T5, T6; every ratio an
+Implemented 2026-08-15 as `seval typespace` (T1–T6; every ratio an
 integer numerator/denominator with a closure identity, all marked proxy over
-declared type syntax). T3 parametricity waits on `seval api` operand extraction.
-Own-repo read: data-bearing enums 20/277; Option+bool tail 47/199 (dominated by
-analyzer-report structs, where optional counters are the honest shape); dynamic
-state 34/4786 mentions (mostly typed maps, not erased values); endomorphic
-methods 14/25 public; shared-mutable concentrated in the service state; wide
-primitives 984/1528 public positions with zero newtype supply — the instrument
-measuring metric/report records, a legitimately primitive-heavy domain.
+declared type syntax). Own-repo read: data-bearing enums 21/302; Option+bool tail
+51/222 (dominated by analyzer-report structs, where optional counters are the
+honest shape); dynamic state 40/5081 mentions (mostly typed maps, not erased
+values); T3 abstract positions 8/319, return-parametric 0/7 generic public
+functions, bounds min/p50/p90/max 1/1/2/2, and generic-washing 7/8 parameters;
+endomorphic methods 14/25 public; shared-mutable concentrated in the service
+state; wide primitives 1064/1651 public positions with zero newtype supply — the
+instrument measuring metric/report records, a legitimately primitive-heavy
+domain.
 
 Culled on the record: annotation-burden ratio (direction-free), totality census
 (no Rust checker; the honest partiality signal is already discipline's

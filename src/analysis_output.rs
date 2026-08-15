@@ -771,6 +771,13 @@ pub fn print_typespace(report: &TypeSpaceReport, top: usize) {
     }
     println!("  dedupe: overlaps discipline's bare-any count; this census is signature/field-scoped and includes container forms");
 
+    let t3 = &report.t3;
+    println!("T3 signature parametricity degree [proxy over declared Rust syntax; within-language distribution only]:");
+    println!("  abstract positions: {} / {} signature type-leaf mentions; concrete={}", t3.abstract_type_leaf_mentions, t3.signature_type_leaf_mentions, t3.concrete_type_leaf_mentions);
+    println!("  return-parametric: {} / {} public generic functions; generic functions: {} / {} public functions", t3.return_parametric_public_functions, t3.generic_public_functions, t3.generic_public_functions, t3.public_functions);
+    println!("  bounds per generic parameter (nearest-rank): min={} p50={} p90={} max={}", t3.bounds_per_parameter.min, t3.bounds_per_parameter.p50, t3.bounds_per_parameter.p90, t3.bounds_per_parameter.max);
+    println!("  generic-washing: {} / {} generic parameters have Into/AsRef/From/TryInto bound to a non-generic argument", t3.generic_washing_parameters, t3.generic_parameters);
+
     let t4 = &report.t4;
     println!("T4 endomorphic closure [proxy over declared return syntax; closure != lawfulness]:");
     println!("  endomorphic methods: {} / {} public methods; owned={}; borrowed={}; mutant-builder={}", t4.endomorphic_methods, t4.public_methods, t4.owned_endomorphic_methods, t4.borrowed_endomorphic_methods, t4.mutant_endomorphic_methods);
