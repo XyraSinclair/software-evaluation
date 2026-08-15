@@ -296,6 +296,44 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
                 );
             }
         }
+        if !partition.rows.is_empty() {
+            println!("    boundary endpoint dispersion (file denominator = FILES):");
+            println!(
+                "    {:<40} {:>8} {:>9} {:>8}  COVER-90 WITNESS",
+                "PATH", "IN-FILES", "OUT-FILES", "COVER-90"
+            );
+            for row in partition.rows.iter().take(top) {
+                println!(
+                    "    {:<40} {:>8} {:>9} {:>8}  {}",
+                    row.path,
+                    row.boundary_in_files,
+                    row.boundary_out_files,
+                    row.boundary_cover_90_files,
+                    row.boundary_cover_90_file_paths.join(", "),
+                );
+            }
+        }
+        println!(
+            "    direction inconsistency: {}/{} (fraction={})",
+            partition.direction_inconsistency_numerator,
+            partition.direction_inconsistency_denominator,
+            optional(partition.direction_inconsistency),
+        );
+        if !partition.direction_pairs.is_empty() {
+            println!(
+                "    {:<28} {:<28} {:>6} {:>6}",
+                "PATH A", "PATH B", "E_AB", "E_BA"
+            );
+            for pair in partition.direction_pairs.iter().take(top) {
+                println!(
+                    "    {:<28} {:<28} {:>6} {:>6}",
+                    pair.path_a, pair.path_b, pair.e_ab, pair.e_ba,
+                );
+                for edge in &pair.edge_witnesses {
+                    println!("      witness: {} -> {}", edge.source, edge.target);
+                }
+            }
+        }
     }
 
     println!(

@@ -237,6 +237,21 @@ collapsed to one edge with $m$ the resulting edge count):
   directed out/in edges that cross the community boundary.
 - The closure $\text{intra} + \text{cross} = m$ holds for every partition.
 
+The directed crossing edges also expose two boundary coordinates. Per community,
+`boundary_in_files` and `boundary_out_files` count distinct member files touched
+by incoming and outgoing crossing edges, over the community file count; the
+`boundary_cover_90_files` count and `boundary_cover_90_file_paths` list form a
+deterministic greedy upper-bound witness covering at least 90% of its
+crossing-edge endpoints. Per unordered community pair, `e_ab` and `e_ba` retain
+direction, and direction inconsistency is the exact rational
+$\sum \min(e_{ab},e_{ba}) / \sum(e_{ab}+e_{ba})$; its denominator equals the
+partition's directed cross-edge count, with witnesses only for two-way pairs.
+Endpoint concentration cannot distinguish a deliberate narrow interface from a
+god façade or establish symbol-level interface information. Direction
+inconsistency can expose quotient-level two-way coupling without a file SCC, but
+it cannot establish that the coupling is harmful: bidirectional peer protocols
+are a legitimate exception, so this too is a coordinate rather than a target.
+
 This establishes whether the on-disk tree is a faithful map of actual coupling:
 high $Q$ with a low cross fraction means folders concentrate the edges; a legacy
 layout over a well-connected graph shows the opposite. It cannot say which

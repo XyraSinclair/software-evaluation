@@ -162,8 +162,42 @@ pub struct LayoutPartition {
     /// denominator `4m²`. The integers are authoritative; the f64 is display.
     pub modularity_numerator: Option<i128>,
     pub modularity_denominator: Option<u128>,
+    /// Sum of `min(e_ab, e_ba)` over unordered crossing community pairs.
+    /// The integer is authoritative; see `direction_inconsistency_denominator`.
+    pub direction_inconsistency_numerator: usize,
+    /// Sum of `e_ab + e_ba` over unordered crossing community pairs. This is
+    /// exactly the number of directed internal edges crossing this partition.
+    pub direction_inconsistency_denominator: usize,
+    /// Quotient-level two-way coupling: numerator / denominator above; `None`
+    /// when no directed internal edge crosses this partition. Display only.
+    pub direction_inconsistency: Option<f64>,
+    /// Per-unordered-community-pair directed crossing counts and witnesses,
+    /// descending by `min(e_ab, e_ba)` then paths.
+    pub direction_pairs: Vec<LayoutDirectionPair>,
     /// Per-community rows, descending by crossing-edge count then path.
     pub rows: Vec<LayoutCommunity>,
+}
+
+/// Directed crossing counts for one unordered pair of layout communities.
+#[derive(Debug, Clone, Serialize)]
+pub struct LayoutDirectionPair {
+    /// Lexicographically first community path.
+    pub path_a: String,
+    /// Lexicographically second community path.
+    pub path_b: String,
+    /// Directed edges from `path_a` to `path_b`.
+    pub e_ab: usize,
+    /// Directed edges from `path_b` to `path_a`.
+    pub e_ba: usize,
+    /// Up to five deterministic crossing-edge witnesses. Empty when either
+    /// direction has zero edges, because the pair then adds no inconsistency.
+    pub edge_witnesses: Vec<LayoutEdgeWitness>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+pub struct LayoutEdgeWitness {
+    pub source: String,
+    pub target: String,
 }
 
 /// One community (directory bucket) within a layout partition.
@@ -180,6 +214,18 @@ pub struct LayoutCommunity {
     pub out_edges: usize,
     /// Directed internal edges with target inside and source outside.
     pub in_edges: usize,
+    /// Member files targeted by at least one cross-community directed edge.
+    /// The denominator is `files`.
+    pub boundary_in_files: usize,
+    /// Member files sourcing at least one cross-community directed edge. The
+    /// denominator is `files`.
+    pub boundary_out_files: usize,
+    /// Size of the deterministic greedy upper-bound witness covering at least
+    /// 90% of this community's cross-boundary directed-edge endpoints.
+    pub boundary_cover_90_files: usize,
+    /// Member file paths in that greedy witness, descending by crossing count
+    /// with path as the deterministic tie-break.
+    pub boundary_cover_90_file_paths: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -696,6 +742,8 @@ fn dependency_layout(analyzed: &BTreeSet<String>, edges: &[DependencyEdge]) -> D
             "Import resolution is conservative, so unresolved edges are absent from the graph and heavily unresolved code makes the partition partial.".to_owned(),
             "Modularity Q compares the directory partition to a configuration null model; it says nothing about which partition is correct, only how much this one concentrates edges beyond chance.".to_owned(),
             "A single community scores near zero by construction, and over-splitting inflates cross-community edges; Q is a coordinate, not a target.".to_owned(),
+            "Boundary endpoint dispersion counts file-level crossing endpoints, not exported symbols or interface information; a concentrated god façade can therefore look favorable and must be read beside interface evidence.".to_owned(),
+            "Boundary direction inconsistency is a coordinate, not a target: bidirectional peer protocols are a legitimate source of quotient-level two-way coupling.".to_owned(),
         ],
     }
 }
@@ -707,6 +755,17 @@ struct CommunityAgg {
     degree_sum: usize,
     out_edges: usize,
     in_edges: usize,
+    boundary_in_files: BTreeSet<String>,
+    boundary_out_files: BTreeSet<String>,
+    boundary_endpoint_counts: BTreeMap<String, usize>,
+}
+
+#[derive(Default)]
+struct DirectionPairAgg {
+    e_ab: usize,
+    e_ba: usize,
+    ab_edge_witnesses: BTreeSet<LayoutEdgeWitness>,
+    ba_edge_witnesses: BTreeSet<LayoutEdgeWitness>,
 }
 
 fn layout_partition(
@@ -723,28 +782,85 @@ fn layout_partition(
         .collect();
     let mut aggs: BTreeMap<String, CommunityAgg> = BTreeMap::new();
     for path in analyzed {
-        aggs.entry(community[path.as_str()].clone()).or_default().files += 1;
+        let Some(path_community) = community.get(path.as_str()) else {
+            unreachable!("analyzed file must belong to its constructed layout partition")
+        };
+        aggs.entry(path_community.clone()).or_default().files += 1;
     }
     let mut intra_total = 0usize;
     let mut cross_total = 0usize;
     for &(a, b) in undirected {
-        let (ca, cb) = (&community[a], &community[b]);
+        let Some(ca) = community.get(a) else {
+            unreachable!("internal edge endpoint must belong to the analyzed file partition")
+        };
+        let Some(cb) = community.get(b) else {
+            unreachable!("internal edge endpoint must belong to the analyzed file partition")
+        };
         if ca == cb {
             intra_total += 1;
-            let agg = aggs.get_mut(ca).unwrap();
+            let Some(agg) = aggs.get_mut(ca) else {
+                unreachable!("constructed layout community must have an aggregate")
+            };
             agg.intra_edges += 1;
             agg.degree_sum += 2;
         } else {
             cross_total += 1;
-            aggs.get_mut(ca).unwrap().degree_sum += 1;
-            aggs.get_mut(cb).unwrap().degree_sum += 1;
+            let Some(a_agg) = aggs.get_mut(ca) else {
+                unreachable!("constructed layout community must have an aggregate")
+            };
+            a_agg.degree_sum += 1;
+            let Some(b_agg) = aggs.get_mut(cb) else {
+                unreachable!("constructed layout community must have an aggregate")
+            };
+            b_agg.degree_sum += 1;
         }
     }
+    let mut direction_pair_aggs: BTreeMap<(String, String), DirectionPairAgg> = BTreeMap::new();
     for &(source, target) in internal {
-        let (cs, ct) = (&community[source], &community[target]);
+        let Some(cs) = community.get(source) else {
+            unreachable!("internal edge source must belong to the analyzed file partition")
+        };
+        let Some(ct) = community.get(target) else {
+            unreachable!("internal edge target must belong to the analyzed file partition")
+        };
         if cs != ct {
-            aggs.get_mut(cs).unwrap().out_edges += 1;
-            aggs.get_mut(ct).unwrap().in_edges += 1;
+            let Some(source_agg) = aggs.get_mut(cs) else {
+                unreachable!("internal edge source must belong to the analyzed file partition")
+            };
+            source_agg.out_edges += 1;
+            source_agg.boundary_out_files.insert(source.to_owned());
+            *source_agg
+                .boundary_endpoint_counts
+                .entry(source.to_owned())
+                .or_insert(0) += 1;
+
+            let Some(target_agg) = aggs.get_mut(ct) else {
+                unreachable!("internal edge target must belong to the analyzed file partition")
+            };
+            target_agg.in_edges += 1;
+            target_agg.boundary_in_files.insert(target.to_owned());
+            *target_agg
+                .boundary_endpoint_counts
+                .entry(target.to_owned())
+                .or_insert(0) += 1;
+
+            let (path_a, path_b, a_to_b) = if cs < ct {
+                (cs.clone(), ct.clone(), true)
+            } else {
+                (ct.clone(), cs.clone(), false)
+            };
+            let pair = direction_pair_aggs.entry((path_a, path_b)).or_default();
+            let witness = LayoutEdgeWitness {
+                source: source.to_owned(),
+                target: target.to_owned(),
+            };
+            if a_to_b {
+                pair.e_ab += 1;
+                pair.ab_edge_witnesses.insert(witness);
+            } else {
+                pair.e_ba += 1;
+                pair.ba_edge_witnesses.insert(witness);
+            }
         }
     }
     let modularity_numerator = (m != 0).then(|| {
@@ -760,14 +876,92 @@ fn layout_partition(
         .map(|(numerator, denominator)| numerator as f64 / denominator as f64);
     let cross_community_edge_fraction =
         (m != 0).then(|| cross_total as f64 / (intra_total + cross_total) as f64);
+    let mut direction_pairs: Vec<LayoutDirectionPair> = direction_pair_aggs
+        .into_iter()
+        .map(|((path_a, path_b), agg)| {
+            let edge_witnesses = if agg.e_ab.min(agg.e_ba) >= 1 {
+                let mut selected = BTreeSet::new();
+                if let Some(witness) = agg.ab_edge_witnesses.first() {
+                    selected.insert(witness.clone());
+                }
+                if let Some(witness) = agg.ba_edge_witnesses.first() {
+                    selected.insert(witness.clone());
+                }
+                for witness in agg
+                    .ab_edge_witnesses
+                    .union(&agg.ba_edge_witnesses)
+                    .take(5)
+                {
+                    if selected.len() == 5 {
+                        break;
+                    }
+                    selected.insert(witness.clone());
+                }
+                selected.into_iter().collect()
+            } else {
+                Vec::new()
+            };
+            LayoutDirectionPair {
+                path_a,
+                path_b,
+                e_ab: agg.e_ab,
+                e_ba: agg.e_ba,
+                edge_witnesses,
+            }
+        })
+        .collect();
+    direction_pairs.sort_by(|a, b| {
+        b.e_ab
+            .min(b.e_ba)
+            .cmp(&a.e_ab.min(a.e_ba))
+            .then_with(|| a.path_a.cmp(&b.path_a))
+            .then_with(|| a.path_b.cmp(&b.path_b))
+    });
+    let direction_inconsistency_numerator = direction_pairs
+        .iter()
+        .map(|pair| pair.e_ab.min(pair.e_ba))
+        .sum::<usize>();
+    let direction_inconsistency_denominator = direction_pairs
+        .iter()
+        .map(|pair| pair.e_ab + pair.e_ba)
+        .sum::<usize>();
+    let direction_inconsistency = (direction_inconsistency_denominator != 0).then(|| {
+        direction_inconsistency_numerator as f64
+            / direction_inconsistency_denominator as f64
+    });
     let mut rows: Vec<LayoutCommunity> = aggs
         .into_iter()
-        .map(|(path, agg)| LayoutCommunity {
-            path,
-            files: agg.files,
-            intra_edges: agg.intra_edges,
-            out_edges: agg.out_edges,
-            in_edges: agg.in_edges,
+        .map(|(path, agg)| {
+            let mut endpoints = agg
+                .boundary_endpoint_counts
+                .into_iter()
+                .collect::<Vec<_>>();
+            endpoints.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+            let endpoint_total = agg.out_edges + agg.in_edges;
+            let cover_target = endpoint_total - endpoint_total / 10;
+            let mut covered = 0usize;
+            let boundary_cover_90_file_paths = endpoints
+                .into_iter()
+                .take_while(|(_, count)| {
+                    let include = covered < cover_target;
+                    if include {
+                        covered += *count;
+                    }
+                    include
+                })
+                .map(|(path, _)| path)
+                .collect::<Vec<_>>();
+            LayoutCommunity {
+                path,
+                files: agg.files,
+                intra_edges: agg.intra_edges,
+                out_edges: agg.out_edges,
+                in_edges: agg.in_edges,
+                boundary_in_files: agg.boundary_in_files.len(),
+                boundary_out_files: agg.boundary_out_files.len(),
+                boundary_cover_90_files: boundary_cover_90_file_paths.len(),
+                boundary_cover_90_file_paths,
+            }
         })
         .collect();
     rows.sort_by(|a, b| {
@@ -783,6 +977,10 @@ fn layout_partition(
         modularity,
         modularity_numerator,
         modularity_denominator,
+        direction_inconsistency_numerator,
+        direction_inconsistency_denominator,
+        direction_inconsistency,
+        direction_pairs,
         rows,
     }
 }
