@@ -790,7 +790,7 @@ fn deps_cli_json_is_observational_and_text_discloses_structural_proxy_limits() {
     assert!(text.contains("graph: 18 nodes, 14 edges (6 internal, 5 external, 3 unresolved), 5 weak components, 1 cycles, condensation-depth=2"));
     assert!(text.contains("internal transitive reachability: 9/90 non-self source-file pairs; status=computed; node-limit=10000"));
     assert!(text.contains(
-        "internal cycles: 1 cyclic components, 2/10 cyclic source files, largest=2 source files"
+        "internal cycles: 1 cyclic components, files-in-cycle fraction=2/10 (display=0.200), largest=2 source files"
     ));
     assert!(text.contains("INTERNAL-OUT"));
     assert!(text.contains("INTERNAL-IN"));
@@ -805,5 +805,5 @@ fn deps_cli_json_is_observational_and_text_discloses_structural_proxy_limits() {
     assert!(empty_text_output.status.success());
     let empty_text = String::from_utf8(empty_text_output.stdout).expect("empty deps text UTF-8");
     assert!(empty_text.contains("internal transitive reachability: n/a/n/a non-self source-file pairs; status=not_applicable; node-limit=10000"));
-    assert!(empty_text.contains("internal cycles: 0 cyclic components, n/a/n/a cyclic source files, largest=n/a source files"));
+    assert!(empty_text.contains("internal cycles: 0 cyclic components, files-in-cycle fraction=n/a/n/a (display=n/a), largest=n/a source files"));
 }
