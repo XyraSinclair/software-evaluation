@@ -150,15 +150,26 @@ bar scale, or area encoding that implies unlike units are commensurate.
 
 ### Metric admission queue
 
-The next useful families are ordered by decision value and instrument honesty:
+The next useful families are ordered by decision value and instrument honesty
+(see [DETERMINANTS.md](DETERMINANTS.md) for the generative/diagnostic split that
+sets this order):
 
-1. Import native runtime coverage artifacts as executed/coverable counts and
-   uncovered locations with run provenance; coverage is not correctness.
-2. Add compiler- or language-server-resolved call, type, member, and inheritance
+1. Add compiler- or language-server-resolved call, type, member, and inheritance
    edges as separate coupling relations; never collapse them into one CBO value.
-3. Add TCC/LCC method-state cohesion only for languages and constructs where
+   This is the common substrate under the generative determinants (reader
+   working set, effect depth, module depth, tree-vs-graph modularity) and
+   therefore leads the queue.
+2. Per-function structural discipline (`seval discipline`): syntactic purity
+   and effect calls, mutation census, shape, error-handling shape, lexical
+   type-honesty — the cheap tree-sitter half of DETERMINANTS G3/G5/G6.
+3. Directory-partition modularity and cycle membership over the existing
+   resolved file graph; module depth from existing API/metrics operands;
+   branch symmetry and cyclomatic–cognitive gap from existing operands.
+4. Import native runtime coverage artifacts as executed/coverable counts and
+   uncovered locations with run provenance; coverage is not correctness.
+5. Add TCC/LCC method-state cohesion only for languages and constructs where
    instance-field access can be resolved, preserving method-pair denominators.
-4. Add build/test queue and execution tails when CI telemetry is available;
+6. Add build/test queue and execution tails when CI telemetry is available;
    those measure developer friction, not intrinsic source quality.
 
 Universal smell thresholds, letter grades, weighted maintainability scores,

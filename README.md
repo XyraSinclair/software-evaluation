@@ -24,6 +24,7 @@ Built on three refusals:
 | Doc | What it holds |
 |---|---|
 | [TAXONOMY.md](TAXONOMY.md) | The nine axes — Form (parsimony, consistency, interface sharpness), Assurance (correctness machinery, robustness, documentation truth), Life (evolvability, operational legibility, fitness-to-intent) — with applicability gates: not all software must honor all nine, but every waiver is declared. |
+| [DETERMINANTS.md](DETERMINANTS.md) | The mechanizable determinants of beautiful software: a small generative core (reader working set, deep modules, effects at the edges, tree-tells-the-truth, invariants in types, uniformity) versus the diagnostic sieve, each with denominator, Goodhart mode, feasibility, and the incremental-validity admission test. |
 | [INSTRUMENTS.md](INSTRUMENTS.md) | Implemented mechanical instruments plus external empirical and judged methods. AST-level complexity/clone/dependency metrics and git co-change mining are built in; mutation testing, cold-start/claim audits, and [cardinal-harness](https://github.com/XyraSinclair/cardinal-harness) judgment are operator-run methods. |
 | [PROVENANCE.md](PROVENANCE.md) | The record schema: artifact@commit, instrument, agent, procedure, evidence, verdict, integrity caveats. Honest nulls over neat fictions. |
 | [REPORT.md](REPORT.md) | The report template and its rules: spread never mean, adversarial symmetry, denominators always, verdicts carry record ids. |
