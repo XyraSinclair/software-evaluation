@@ -9,7 +9,144 @@ use software_evaluation::discipline::{
     rank_functions as rank_discipline_functions,
 };
 use software_evaluation::duplicates::DuplicateReport;
+use software_evaluation::symbols::{SymbolEdgeKind, SymbolReport};
 use software_evaluation::tests_analysis::TestReport;
+
+pub fn print_symbols(report: &SymbolReport, top: usize) {
+    println!("analyzer: {}", report.analyzer);
+    println!("root: {}", report.root);
+    println!("epistemic-class: {}", report.epistemic_class);
+    let coverage = &report.coverage;
+    println!(
+        "coverage: {} Rust files / {} entries; {} non-Rust-or-unsupported skipped; {} declarations -> {} identity nodes; {} references ({} call, {} type-use); syntax-error-files={}",
+        coverage.rust_files_analyzed,
+        coverage.filesystem_entries_enumerated,
+        coverage.non_rust_or_unsupported_entries_skipped,
+        coverage.declarations_extracted,
+        coverage.symbols_extracted,
+        report.resolution.references_total,
+        coverage.call_references,
+        coverage.type_use_references,
+        coverage.syntax_error_files,
+    );
+    let resolution = &report.resolution;
+    println!(
+        "resolution: {}/{} resolved (same-file={}, unique-crate={}), ambiguous={}, external-or-unresolved={}, fraction={}",
+        resolution.resolved_total,
+        resolution.references_total,
+        resolution.resolved_same_file,
+        resolution.resolved_unique_crate,
+        resolution.ambiguous,
+        resolution.external_or_unresolved,
+        resolution
+            .resolution_fraction
+            .map_or_else(|| "n/a".to_owned(), |fraction| format!("{fraction:.3}")),
+    );
+    let graph = &report.graph;
+    let mut scc_size_counts = std::collections::BTreeMap::new();
+    for size in &graph.strongly_connected_component_sizes {
+        *scc_size_counts.entry(*size).or_insert(0usize) += 1;
+    }
+    let scc_sizes = scc_size_counts
+        .iter()
+        .rev()
+        .map(|(size, count)| format!("{size}x{count}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    println!(
+        "graph: {} nodes, {} edges, {} strongly connected components; size-histogram={}",
+        graph.node_count,
+        graph.edge_count,
+        graph.strongly_connected_component_count,
+        if scc_sizes.is_empty() { "none" } else { &scc_sizes },
+    );
+    println!(
+        "mutual reachability: {}/{} ordered same-component pairs (fraction={})",
+        graph.mutually_reachable_pairs,
+        graph
+            .possible_nonself_pairs
+            .map_or_else(|| "n/a".to_owned(), |count| count.to_string()),
+        graph
+            .mutual_reachability_fraction
+            .map_or_else(|| "n/a".to_owned(), |fraction| format!("{fraction:.3}")),
+    );
+    let reachability = &report.working_set_reachability;
+    println!(
+        "working-set reachability: status={}; {}/{} nodes; min={} p50={} p90={} max={}; node-limit={}; work-upper-bound={}; work-limit={}",
+        reachability_status(reachability.status),
+        reachability.nodes_in_distribution,
+        graph.node_count,
+        shown_count(reachability.min),
+        shown_count(reachability.p50),
+        shown_count(reachability.p90),
+        shown_count(reachability.max),
+        reachability.node_limit,
+        reachability
+            .work_upper_bound
+            .map_or_else(|| "overflow".to_owned(), |bound| bound.to_string()),
+        reachability.work_limit,
+    );
+    print_ranked_symbols(
+        "highest forward-reachable working sets",
+        &reachability.top,
+        top,
+    );
+    print_ranked_symbols(
+        "highest transitive fan-in (load-bearing symbols)",
+        &report.transitive_fan_in_tail,
+        top,
+    );
+    println!(
+        "per-file symbol counts: {} / {} shown",
+        report.per_file_symbol_counts.len().min(top),
+        report.per_file_symbol_counts.len(),
+    );
+    println!("  {:>7} PATH", "SYMBOLS");
+    for row in report.per_file_symbol_counts.iter().take(top) {
+        println!("  {:>7} {}", row.symbols, row.path);
+    }
+    let mut kind_counts = std::collections::BTreeMap::new();
+    for edge in &report.edges {
+        for kind in &edge.kinds {
+            *kind_counts.entry(*kind).or_insert(0usize) += 1;
+        }
+    }
+    println!(
+        "edge relations: call={} type-use={} over {} unique directed pairs",
+        kind_counts.get(&SymbolEdgeKind::Call).copied().unwrap_or(0),
+        kind_counts
+            .get(&SymbolEdgeKind::TypeUse)
+            .copied()
+            .unwrap_or(0),
+        graph.edge_count,
+    );
+    print_limitations(&report.limitations);
+}
+
+fn reachability_status(status: software_evaluation::deps::ReachabilityStatus) -> &'static str {
+    match status {
+        software_evaluation::deps::ReachabilityStatus::Computed => "computed",
+        software_evaluation::deps::ReachabilityStatus::NotApplicable => "not_applicable",
+        software_evaluation::deps::ReachabilityStatus::SizeLimit => "size_limit",
+        software_evaluation::deps::ReachabilityStatus::WorkLimit => "work_limit",
+    }
+}
+
+fn shown_count(value: Option<usize>) -> String {
+    value.map_or_else(|| "n/a".to_owned(), |count| count.to_string())
+}
+
+fn print_ranked_symbols(
+    label: &str,
+    rows: &[software_evaluation::symbols::RankedSymbol],
+    top: usize,
+) {
+    println!("{label}: {} / {} shown", rows.len().min(top), rows.len());
+    println!("  {:>8} SYMBOL", "COUNT");
+    for row in rows.iter().take(top) {
+        println!("  {:>8} {}", row.count, row.id);
+    }
+}
 
 pub fn print_dependencies(report: &DependencyReport, top: usize) {
     println!("analyzer: {}", report.analyzer);

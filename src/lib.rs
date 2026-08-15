@@ -19,4 +19,5 @@ pub mod repo;
 
 pub mod service;
 pub mod source;
+pub mod symbols;
 pub mod tests_analysis;
