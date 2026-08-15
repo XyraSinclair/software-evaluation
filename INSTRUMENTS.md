@@ -125,6 +125,21 @@ For $n$ analyzed source files and the unique resolved internal edges $u \to v$:
   for $n < 2$, never manufactured as zero.
 - Cycle observations retain the number of cyclic SCCs, participating files,
   largest cyclic SCC, and both file-count denominators.
+- Mutual reachability is the exact rational
+  $\sum_i s_i(s_i-1)\,/\,n(n-1)$ over SCC sizes $s_i$ (u128 numerator and
+  denominator serialized; the f64 is display). Because the global denominator
+  dilutes a tangle embedded beside unrelated files, the same sum is also
+  reported over $W(W-1)$ of the worst weak component (exact integer argmax,
+  ties toward the larger component), with the weak-component count and largest
+  size as context.
+- The condensation depth profile reports per-file longest-path
+  `depth_in`/`depth_out` on the SCC-condensation DAG (nearest-rank p50/p90/max
+  over the stated file denominator) and one maximum-length witness path. Depth
+  counts sequential abstraction boundaries; reach counts definitions — the two
+  disagree on deep thin chains versus shallow wide fans.
+- Layout modularity carries its exact rational beside the float:
+  signed numerator $\sum_c (4m e_c - d_c^2)$ over $4m^2$; co-change masses are
+  serialized both as unit weights and as raw scale-$2^{40}$ integers.
 
 These are file-graph topology coordinates. Higher reach means broader static
 reach in the analyzer's observed graph; it does not mean worse maintenance,
