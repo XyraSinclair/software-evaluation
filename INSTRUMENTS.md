@@ -195,10 +195,12 @@ $1$, spread as $1/\binom{k}{2}$ over every unordered pair of those files
   fully inside community $c$ and $d_c$ the incident mass (null when $W = 0$).
 - Per-community rows carry the file count, intra mass, and the crossing mass
   incident to the community (counted at both of its endpoints).
-- Total mass equals the eligible-commit count exactly; pair weights are stored
-  as fixed-point integers (scale $2^{40}$), so $\text{intra} + \text{cross} = W$
-  closes under integer addition while the reported quantization bound caps the
-  truncation. Rename detection is disabled and commits touching more than a
+- The *ideal* total mass is the eligible-commit count; the accumulated total
+  falls short of it by at most the reported quantization bound, because each
+  per-pair weight $1/\binom{k}{2}$ is truncated to fixed-point integers
+  (scale $2^{40}$). Within the accumulated masses, $\text{intra} + \text{cross}
+  = W$ closes exactly under integer addition, and the report states both the
+  ideal mass and the bound. Rename detection is disabled and commits touching more than a
   documented cap (100 in-universe files) are counted and excluded as broad.
 
 This is the maintenance-activity counterpart to the static layout $Q$: it asks

@@ -222,7 +222,13 @@ What survives, in implementation order:
 | 3 | **Symbol working-set reachability tail** — per function, distinct definitions transitively reachable in the resolved call/type graph, p90 over (n−1), traversed via SCC condensation; never shown without the cognitive tail (the joint surface is G1) | the direct operationalization of reader working set; helper-soup raises it while lowering local complexity — the pair polices itself | later (symbol graph, #1 in queue) |
 | 4 | **Balanced separator witness** — smallest found vertex set whose removal leaves components ≤ 2n/3; articulation points exactly first, then spectral sweep (normalized Laplacian) as internal machinery; report the *node list* and component sizes as an upper-bound witness, never "the treewidth", λ₂ as solver provenance only | recursive decomposability = the structural form of deep modules; a 1-node separator that is a god-object is caught by reading its G2 interface-information beside it | later (experimental) |
 | 5 | **Feedback-arc fraction** (min FAS via deterministic Eades–Lin–Smyth / |E|) and **trophic incoherence F** (single sparse CG solve, MacKay–Johnson–Sansom 2020) — the edge-deletion and layering complements of F↔; trophic coherence has never been tried on software (finding, not citation) | how much wiring must break to layer the system; how far the acyclic remainder is from clean stratification (the tangle SCCs cannot see) | later (validation-gated research arm) |
-| 6 | **Size-stratified AST DAG ratio** — hash-cons every subtree (structural equality confirmed on hash match), report |DAG|/|tree| as a *curve* over minimum subtree size k, alpha-normalized identifiers primary, generated files excluded | global structural-repetition superset of clone windows; the raw scalar is dominated by trivial leaves and by grammar verbosity — the curve is the honest object. One seat would ship it, one would gate it as a corpus experiment; adjudicated: research arm, never a headline, never called Kolmogorov anything | later (experimental) |
+| 6 | **Size-stratified AST DAG ratio** — hash-cons every subtree (structural equality confirmed on hash match), report |DAG|/|tree| as a *curve* over minimum subtree size k, alpha-normalized identifiers primary, generated files excluded | global structural-repetition superset of clone windows; the raw scalar is dominated by trivial leaves and by grammar verbosity — the curve is the honest object. One seat would ship it, one would gate it as a corpus experiment; adjudicated: research arm, never a headline, never called Kolmogorov anything. **Second round: downgraded to repetition *locator*** — the ratio has no stable quality direction (200 deliberately uniform protocol encoders and 200 copy-pasted handlers produce the same curve; alpha-normalization erases exactly the names that distinguish them; folding repeats into an opaque macro improves the number while raising reader state). Where the repeats are stays reportable; the global compressibility scalar is not a determinant | locator only (2nd round) |
+| 7 | **Condensation depth profile** — per-file longest-path depth d_in(v), d_out(v) on the SCC-condensation DAG, per weak component; distributions + max witness path; exact rational d/(c_W−1) beside the raw integers | the sequential-abstraction-boundary count reachability cannot see: a deep thin chain, a shallow wide fan, and a high-fan-in stable kernel have different depth shapes at equal reach; O(n+m) DP, witness chain instead of a scalar. Path *counts* rejected: exponential, shortcut-sensitive, no stable denominator | next (operands exist: condensation + one max depth already computed) |
+| 8 | **Conductance certificate** — per connected undirected component, a dyadic lower bound λ₂ ≥ a/2^b from fixed-order rational inertia bisection on L − qD, reported only as its Cheeger consequence φ(C) ≥ a/2^{b+1} with volumes and |V_C|/n | the one fact no survivor establishes: *negative* evidence that no sparse cut exists. A left-to-right bipartite expander scores F↔=0, FAS=0, trophic F=0, depth 1, bounded working set — every instrument reads "fine" while every attempted modular cut is provably expensive. Exact rational certificate, no eigenvector, no null ensemble; this is the honest resurrection of the killed λ₂ headline | later (research arm; the one spectral admission) |
+| 9 | **Boundary-endpoint dispersion** — per directory and relation: fraction of member files that are cross-boundary endpoints (in and out separately), plus the minimum endpoint set covering 90% of crossing edges, with witness list | interface concentration Q cannot see: identical Q and crossing mass for a module routing everything through two façade symbols vs one exposing every internal file; the structural form of G2 interface sharpness. Goodhart: a god façade — read its interface information beside it | later |
+| 10 | **Boundary direction inconsistency** — per unordered directory pair, D = Σ min(e_ab, e_ba) / Σ (e_ab + e_ba) with per-pair rows and edge witnesses, per relation | quotient-level two-way coupling on an acyclic file graph: two directories depending on each other through disjoint files fire no SCC, no FAS, no F↔; this is Parnas one-way-ness at the partition level. Legitimate exception: bidirectional peer protocols — a coordinate, never a target | later |
+| 11 | **Static–historical support cross-tab** — cross co-change mass binned by static relation of the pair (direct / transitive-only / unrelated), over total cross mass; and conversely, fraction of cross-directory static edges with any co-change support. Fixed-point mass, same pinned universe both sides | the question neither Q answers: are the pairs that change together the pairs the declared architecture connects? Two repos with identical Q×Q coordinates can have opposite support tables. **Precondition it repairs: the 2-D Q read is invalid until both graphs share one pinned node universe** (static Q sees parser-supported walk files, co-change sees all source-classified tracked blobs — currently different sets) | later |
+| 12 | **Commit Jaccard tail** — pairwise Jaccard similarity of file change-histories, distribution + tail, exact rationals | partition-free coupling detector: files that *only* change together, invisible to directory-binned Q, robust to layout churn | later |
 
 Determinism doctrine for this family: integer and rational invariants are
 preferred not merely for float-safety but because they are self-interpreting —
@@ -234,6 +240,43 @@ CG. Null models, when needed offline: degree-preserving configuration
 rewiring (Maslov–Sneppen), never Erdős–Rényi — beating a homogeneous random
 graph is flattery, not evidence. Exact rational forms exist for both Q's
 (signed integer numerator over 4m²; fixed-point weights for co-change).
+
+### Second adversarial round (2026-08-15, Sol xhigh via codexpool + Gemini)
+
+The browser Oracle seat being down, the adjudicated set above was attacked by
+two repo-grounded seats. Verdict changes are folded into the table (rows 6–12);
+what follows is the residue that is neither a row nor already fixed.
+
+**Fixed same-day**: F↔'s global n(n−1) denominator dilutes a tangle embedded
+beside unrelated files — a 100-file SCC vanishes in a monorepo. `seval deps`
+now also reports mutual reachability inside the worst weak component
+(exact integer argmax; own repo: 42/702 = 0.060 global vs 42/506 = 0.083
+scoped).
+
+**Implementation debts, admitted as defects (both seats hit the first)**:
+static Q and co-change Q are computed from exactly-accumulated integers but
+serialized only as f64 — the integer numerators/denominators (signed Q
+numerator over 4m²; raw u128 masses and strengths) should ride beside the
+float so the exact rational is reconstructible; F↔'s numerator accumulates in
+usize, which can overflow on a 32-bit target while succeeding on 64-bit — the
+serialized form should be u128 numerator/denominator with the float display
+secondary. The current f64s are deterministic on one architecture (fixed
+iteration order, no FMA) but the doctrine claims more than that.
+
+**Trophic F, sharpened prediction (both seats)**: it will correlate with
+SCC/FAS operands inside cycles and with depth/shortcut operands on DAGs, and
+fail the incremental-validity partial. Its one unique shape is the transitive
+triangle (A→B→C plus A→C): F↔ = FAS = 0, depth and reach unchanged, F > 0.
+If that is all that survives validation, replace the CG scalar with exact
+shortcut-edge witness rows (which is also Gemini's transitive-reduction edge
+ratio — same object, |E_reduced|/|E| on the condensation DAG).
+
+**Standing quadrant caveats for the 2-D Q read** (beyond the universe
+precondition in row 11): high-static/low-co-change is produced innocently by
+resolver blind spots (path aliases read as external) plus disciplined
+vertical-slice commits; low-static/high-co-change is produced by successful
+dependency inversion (volatile plugins importing a stable kernel). The
+coordinate locates; the diagnosis needs the support cross-tab and a human.
 
 ## Ruled out or downranked
 
@@ -295,3 +338,25 @@ code.
    is what gets *taught*; the judged instrument adjudicates the flagged spots.
    The irreducible remainder — whether this beautiful structure was the right
    structure for this problem — stays the master's.
+6. **The graph's information ceiling is isomorphism** (Sol, 2nd round). Two
+   implementations can share every extracted graph — file, call, type,
+   co-change — while differing arbitrarily in algorithmic clarity, naming,
+   invariant strength, error semantics, and fitness; conversely a façade move
+   transforms every graph statistic while changing nothing a reader holds.
+   The current set spans nearly every low-order fact the coarse graph
+   contains (reach/depth/degree = exposure; SCC/F↔/FAS = feedback; the Q's =
+   imposed partitions; separator/conductance = cuts); the marginal graph
+   scalar after it is mostly a recombination of n, m, the degree sequence,
+   and the reachability relation, and should be presumed near-zero
+   incremental validity until proven otherwise. What dominates it:
+   **task-grounded reader experimentation** (N real prediction/change tasks ×
+   R blinded readers; correctness, files opened, revisits, time; tails over
+   the explicit N×R denominator) for comprehensibility claims, and
+   mutation/property/differential probes for Assurance claims — new semantic
+   evidence rather than another functional of the same graph.
+7. **Complexity migrates off the graph into the state space** (Gemini, 2nd
+   round). A perfectly decomplected import graph passes everything while
+   every function trafficks in `HashMap<String, Any>` or `&mut GlobalContext`
+   — the type-space cardinality problem. Partially covered by the discipline
+   instrument (any-annotations, global mutable state, unannotated params);
+   the PL-theory range (types-as-invariants measurement) is the open arm.
