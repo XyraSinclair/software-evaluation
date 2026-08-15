@@ -307,6 +307,70 @@ refactorings?) is what separates a coordinate system from a collection of
 numbers. Nothing above claims validity; it claims exactness, closure, and
 disclosed limitations.
 
+## Validation arm — literature priors and the adversarial battery
+
+The target is high-dimensional: "healthier repo" is a bundle of outcomes
+(defect density, maintenance effort, contributor survival, abandonment) that
+no single coordinate captures. The literature was consulted 2026-08-15 through
+scry's `academic.catalog` (seven bounded lexical probes over titles, abstracts
+hydrated for the shortlist; probe ledger in the session record). The priors,
+each carrying its adversarial edge:
+
+| Prior | Source | What it does to our set |
+|---|---|---|
+| **Size confounds nearly everything.** Most structural metrics' fault associations shrink drastically once size is controlled | El Emam et al. 2001 (10.1109/32.935855); Zhou et al. 2014 (10.1145/2556777) | Battery test B1: every corpus association is computed size-partialed. A determinant that is SLOC in disguise gets demoted to a size proxy, whatever its mathematics |
+| **History beats static structure; relative beats absolute.** Relative churn predicts defect density where absolute churn fails | Nagappan & Ball 2005 (10.1145/1062455.1062514); Hall et al. SLR 2011 (10.1109/tse.2011.103) | Validates the co-change arm (rows 2, 11, 12) and the denominator doctrine itself — every seval number is already relative by construction |
+| **Change coupling correlates with defects** | Gall et al. 1998 (10.1109/icsm.1998.738508); D'Ambros et al. 2009 (10.1109/wcre.2009.19) | Rows 11–12 have direct published lineage; the Jaccard tail is the partition-free version of what these papers measured |
+| **Propagation cost discriminates architectures and moves under deliberate redesign** (Mozilla's purposeful modularization lowered it) | MacCormack et al. 2006 (10.1287/mnsc.1060.0552) | Row 1's ancestor, and a published refactor-delta observation: the coordinate moved when the architecture was deliberately fixed |
+| **The static×history cross is where the signal is.** Unstable Interface and Implicit Cross-module Dependency (structure + history combined) pinpoint error-prone files better than either alone | Xiao, Cai et al. 2015 (10.1109/wicsa.2015.12) | Our boundary rows (9–10) × support cross-tab (11) is exactly this cross; the unrelated-mass bin ≈ implicit cross-module dependency |
+| **Decoupling Level: option-value of independently replaceable modules, measured against maintainability across 129 projects** | Mo, Cai et al. 2016 (10.1145/2884781.2884825) | Adjacent coordinate to our separator/conductance pair — note the sign discipline: a high φ certificate means a component RESISTS decomposition, which is cohesion within a module and monolithicity at the top; per-component framing is mandatory |
+| **Code smells failed their controlled test.** With professionals on real tasks, file size and churn explained maintenance effort; smells added little | Sjøberg et al. 2013 (10.1109/tse.2012.89) | Humility for the discipline/shape arms: they are locators and coordinates, never health verdicts; expect B1 to hit them hardest |
+| **Simple + process metrics win; complex models overfit** | Hall et al. 2011, ibid. | Empirical backing for the no-composite-score doctrine |
+| **Trophic coherence ties loops, hierarchy, and spectra into one object**: incoherence determines cycle structure and leading eigenvalues; maximally coherent networks are loopless and stable | Johnson et al. 2014 (10.1073/pnas.1409077111); Johnson & Jones 2017 (10.1073/pnas.1613786114) | Rows 6 (trophic incoherence), 7 (depth profile), and 8 (spectral certificate) are one mathematical family; the research arm should measure incoherence q and test Johnson's loop-spectrum relation on dependency graphs |
+| **Abandonment/survival is measurable and predictable** | Coelho & Valente 2017 (10.1145/3106237.3106246); Samoladas et al. 2010 (10.1016/j.infsof.2010.05.001); Avelino et al. truck factor 2016 (10.1109/icpc.2016.7503718) | Outcome side of the corpus: abandonment class labels, activity survival, contributor concentration |
+
+### The adversarial battery
+
+B1 — **size partialing.** Across the corpus, every coordinate↔outcome
+association is computed with SLOC partialed out (rank-based). Survivors are
+determinants; casualties are size proxies and say so in their docs.
+
+B2 — **transformation algebra (metamorphic laws).** Meaning-preserving
+transformations with predicted responses, executed directly (2026-08-15, own
+repo, /tmp copies):
+
+- *Rename-with-rewrite invariance:* renaming `src/shape.rs → fnshape.rs` with
+  reference rewrite left every `seval deps` number exactly identical
+  (fully-normalized outputs byte-equal). Verified.
+- *Naive rename is not a refactoring — and the instrument knows:* relocating
+  `src` to `core` without reference rewrite collapsed resolution (62→37
+  internal edges, depth 4→1, unresolved 7→33). Directory names are the import
+  namespace; `deps` correctly detected a semantics-breaking change while
+  `symbols` and `typespace` (declaration-keyed) stayed exactly invariant and
+  `shape` was invariant modulo row order. Verified.
+- *Disjoint-union laws:* duplicating the crate as two sibling trees —
+  worst-WCC F↔ invariant (42/756 over 28 files, both sides); files-in-cycle
+  fraction intensive (0.219 = 0.219); global mutual reachability diluted by
+  exactly the documented denominator (42/992 → 84/4032); conductance
+  certificates duplicated per component with identical (a, b). Verified.
+  This classifies the set: per-component and worst-WCC coordinates are
+  **intensive** (comparable across repo sizes); whole-graph fractions with
+  n(n−1) denominators are **dilutive** (comparable only at fixed universe) —
+  the second round's WCC-scoping fix is what made row 1 intensive.
+
+B3 — **corpus discrimination.** Two labeled classes of Rust crates
+(14 deprecated/unmaintained × 16 active, popularity ranges overlapping so
+adoption cannot be the separator), full instrument suite + git outcome proxies
+(activity, fix-share, contributor structure), run 2026-08-15 under
+`~/projects/scratch/seval-corpus-2026-08-15/`. Cross-sectional association
+only — HEAD structure post-dates the outcome for abandoned repos, and the
+read is stated as association, never cause.
+
+B4 — **the standing gate, unchanged:** refactor-delta mining. Do coordinates
+move the predicted direction across accepted refactorings (MacCormack's
+Mozilla observation, systematized)? Until then, nothing here claims validity —
+exactness, closure, disclosed limitations, and now stated priors.
+
 ## PL-theoretic determinants — the type-space arm
 
 Seat consult 2026-08-15 (Claude Opus, repo-grounded; full text was distilled
