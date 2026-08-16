@@ -522,6 +522,18 @@ gate now requires is intent-classed subsets — decouple/break-cycle commits
 predicting F₀ and cycle mass down, extract-module commits predicting Q up —
 each class carrying its own sign before measurement.
 
+**Directional pre-registration (2026-08-15, before measurement).** Two
+intent classes mined from the corpus histories by tightened subject
+patterns (excluding `extractor`/`flatten` API vocabulary): *decycle* —
+break/remove/fix cycle-or-circular, decouple, untangle (15 commits);
+*extract-module* — move/extract/split targeting a module/submodule/crate/
+separate-file noun (243 commits). Predictions, fixed before any
+measurement: among decycle commits that move trophic F₀, down exceeds up;
+among decycle commits that move files-in-cycle, down exceeds up; among
+extract-module commits that move parent-directory Q, up exceeds down.
+One-sided exact binomial sign tests on movers; results in the commit that
+follows this one.
+
 ## PL-theoretic determinants — the type-space arm
 
 Seat consult 2026-08-15 (Claude Opus, repo-grounded; full text was distilled
