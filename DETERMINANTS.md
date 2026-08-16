@@ -425,6 +425,21 @@ Sjøberg's smells-fail-controlled-tests prior predicted exactly this for the
 discipline/shape arms. `revert_share` has tiny numerators and
 anti-correlates with size (ρ = −0.44); no claims from it.
 
+**Finding 4 — the within-stratum read (added later the same day).** The
+corpus already contains one honest size-matched band: 6,000–28,000 SLOC
+holds 6 abandoned × 5 active repos. Inside it, `cochange_layout_q`
+separates the classes **perfectly** (rank-biserial −1.000; every abandoned
+repo below every active one, threshold ≈ 0.17; exact null probability
+1/462 ≈ 0.002), while eligible-commit counts (rb = +0.27) and file counts
+overlap freely — it is not a history-volume proxy. `support_jaccard_p90`
+shows the consistent companion sign (+0.67, abandoned repos carry heavier
+co-change tail coupling). Both are history-based coordinates; every static
+coordinate stays within noise in the band. This is the corpus's central
+empirical statement, and it is the Nagappan/Gall prior speaking: whether
+recent commits cohere within the directory layout or scatter across it
+tracks project fate where structure alone does not. n = 11, association
+at HEAD, never cause.
+
 Everything above is **nomination, not validation** — B4 (refactor-delta)
 remains the gate. What B3 changes: the next corpus must stratify by size,
 and `symbol_working_set_p90` earns priority in the B4 mining.
