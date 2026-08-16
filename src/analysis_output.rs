@@ -182,6 +182,55 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
             .condensation_maximum_depth
             .map_or_else(|| "n/a".to_owned(), |value| value.to_string()),
     );
+    let grading = &report.import_grading;
+    println!("import grading [{}]:", grading.epistemic_class);
+    for (language, row) in &grading.languages {
+        println!(
+            "  {language}: use-declarations={}; glob={}/{} (display={}); module-object={}/{} (display={})",
+            row.use_declarations,
+            row.glob_imports,
+            row.glob_import_denominator,
+            row.glob_import_fraction
+                .map_or_else(|| "n/a".to_owned(), |value| format!("{value:.3}")),
+            row.module_object_imports,
+            row.module_object_import_denominator,
+            row.module_object_import_fraction
+                .map_or_else(|| "n/a".to_owned(), |value| format!("{value:.3}")),
+        );
+    }
+    let internal_grading = &grading.internal_edges;
+    println!(
+        "  internal edges: glob-bearing={}/{} (display={}); non-glob grade p50/p90/max={}/{}/{} over {} edges; plug-grade<=2={}/{} (display={})",
+        internal_grading.glob_bearing_edges,
+        internal_grading.glob_bearing_edge_denominator,
+        internal_grading
+            .glob_bearing_edge_fraction
+            .map_or_else(|| "n/a".to_owned(), |value| format!("{value:.3}")),
+        internal_grading
+            .edge_grade_p50
+            .map_or_else(|| "n/a".to_owned(), |value| value.to_string()),
+        internal_grading
+            .edge_grade_p90
+            .map_or_else(|| "n/a".to_owned(), |value| value.to_string()),
+        internal_grading
+            .edge_grade_max
+            .map_or_else(|| "n/a".to_owned(), |value| value.to_string()),
+        internal_grading.edge_grade_distribution_denominator,
+        internal_grading.plug_edges,
+        internal_grading.plug_edge_denominator,
+        internal_grading
+            .plug_edge_fraction
+            .map_or_else(|| "n/a".to_owned(), |value| format!("{value:.3}")),
+    );
+    let external_grading = &grading.external_edges;
+    println!(
+        "  external edges: glob-bearing={}/{} (display={})",
+        external_grading.glob_bearing_edges,
+        external_grading.glob_bearing_edge_denominator,
+        external_grading
+            .glob_bearing_edge_fraction
+            .map_or_else(|| "n/a".to_owned(), |value| format!("{value:.3}")),
+    );
     let propagation = &report.propagation;
     let status = match propagation.reachability_status {
         software_evaluation::deps::ReachabilityStatus::Computed => "computed",
