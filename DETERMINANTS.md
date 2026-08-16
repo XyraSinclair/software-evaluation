@@ -638,6 +638,42 @@ verified, class associations (B3) nominate the duplication/comprehension
 family under size control. Everything remains association or
 history-internal movement — never cause, never a verdict.
 
+### The exact triangle closes on the corpus (2026-08-15, late)
+
+With the spectral-radius certificate landed (Collatz–Wielandt bounds on
+ρ(A) per SCC, exact over BigRational), all three vertices of the Johnson
+loop-spectrum triangle are exact on the same file graph. Over the 24
+corpus repos with a certified ρ and computed F₀ (n=44 corpus, deps
+re-run at HEAD e33829d):
+
+| pair | Spearman ρ | SLOC-partialed |
+|---|---|---|
+| ρ(A) vs trophic F₀ | +0.714 | +0.680 |
+| ρ(A) vs files-in-cycle | +0.669 | +0.688 |
+| trophic F₀ vs files-in-cycle | +0.846 | +0.840 |
+
+Three formalisms — a rational linear solve, Tarjan membership, and a
+Perron–Frobenius growth rate — computed by disjoint code paths, agree
+pairwise on real dependency graphs, and the agreement survives size
+control. This is Johnson & Jones's prediction (coherence controls the
+leading eigenvalue) observed exactly, not estimated. ρ tracks largest-SCC
+size at +0.907, so it is a *braidedness* coordinate for the recirculating
+core, not a whole-repo one: failure and iron sit at ρ = 1 exactly (a
+single 2-cycle), stdweb at 6.71 (65-file braided core), nom at 5.19,
+conrod 4.90, actix-web 4.64. Every SCC on the corpus certified within the
+128-file bound; none hit size_limit.
+
+**Coeffect grading, first read (n=39 with internal edges).** Plug-edge
+fraction, edge-grade p90, and internal glob fraction show no class or
+fix-share association beyond noise — the honest null: coupling *width* at
+file granularity does not separate these classes. One lead: external
+glob-bearing fraction (ambient authority toward dependencies, `use
+rand::*`) at class rb = +0.26 → **+0.38 SLOC-partialed** and fix-share
++0.34 raw — the same suppression pattern as the duplication family, and
+prior-consistent (unreviewable dependence ↔ maintenance burden). n=43,
+nomination only. Own repo for scale: 40/64 plug edges, 1/315 external
+glob.
+
 ## The effect–coeffect duality — a frame for the whole instrument set
 
 Read 2026-08-15 evening from Shi, Zhang & Cui, *A Programming Paradigm for
