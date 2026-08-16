@@ -549,6 +549,78 @@ extract-module commits that move parent-directory Q, up exceeds down.
 One-sided exact binomial sign tests on movers; results in the commit that
 follows this one.
 
+### B3 extension — the size-stratified corpus (2026-08-15 evening, n=44)
+
+Finding 0's prescription executed: 14 repos added to break the size↔class
+confound — six large clearly-discontinued projects (amethyst, xi-editor,
+conrod, leaf, exonum, druid — official discontinuation notices or archived
+repos) and eight small active crates (cfg-if, bitflags, itoa, ryu,
+thiserror, anyhow, heck, is-terminal). way-cooler was selected and dropped
+with disclosure: its HEAD is the project's rewrite-in-C tombstone (one .rs
+file). druid is kept with disclosure: last commit 114 days old
+(post-discontinuation maintenance drift). All deps columns re-measured
+under the self-edge fix so the table is version-consistent
+(`table.jsonl`, 44 rows; the n=30 original preserved as `table-v1.jsonl`).
+
+Size↔class collapsed from rb = −0.911 to **rb = −0.271 (p = 0.13)** — B1
+partialing now has genuine residual variance to work with.
+
+**Class survivors under SLOC partialing (18 coordinates tested — at
+Bonferroni 0.05/18 only the strongest survives; exact values, no crowns):**
+
+- `t5_clone_density` — partial ρ = **+0.50** (raw +0.26; partialing
+  *strengthens* it — size was masking, not making, the signal). Duplicated
+  type-shape mass associates with abandonment at matched size, and it is
+  also the strongest fix-share coordinate (+0.43 partialed).
+- `symbol_mutual_reach` — partial ρ = +0.37 (raw rb +0.42, the only raw
+  class association at p < 0.05): entangled symbol graphs associate with
+  abandonment. On the n=30 corpus this died under partialing; with the
+  confound broken it survives.
+- `symbol_working_set_p90` — partial ρ = +0.39 (raw +0.17; another
+  suppression case), consistent with its n=30 fix-share nomination.
+
+The three survivors are one conceptual family — duplication and
+comprehension load — and all three also carry the fix-share axis
+(+0.43/+0.27/+0.27 partialed). The discipline/shape/typespace-T1/T2/T6
+arms stay within noise, as Sjøberg predicted.
+
+**The attenuation that teaches: `cochange_layout_q` weakened** (raw −0.30,
+partial −0.12) on the extended corpus, despite its perfect within-stratum
+separation on n=30. The new large abandoned repos explain it: druid
+(q = 0.286) and amethyst (0.243) sit in the *active* range — well-organized
+projects abandoned by organizational decision, not maintenance decay. The
+class label bundles two mechanisms: utility crates that complete or get
+superseded (where co-change coherence separated perfectly) and
+organization-backed projects that die by announcement while still
+well-maintained. Co-change coherence tracks the *decay* mechanism, not the
+*decision* mechanism — a coordinate meeting a heterogeneous outcome, which
+is exactly why the doctrine forbids composite health verdicts. Follow-up
+when the corpus grows: mechanism-labeled outcome classes
+(decayed / superseded / discontinued).
+
+### B4 directional results — the pre-registered tests (same evening)
+
+Measured after commit `00dddea` fixed the predictions; 258 commits, all
+measured (b4/measurements3.jsonl):
+
+- **extract-module → parent-directory Q up: CONFIRMED.** Among 243
+  extract/move/split-module commits, 152 moved Q; 95 rose vs 57 fell —
+  one-sided exact binomial **p = 0.0013**. First directional prediction to
+  pass measurement: extracting modules moves layout-modularity the
+  predicted way across 18 real repos' accepted history.
+- **decycle: below instrument granularity, not refuted.** 13 of 15
+  decouple/break-cycle commits moved neither F₀ nor files-in-cycle (2 F₀
+  movers split 1/1). Inspection of the subjects shows why: they decouple
+  types and derive logic *within* files — symbol-level surgery invisible
+  to the file-edge graph. The prediction stands untested at file
+  granularity; the HIR bridge is the instrument that could test it.
+
+Validity ledger after one full battery cycle: exactness (B2) verified,
+responsiveness (B4a) verified, one directional law (B4b extract→Q)
+verified, class associations (B3) nominate the duplication/comprehension
+family under size control. Everything remains association or
+history-internal movement — never cause, never a verdict.
+
 ## PL-theoretic determinants — the type-space arm
 
 Seat consult 2026-08-15 (Claude Opus, repo-grounded; full text was distilled
