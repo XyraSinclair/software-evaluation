@@ -422,10 +422,49 @@ legitimately be coherent, while an event system or peer protocol can
 legitimately be incoherent. Read the value beside files-in-cycle and largest SCC.
 Johnson et al. (2014) and Johnson and Jones (2017) connect low trophic
 incoherence with low loop mass and small leading eigenvalues, so the trophic,
-condensation/cycle, and conductance rows are one cross-instrument family. The
+cycle, and spectral-radius rows form the **loop-spectrum triangle**. The
 software graph is only the conservatively resolved file-import graph; $F_0$
 cannot establish runtime direction, semantic layering, architectural quality,
 the cause or harm of a cycle, or anything about unresolved and external edges.
+
+### Spectral-radius certificate
+
+For every directed SCC $S$ of at least two files within the stated node bound,
+`seval deps PATH` certifies exact rational lower and upper bounds on the
+adjacency spectral radius $\rho(A)$. Because $S$ is strongly connected, $A$ is
+irreducible and Perron--Frobenius makes $\rho(A)\geq1$ a real eigenvalue with a
+positive eigenvector. The implementation uses the primitive matrix $B=A+I$,
+starts from the all-ones positive vector, and performs at most 24 exact
+arbitrary-precision rational power steps. At every step the
+Collatz--Wielandt ratios certify
+
+$$
+\min_i \frac{(Bx)_i}{x_i}-1 \leq \rho(A) \leq
+\max_i \frac{(Bx)_i}{x_i}-1.
+$$
+
+The narrowest certified interval is retained; iteration stops when its width
+is below $2^{-16}$ or the iteration bound is reached. Dividing each iterate by
+its maximum component limits numerator growth without changing the ratios. A
+final exact multiplication reproduces the reported bounds, every nontrivial
+SCC checks lower $\leq$ upper and lower $\geq1$, and any pure directed two-cycle
+checks the exact identity $\rho=1$. SCCs below two files are `trivial_small`;
+SCCs above the node bound are `size_limit`. Exact decimal-string numerators and
+denominators are authoritative; f64 values and bound width are display-only.
+
+$\rho$ is the exponential growth rate of closed walks: the cycle mass present
+across all lengths. $\rho=1$ means thin recirculation--a single simple directed
+cycle has exactly $\rho=1$--while larger values mean braided or denser
+recirculation. The display quantity $\ln(\rho)$ would be the closed-walk entropy
+rate, but only the exact rational bounds are authoritative. This is the third
+vertex of the loop-spectrum triangle beside trophic incoherence $F_0$
+(linear-algebraic layering) and files-in-cycle (combinatorial membership), as
+motivated by Johnson and Jones (2017,
+[doi:10.1073/pnas.1613786114](https://doi.org/10.1073/pnas.1613786114)). It is a
+coordinate, never a quality verdict: pipelines may legitimately have no
+nontrivial SCC and therefore no $\rho$, while event meshes may legitimately be
+$\rho$-heavy. It cannot establish architectural quality, cycle harm, runtime
+traffic, or semantics absent from the conservatively resolved file graph.
 
 ### Conductance certificate
 

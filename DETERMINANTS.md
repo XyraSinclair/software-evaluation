@@ -191,12 +191,14 @@ Report as distributions and tails; use as review routers, never gates.
 Triangulated 2026-08-15 across three independent seats (GPT-5.6 Sol, Claude
 Opus, Gemini) on the question "the deepest, simplest graph/spectral invariants
 of quality." Unanimous verdict: **spectral scalars are the wrong shape of
-number for this tool** — reported eigenvalues behave like means, need a null
-ensemble to mean anything, carry a floating-point determinism tax, and their
+number for this tool** — uncertified repository-wide eigenvalue headlines
+behave like means, need a null ensemble to mean anything, carry a floating-point determinism tax, and their
 eigenvectors are genuinely non-unique under the twin nodes generated code
 creates (Davis–Kahan). Spectral machinery earns one narrow role: as an
 internal *algorithm* (a partitioner/separator finder) whose reported output is
-an integer witness. Killed as headlines, 3/3 seats: λ₂ as a value, spectral
+an integer witness. The later exact per-SCC $\rho$ interval is a narrower
+exception: a bounded certificate of closed-walk growth, never a repository-wide
+verdict. Killed as headlines, 3/3 seats: λ₂ as a value, unbounded global spectral
 radius (zero on every DAG regardless of reach), von Neumann entropy, Estrada /
 natural connectivity, Kirchhoff / effective resistance, eigengap module count,
 principal-angle tree alignment (dominated by Q), motif censuses as verdicts
@@ -226,7 +228,7 @@ What survives, in implementation order:
 | 5 | **Feedback-arc fraction** (min FAS via deterministic Eades–Lin–Smyth / |E|) and **improved trophic incoherence F0** (exact rational solve, MacKay–Johnson–Asllani 2020) — the edge-deletion and layering complements of F↔; trophic coherence has never been tried on software (finding, not citation) | how much wiring must break to layer the system; how far the directed graph is from clean stratification (the tangle SCCs cannot see) | trophic half lands now (`seval deps` exact F0); FAS half stays later |
 | 6 | **Size-stratified AST DAG ratio** — hash-cons every subtree (structural equality confirmed on hash match), report |DAG|/|tree| as a *curve* over minimum subtree size k, alpha-normalized identifiers primary, generated files excluded | global structural-repetition superset of clone windows; the raw scalar is dominated by trivial leaves and by grammar verbosity — the curve is the honest object. One seat would ship it, one would gate it as a corpus experiment; adjudicated: research arm, never a headline, never called Kolmogorov anything. **Second round: downgraded to repetition *locator*** — the ratio has no stable quality direction (200 deliberately uniform protocol encoders and 200 copy-pasted handlers produce the same curve; alpha-normalization erases exactly the names that distinguish them; folding repeats into an opaque macro improves the number while raising reader state). Where the repeats are stays reportable; the global compressibility scalar is not a determinant | locator only (2nd round) |
 | 7 | **Condensation depth profile** — per-file longest-path depth d_in(v), d_out(v) on the SCC-condensation DAG, per weak component; distributions + max witness path; exact rational d/(c_W−1) beside the raw integers | the sequential-abstraction-boundary count reachability cannot see: a deep thin chain, a shallow wide fan, and a high-fan-in stable kernel have different depth shapes at equal reach; O(n+m) DP, witness chain instead of a scalar. Path *counts* rejected: exponential, shortcut-sensitive, no stable denominator | have (`seval deps` condensation profile) |
-| 8 | **Conductance certificate** — per connected undirected component, a dyadic lower bound λ₂ ≥ a/2^b from fixed-order rational inertia bisection on L − qD, reported only as its Cheeger consequence φ(C) ≥ a/2^{b+1} with volumes and |V_C|/n | the one fact no survivor establishes: *negative* evidence that no sparse cut exists. A left-to-right bipartite expander scores F↔=0, FAS=0, trophic F=0, depth 1, bounded working set — every instrument reads "fine" while every attempted modular cut is provably expensive. Exact rational certificate, no eigenvector, no null ensemble; this is the honest resurrection of the killed λ₂ headline | have (`seval deps` conductance certificates; own repo: the 28-file src component certifies λ₂ ≥ 72/2^10, φ ≥ 72/2^11, and a 3-path component certifies exactly 1024/2^10 = 1 — the bisection reaches P3's true eigenvalue) |
+| 8 | **Conductance and SCC spectral certificates** — per connected undirected component, a dyadic lower bound λ₂ ≥ a/2^b from fixed-order rational inertia bisection on L − qD, reported only as its Cheeger consequence φ(C) ≥ a/2^{b+1}; per nontrivial directed SCC, exact Collatz–Wielandt rational bounds on adjacency ρ | conductance supplies the one negative fact no other survivor establishes: no cut exists below its bound. SCC ρ supplies the recirculation growth rate across closed-walk lengths: ρ=1 is a thin simple cycle; larger ρ is braided/dense recirculation. Both are exact bounded certificates, not floating eigensolver headlines and not quality verdicts | have (`seval deps` conductance and spectral certificates) |
 | 9 | **Boundary-endpoint dispersion** — per directory and relation: fraction of member files that are cross-boundary endpoints (in and out separately), plus the minimum endpoint set covering 90% of crossing edges, with witness list | interface concentration Q cannot see: identical Q and crossing mass for a module routing everything through two façade symbols vs one exposing every internal file; the structural form of G2 interface sharpness. Goodhart: a god façade — read its interface information beside it | have (`seval deps` layout profile) |
 | 10 | **Boundary direction inconsistency** — per unordered directory pair, D = Σ min(e_ab, e_ba) / Σ (e_ab + e_ba) with per-pair rows and edge witnesses, per relation | quotient-level two-way coupling on an acyclic file graph: two directories depending on each other through disjoint files fire no SCC, no FAS, no F↔; this is Parnas one-way-ness at the partition level. Legitimate exception: bidirectional peer protocols — a coordinate, never a target | have (`seval deps` layout profile) |
 | 11 | **Static–historical support cross-tab** — cross co-change mass binned by static relation of the pair (direct / transitive-only / unrelated), over total cross mass; and conversely, fraction of cross-directory static edges with any co-change support. Fixed-point mass, same pinned universe both sides | the question neither Q answers: are the pairs that change together the pairs the declared architecture connects? Two repos with identical Q×Q coordinates can have opposite support tables. **Precondition it repairs: the 2-D Q read is invalid until both graphs share one pinned node universe** (static Q sees parser-supported walk files, co-change sees all source-classified tracked blobs; the instrument intersects them and reports all four join counts) | have (`seval cochange-support`) |
@@ -242,6 +244,19 @@ rational elimination. Null models, when needed offline: degree-preserving config
 rewiring (Maslov–Sneppen), never Erdős–Rényi — beating a homogeneous random
 graph is flattery, not evidence. Exact rational forms exist for both Q's
 (signed integer numerator over 4m²; fixed-point weights for co-change).
+
+Rows 6--8 remain distinct instruments rather than a score. The directed
+cross-read is the **loop-spectrum triangle**: exact trophic $F_0$
+(linear-algebraic layering), exact files-in-cycle counts over their analyzed-file
+denominator (combinatorial membership), and exact SCC bounds on $\rho$
+(closed-walk recirculation growth). Johnson and Jones (2017,
+10.1073/pnas.1613786114) show coherence controls leading eigenvalues; these
+three instruments put the corresponding vertices on the same resolved graph.
+$\rho=1$ identifies thin cycles--a single simple cycle is exactly 1--while
+larger $\rho$ identifies braided or dense recirculation. Display $\ln(\rho)$
+would be the closed-walk entropy rate, but only the rational bounds are
+authoritative. None is a quality verdict: pipelines may legitimately be
+$\rho$-less and event meshes legitimately $\rho$-heavy.
 
 ### Second adversarial round (2026-08-15, Sol xhigh via codexpool + Gemini)
 
@@ -459,7 +474,7 @@ limitation. All deps-derived numbers below and in the read-out above were
 recomputed post-fix; every B1 demotion stands (files-in-cycle moved
 −0.42 → −0.63 raw and stays a size casualty at −0.28 partialed).
 
-**The Johnson cross-read — rows 6/7/8 confirmed as one family.** Over the
+**The Johnson cross-read — the loop-spectrum triangle.** Over the
 24 corpus repos with fully computed F₀ (three size_limit, three
 trivial/no-edge):
 
@@ -478,10 +493,12 @@ trivial/no-edge):
 - F₀ vs class: rb = −0.622 collapsing to −0.23 under SLOC — F₀ is *not*
   a health verdict on this corpus, and per doctrine never claimed to be.
 
-The family reading: F₀, cycle mass, and the spectral certificate
+The family reading: F₀, files-in-cycle, and SCC spectral radius $\rho$
 triangulate one latent property — how far the file graph is from a layered
-feed-forward architecture — from three independent formalisms that agree
-on real code. Extremes on the corpus: five repos are exactly F₀ = 0/1
+feed-forward architecture — from three independent formalisms. The prior
+conductance cross-read remains historical evidence about cohesion, not the
+triangle's spectral vertex; the exact SCC $\rho$ certificate now measures that
+vertex directly on the same graph. Extremes on the corpus: five repos are exactly F₀ = 0/1
 (perfectly layered; four abandoned small utilities plus url), stdweb is
 F₀ = 0.822 with 68.5% of files in cycles.
 

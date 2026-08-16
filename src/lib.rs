@@ -22,6 +22,7 @@ pub mod shape;
 
 pub mod service;
 pub mod source;
+pub mod spectral;
 pub mod symbols;
 pub mod tests_analysis;
 pub mod trophic;

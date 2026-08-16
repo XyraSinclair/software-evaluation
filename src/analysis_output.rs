@@ -203,8 +203,41 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
             .map_or_else(|| "overflow".to_owned(), |value| value.to_string()),
         propagation.reachability_work_limit,
     );
+    let largest_spectral = report
+        .spectral_certificates
+        .iter()
+        .filter(|certificate| certificate.component_files.len() >= 2)
+        .max_by(|left, right| {
+            left.component_files
+                .len()
+                .cmp(&right.component_files.len())
+                .then_with(|| right.component_files.cmp(&left.component_files))
+        });
+    let largest_spectral_exact = largest_spectral
+        .and_then(|certificate| {
+            certificate
+                .lower_bound_numerator
+                .as_ref()
+                .zip(certificate.lower_bound_denominator.as_ref())
+                .zip(certificate.upper_bound_numerator.as_ref())
+                .zip(certificate.upper_bound_denominator.as_ref())
+        })
+        .map_or_else(
+            || "n/a".to_owned(),
+            |(((lower_numerator, lower_denominator), upper_numerator), upper_denominator)| {
+                format!(
+                    "[{lower_numerator}/{lower_denominator}, {upper_numerator}/{upper_denominator}]"
+                )
+            },
+        );
+    let largest_spectral_display = largest_spectral
+        .and_then(|certificate| certificate.lower_bound.zip(certificate.upper_bound))
+        .map_or_else(
+            || "n/a".to_owned(),
+            |(lower, upper)| format!("[{lower:.6}, {upper:.6}]"),
+        );
     println!(
-        "internal cycles: {} cyclic components, files-in-cycle fraction={}/{} (display={}), largest={} source files",
+        "internal cycles: {} cyclic components, files-in-cycle fraction={}/{} (display={}), largest={} source files; largest-SCC rho={} (display={})",
         propagation.cyclic_components,
         if propagation.source_files == 0 {
             "n/a".to_owned()
@@ -224,6 +257,8 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
         } else {
             propagation.largest_cyclic_component_files.to_string()
         },
+        largest_spectral_exact,
+        largest_spectral_display,
     );
     println!(
         "mutual reachability: {}/{} ordered same-component pairs (fraction={})",
@@ -319,6 +354,61 @@ pub fn print_dependencies(report: &DependencyReport, top: usize) {
             component.largest_scc_files,
         );
         println!("    files: {}", component.component_files.join(", "));
+    }
+    println!(
+        "spectral-radius certificates: {} SCCs; target-width=1/2^{}; max-iterations={}; node-limit={} (exact bounds authoritative; f64 display-only)",
+        report.spectral_certificates.len(),
+        report.spectral_certificate_width_denominator_power,
+        report.spectral_certificate_max_iterations,
+        report.spectral_certificate_node_limit,
+    );
+    for (index, certificate) in report.spectral_certificates.iter().enumerate() {
+        let status = match certificate.status {
+            software_evaluation::spectral::SpectralCertificateStatus::Certified => "certified",
+            software_evaluation::spectral::SpectralCertificateStatus::SizeLimit => "size_limit",
+            software_evaluation::spectral::SpectralCertificateStatus::TrivialSmall => {
+                "trivial_small"
+            }
+        };
+        let exact = certificate
+            .lower_bound_numerator
+            .as_ref()
+            .zip(certificate.lower_bound_denominator.as_ref())
+            .zip(certificate.upper_bound_numerator.as_ref())
+            .zip(certificate.upper_bound_denominator.as_ref())
+            .map_or_else(
+                || "n/a".to_owned(),
+                |(((lower_numerator, lower_denominator), upper_numerator), upper_denominator)| {
+                    format!(
+                        "[{lower_numerator}/{lower_denominator}, {upper_numerator}/{upper_denominator}]"
+                    )
+                },
+            );
+        let display = certificate
+            .lower_bound
+            .zip(certificate.upper_bound)
+            .map_or_else(
+                || "n/a".to_owned(),
+                |(lower, upper)| format!("[{lower:.6}, {upper:.6}]"),
+            );
+        println!(
+            "  SCC {}: status={status}; files={}/{} (fraction={:.3}); directed-edges={}; rho={exact} (display={display}); iterations={}; bound-width={}; final-exact-check={}",
+            index + 1,
+            certificate.component_file_numerator,
+            certificate.analyzed_file_denominator,
+            certificate.component_file_fraction,
+            certificate.internal_edges,
+            certificate.iterations_used,
+            certificate
+                .bound_width
+                .map_or_else(|| "n/a".to_owned(), |value| format!("{value:.6}")),
+            if certificate.bounds_verified {
+                "verified"
+            } else {
+                "n/a"
+            },
+        );
+        println!("    files: {}", certificate.component_files.join(", "));
     }
     if let Some(depth) = &report.condensation_depth {
         println!(

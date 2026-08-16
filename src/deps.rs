@@ -13,6 +13,10 @@ use crate::conductance::{
     conductance_certificates,
 };
 use crate::source::{SourceError, SourceFile, SourceLanguage, load_source_tree, parse_source};
+use crate::spectral::{
+    SPECTRAL_MAX_ITERATIONS, SPECTRAL_NODE_LIMIT, SPECTRAL_WIDTH_DENOMINATOR_POWER,
+    SpectralCertificate, spectral_certificates,
+};
 use crate::trophic::{TROPHIC_NODE_LIMIT, TrophicIncoherenceReport, trophic_incoherence};
 
 #[derive(Debug, Error)]
@@ -59,6 +63,12 @@ pub struct DependencyReport {
     /// Exact improved trophic incoherence over weak components of the directed
     /// internal file graph: a layering coordinate, not a design verdict.
     pub trophic_incoherence: TrophicIncoherenceReport,
+    pub spectral_certificate_node_limit: usize,
+    pub spectral_certificate_max_iterations: usize,
+    pub spectral_certificate_width_denominator_power: u32,
+    /// Per-SCC exact bounds on the adjacency spectral radius: recirculation
+    /// growth rate, not a design verdict.
+    pub spectral_certificates: Vec<SpectralCertificate>,
     pub layout: DependencyLayout,
     pub conductance_certificate_node_limit: usize,
     pub conductance_certificate_denominator_power: u32,
@@ -566,6 +576,15 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         TROPHIC_NODE_LIMIT,
     )
     .map_err(DependencyError::Invariant)?;
+    let spectral_certificates = spectral_certificates(
+        &known,
+        &directed_internal_edges,
+        &sccs,
+        SPECTRAL_NODE_LIMIT,
+        SPECTRAL_MAX_ITERATIONS,
+        SPECTRAL_WIDTH_DENOMINATOR_POWER,
+    )
+    .map_err(DependencyError::Invariant)?;
     let undirected_internal_edges = internal_undirected_edges(&edges);
     let layout = dependency_layout(&known, &edges, &undirected_internal_edges);
     let conductance_certificates = conductance_certificates(
@@ -659,6 +678,10 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         condensation_depth: depth_profile,
         propagation,
         trophic_incoherence,
+        spectral_certificate_node_limit: SPECTRAL_NODE_LIMIT,
+        spectral_certificate_max_iterations: SPECTRAL_MAX_ITERATIONS,
+        spectral_certificate_width_denominator_power: SPECTRAL_WIDTH_DENOMINATOR_POWER,
+        spectral_certificates,
         layout,
         conductance_certificate_node_limit: CONDUCTANCE_NODE_LIMIT,
         conductance_certificate_denominator_power: CONDUCTANCE_DENOMINATOR_POWER,
