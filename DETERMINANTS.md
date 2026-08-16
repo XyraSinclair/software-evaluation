@@ -621,6 +621,52 @@ verified, class associations (B3) nominate the duplication/comprehension
 family under size control. Everything remains association or
 history-internal movement — never cause, never a verdict.
 
+## The effect–coeffect duality — a frame for the whole instrument set
+
+Read 2026-08-15 evening from Shi, Zhang & Cui, *A Programming Paradigm for
+Spatiotemporal Composability* (2026, github.com/cordiverse/paper), against
+the graded-coeffect line (Petricek, Orchard & Mycroft ICALP 2013 /
+ICFP 2014; Gaboardi et al. ICFP 2016; Brachthäuser et al.'s Effekt
+capabilities; Krishnaswami's capabilities↔separation-logic bridge, TYPES
+list). The duality: **effects** describe how code *modifies* its
+environment; **coeffects** describe what code *requires from* it. The
+paper lifts both to runtime mechanisms (revertible effects, reactive
+coeffects) for dynamic composition; statically, the same duality
+organizes our instrument set:
+
+- **Effects side — `discipline`.** Pure-fraction, unwrap/panic surfaces:
+  how much of the code modifies or aborts its world, function by
+  function, with denominators.
+- **Coeffects side — import grading** (instrument landing on branch
+  `coeffect-grading`). A file's import surface is a *statically declared
+  graded coeffect* over the canonical semiring {0, 1, n, ∞}: unused
+  import, single symbol, enumerated set, glob. `use foo::*` is precisely
+  the ∞-grade — ambient authority, dependence that cannot be reviewed at
+  the declaration site. Per-edge grades separate plug edges (grade ≤ 2,
+  swap-friendly) from interface entanglement, and the glob-bearing edge
+  fraction is a capability-discipline coordinate in the §6.3 sense of the
+  paper: narrow declarations are reviewable capability requests.
+- **Spatial composability — the graph arm.** The paper's §6.5 proves the
+  useful folk theorem: every mutual dependency decomposes in principle
+  into unidirectional cores plus integration components — so row 1's
+  worst-WCC F↔ counts exactly the *unfactored* bidirectional couplings,
+  and the decomposition's quadratic component-count cost is why they
+  persist. Reactive-coeffect cycle detection (their runtime reporting of
+  dependency cycles) is our rows 6–8 read at load time instead of HEAD.
+- **Temporal composability — the removability reading.** A component is
+  removable when its effects can be reverted and its dependents
+  re-resolved. The static shadow: per-file transitive in-cone (already in
+  `deps` propagation) is the blast radius of removal, and the co-change
+  arm (rows 11–12) measures the interface-drift shadow — files that must
+  move together when contracts shift (their §6.6 interface drift, seen
+  from history).
+
+What this frame adds beyond taxonomy: it says the discipline and grading
+instruments are *duals* and should be read as a pair (a file may be pure
+but ∞-graded, or effectful but plug-coupled — four quadrants, each an
+honest architecture), and it grounds two coordinates (F↔, glob fraction)
+in composability theory rather than style preference.
+
 ## PL-theoretic determinants — the type-space arm
 
 Seat consult 2026-08-15 (Claude Opus, repo-grounded; full text was distilled
