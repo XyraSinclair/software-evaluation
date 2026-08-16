@@ -470,10 +470,57 @@ on real code. Extremes on the corpus: five repos are exactly F₀ = 0/1
 (perfectly layered; four abandoned small utilities plus url), stdweb is
 F₀ = 0.822 with 68.5% of files in cycles.
 
-B4 — **the standing gate, unchanged:** refactor-delta mining. Do coordinates
-move the predicted direction across accepted refactorings (MacCormack's
-Mozilla observation, systematized)? Until then, nothing here claims validity —
-exactness, closure, disclosed limitations, and now stated priors.
+B4 — **the standing gate:** refactor-delta mining. Do coordinates move the
+predicted direction across accepted refactorings (MacCormack's Mozilla
+observation, systematized)? First execution below closed the responsiveness
+half; the directional half remains the gate on any validity claim.
+
+### B4 first execution — responsiveness closed, direction open (2026-08-15)
+
+Protocol: from the corpus histories, up to five refactor-intent commits per
+repo (subject matching refactor/restructure/reorganize/modularize/decouple/
+extract, touching ≥5 .rs files, largest touch first), each paired with a
+churn-matched control commit (nearest .rs-touch count, subject not matching).
+67 pairs across 18 repos; every commit measured against its parent with
+`seval deps` in detached worktrees; deltas per coordinate. Runner and raw
+measurements: `~/projects/scratch/seval-corpus-2026-08-15/b4/`. Two runs
+produced byte-identical F₀/FIC deltas — determinism held on ~540 historical
+measurements.
+
+**Responsiveness — the half of the gate that closed.** Refactor-intent
+commits move the coordinates; matched ordinary churn does not:
+
+| coordinate | refactor moved | control moved | Fisher one-sided p |
+|---|---|---|---|
+| trophic F₀ | 32/60 | 13/55 | 0.0010 |
+| parent-directory Q | 31/67 | 17/67 | 0.0094 |
+| internal edges | 32/67 | 18/67 | 0.0099 |
+| files-in-cycle | 29/67 | 19/67 | 0.0522 |
+| depth p90 | 3/67 | 1/67 | 0.31 |
+
+The instruments detect deliberate structural change and stay quiet under
+same-sized ordinary churn — sensitivity and specificity at once. Depth p90
+is the exception for a stated reason: an integer percentile over the
+condensation barely moves per commit; it is a repo-scale coordinate, not a
+commit-scale one.
+
+**Direction — the half that stays open.** Among refactor movers, F₀ went
+down 18 / up 14 (sign p = 0.60) and files-in-cycle down 13 / up 16:
+keyword-mined refactorings reshape structure without uniformly layering it.
+Two directional leans worth recording: parent-directory Q rose in 20 of 31
+moving refactors (sign p = 0.15, suggestive — restructuring tends to align
+layout with structure), and internal edges rose in 24 of 32 (p = 0.007,
+read as a split artifact: extracting modules multiplies explicit imports,
+not a health direction). MacCormack's Mozilla observation was a *deliberate
+modularization*; the generic "refactor" keyword mixes extractions, renames,
+API reshuffles, and cleanups with opposing predicted signs.
+
+Limitations, stated: commit subjects are a weak intent proxy; pairs cluster
+within 18 repos (not independent); candidates and controls come from each
+repo's most recent 200/400 non-merge commits; n = 67. What the directional
+gate now requires is intent-classed subsets — decouple/break-cycle commits
+predicting F₀ and cycle mass down, extract-module commits predicting Q up —
+each class carrying its own sign before measurement.
 
 ## PL-theoretic determinants — the type-space arm
 
