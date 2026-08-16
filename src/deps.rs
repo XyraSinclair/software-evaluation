@@ -54,6 +54,10 @@ pub struct DependencyReport {
     pub internal_edges: usize,
     pub external_edges: usize,
     pub unresolved_edges: usize,
+    /// Coeffect grading of declared dependency width. Exact integer counts and
+    /// denominators are authoritative; f64 fractions are display-only. This
+    /// measures reviewability of declarations, not runtime symbol use.
+    pub import_grading: ImportGrading,
     pub strongly_connected_components: Vec<Vec<String>>,
     pub cycles: Vec<Vec<String>>,
     pub weak_components: Vec<Vec<String>>,
@@ -368,6 +372,13 @@ pub struct DependencyEdge {
     pub source: String,
     pub target: String,
     pub classification: DependencyClassification,
+    /// Sum of declared leaf symbols across this edge's evidence. Module-object
+    /// declarations contribute zero leaves and remain distinguished in the
+    /// evidence. Exact integer; meaningful beside `edge_has_glob`.
+    pub edge_grade: u64,
+    /// True when any evidence declaration grants wildcard access. A glob makes
+    /// the finite `edge_grade` incomplete rather than infinite in JSON.
+    pub edge_has_glob: bool,
     pub evidence: Vec<DependencyEvidence>,
 }
 
@@ -386,6 +397,65 @@ pub struct DependencyEvidence {
     pub raw_specifier: String,
     pub kind: String,
     pub resolved_target: Option<String>,
+    /// Exact count of named leaf symbols declared at this dependency site.
+    pub leaf_symbol_count: u32,
+    /// Wildcard declaration: statically unbounded context dependence.
+    pub glob: bool,
+    /// Namespace/module-object declaration whose surface is bounded by the
+    /// module but not enumerated at the declaration site.
+    pub module_object: bool,
+}
+
+/// Repository import-surface coeffect profile. The epistemic class is declared
+/// context-dependence width: it measures static reviewability, not runtime use.
+#[derive(Debug, Clone, Serialize)]
+pub struct ImportGrading {
+    pub epistemic_class: String,
+    pub languages: BTreeMap<String, LanguageImportGrading>,
+    pub internal_edges: InternalEdgeImportGrading,
+    pub external_edges: ExternalEdgeImportGrading,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LanguageImportGrading {
+    pub epistemic_class: String,
+    /// Exact denominator for both fractions in this row.
+    pub use_declarations: usize,
+    pub glob_imports: usize,
+    pub glob_import_denominator: usize,
+    pub glob_import_fraction: Option<f64>,
+    pub module_object_imports: usize,
+    pub module_object_import_denominator: usize,
+    pub module_object_import_fraction: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct InternalEdgeImportGrading {
+    pub epistemic_class: String,
+    /// Exact denominator for glob-bearing edges.
+    pub internal_edges: usize,
+    pub glob_bearing_edges: usize,
+    pub glob_bearing_edge_denominator: usize,
+    pub glob_bearing_edge_fraction: Option<f64>,
+    /// Exact denominator for grade percentiles and plug edges.
+    pub non_glob_internal_edges: usize,
+    pub edge_grade_p50: Option<u64>,
+    pub edge_grade_p90: Option<u64>,
+    pub edge_grade_max: Option<u64>,
+    pub edge_grade_distribution_denominator: usize,
+    pub plug_edges: usize,
+    pub plug_edge_denominator: usize,
+    pub plug_edge_fraction: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ExternalEdgeImportGrading {
+    pub epistemic_class: String,
+    /// Exact denominator for the ambient-authority fraction.
+    pub external_edges: usize,
+    pub glob_bearing_edges: usize,
+    pub glob_bearing_edge_denominator: usize,
+    pub glob_bearing_edge_fraction: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -415,6 +485,9 @@ struct Declaration {
     specifier: String,
     kind: &'static str,
     hint: ResolutionHint,
+    leaf_symbol_count: u32,
+    glob: bool,
+    module_object: bool,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ResolutionHint {
@@ -470,6 +543,9 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
                 raw_specifier: declaration.specifier.clone(),
                 kind: declaration.kind.to_owned(),
                 resolved_target: (class == DependencyClassification::Internal).then_some(target),
+                leaf_symbol_count: declaration.leaf_symbol_count,
+                glob: declaration.glob,
+                module_object: declaration.module_object,
             });
     }
     let edges: Vec<_> = grouped
@@ -477,10 +553,17 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         .map(|((source, target, classification), mut evidence)| {
             evidence.sort();
             evidence.dedup();
+            let edge_grade = evidence
+                .iter()
+                .map(|item| u64::from(item.leaf_symbol_count))
+                .sum();
+            let edge_has_glob = evidence.iter().any(|item| item.glob);
             DependencyEdge {
                 source,
                 target,
                 classification,
+                edge_grade,
+                edge_has_glob,
                 evidence,
             }
         })
@@ -607,6 +690,7 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         .filter(|e| e.classification == DependencyClassification::External)
         .count();
     let unresolved_edges = edges.len() - internal_edges - external_edges;
+    let import_grading = import_grading(&source_tree.files, &declarations, &edges);
     let evidence_count = edges.iter().map(|e| e.evidence.len()).sum();
     let (manifest_dependencies, manifest_count, unreadable_manifests) =
         inventory_manifests(input)?;
@@ -673,6 +757,7 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         manifest_source_kind_counts,
         manifest_dependencies,
         node_count: nodes.len(), edge_count: edges.len(), internal_edges, external_edges, unresolved_edges,
+        import_grading,
         nodes, edges, strongly_connected_components: sccs, cycles, weak_components,
         condensation_maximum_depth: depth_profile.as_ref().map(|profile| profile.depth_in_max),
         condensation_depth: depth_profile,
@@ -699,11 +784,138 @@ fn base_limitations() -> Vec<String> {
             "JavaScript and TypeScript resolve only relative paths using an explicit deterministic suffix/index search; bare specifiers are external.".to_owned(),
             "Compilation targets are not scoped: examples, tests, and benches share one file namespace with src, so a bare crate-name use next to a same-named file can resolve to a phantom sibling edge; only the self-edge case is suppressed.".to_owned(),
             "Go imports are external/unresolved without go.mod module-path knowledge; standard-library and third-party imports are not distinguished.".to_owned(),
+            "Import grades measure declared context-dependence width, not runtime symbol use. A glob may be used narrowly, and wildcard re-export/prelude idioms are legitimate; they remain flagged because their static authority is ambient and unenumerated.".to_owned(),
             "Fan-in, fan-out, components, cycles, and depth are structural proxies and carry no quality verdict or weighting.".to_owned(),
             "Propagation is measured on the file-level internal dependency graph and depends on resolver completeness; exact transitive reachability is omitted above either the 10,000 analyzed-source-file node bound or the 100,000,000 edge-visit work upper bound while direct internal degrees and cycle measures remain available.".to_owned(),
             format!("Improved trophic incoherence is exact for weakly connected components of the directed internal file graph through the {TROPHIC_NODE_LIMIT}-file component bound; larger edge-bearing components are reported with size_limit and make the repository mean unavailable rather than approximated. It measures layered feed-forward structure versus recirculation, not design quality."),
             format!("Conductance certificates are exact for connected components of at least three files through the {CONDUCTANCE_NODE_LIMIT}-file component bound; larger components are reported with size_limit rather than approximated. They provide negative evidence that no sparse cut exists, not a design-quality verdict."),
     ]
+}
+
+fn import_grading(
+    files: &[SourceFile],
+    declarations: &[(&SourceFile, Declaration)],
+    edges: &[DependencyEdge],
+) -> ImportGrading {
+    let epistemic_class = "declared_context_dependence_width";
+    let mut language_counts: BTreeMap<String, (usize, usize, usize)> = BTreeMap::new();
+    for file in files {
+        language_counts
+            .entry(file.language.name().to_owned())
+            .or_default();
+    }
+    for (file, declaration) in declarations {
+        if !is_use_declaration_kind(declaration.kind) {
+            continue;
+        }
+        let counts = language_counts
+            .entry(file.language.name().to_owned())
+            .or_default();
+        counts.0 += 1;
+        counts.1 += usize::from(declaration.glob);
+        counts.2 += usize::from(declaration.module_object);
+    }
+    let languages = language_counts
+        .into_iter()
+        .map(|(language, (use_declarations, glob_imports, module_object_imports))| {
+            (
+                language,
+                LanguageImportGrading {
+                    epistemic_class: epistemic_class.to_owned(),
+                    use_declarations,
+                    glob_imports,
+                    glob_import_denominator: use_declarations,
+                    glob_import_fraction: exact_fraction(glob_imports, use_declarations),
+                    module_object_imports,
+                    module_object_import_denominator: use_declarations,
+                    module_object_import_fraction: exact_fraction(
+                        module_object_imports,
+                        use_declarations,
+                    ),
+                },
+            )
+        })
+        .collect();
+
+    let internal: Vec<_> = edges
+        .iter()
+        .filter(|edge| edge.classification == DependencyClassification::Internal)
+        .collect();
+    let external: Vec<_> = edges
+        .iter()
+        .filter(|edge| edge.classification == DependencyClassification::External)
+        .collect();
+    let glob_bearing_internal_edges = internal.iter().filter(|edge| edge.edge_has_glob).count();
+    let mut non_glob_grades: Vec<u64> = internal
+        .iter()
+        .filter(|edge| !edge.edge_has_glob)
+        .map(|edge| edge.edge_grade)
+        .collect();
+    non_glob_grades.sort_unstable();
+    let plug_edges = non_glob_grades
+        .iter()
+        .filter(|grade| **grade <= 2)
+        .count();
+    let non_glob_internal_edges = non_glob_grades.len();
+    let glob_bearing_external_edges = external.iter().filter(|edge| edge.edge_has_glob).count();
+
+    ImportGrading {
+        epistemic_class: epistemic_class.to_owned(),
+        languages,
+        internal_edges: InternalEdgeImportGrading {
+            epistemic_class: epistemic_class.to_owned(),
+            internal_edges: internal.len(),
+            glob_bearing_edges: glob_bearing_internal_edges,
+            glob_bearing_edge_denominator: internal.len(),
+            glob_bearing_edge_fraction: exact_fraction(
+                glob_bearing_internal_edges,
+                internal.len(),
+            ),
+            non_glob_internal_edges,
+            edge_grade_p50: nearest_rank_u64(&non_glob_grades, 50),
+            edge_grade_p90: nearest_rank_u64(&non_glob_grades, 90),
+            edge_grade_max: non_glob_grades.last().copied(),
+            edge_grade_distribution_denominator: non_glob_internal_edges,
+            plug_edges,
+            plug_edge_denominator: non_glob_internal_edges,
+            plug_edge_fraction: exact_fraction(plug_edges, non_glob_internal_edges),
+        },
+        external_edges: ExternalEdgeImportGrading {
+            epistemic_class: epistemic_class.to_owned(),
+            external_edges: external.len(),
+            glob_bearing_edges: glob_bearing_external_edges,
+            glob_bearing_edge_denominator: external.len(),
+            glob_bearing_edge_fraction: exact_fraction(
+                glob_bearing_external_edges,
+                external.len(),
+            ),
+        },
+    }
+}
+
+fn is_use_declaration_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "rust-use"
+            | "rust-extern-crate"
+            | "python-import"
+            | "python-from"
+            | "js-import"
+            | "js-export-from"
+            | "go-import"
+    )
+}
+
+fn exact_fraction(numerator: usize, denominator: usize) -> Option<f64> {
+    (denominator != 0).then(|| numerator as f64 / denominator as f64)
+}
+
+fn nearest_rank_u64(sorted: &[u64], percentile: usize) -> Option<u64> {
+    if sorted.is_empty() {
+        return None;
+    }
+    let rank = sorted.len().saturating_mul(percentile).div_ceil(100);
+    sorted.get(rank.saturating_sub(1)).copied()
 }
 
 fn transitive_internal_degrees(adjacency: &[Vec<usize>]) -> ReachabilityComputation {
@@ -1597,6 +1809,9 @@ fn extract_rust(node: Node<'_>, file: &SourceFile, out: &mut Vec<Declaration>) {
                     specifier: text(name, file).to_owned(),
                     kind: "rust-mod",
                     hint: ResolutionHint::RustModule,
+                    leaf_symbol_count: 0,
+                    glob: false,
+                    module_object: false,
                 });
             }
         }
@@ -1617,11 +1832,18 @@ fn extract_rust(node: Node<'_>, file: &SourceFile, out: &mut Vec<Declaration>) {
                 .unwrap_or(raw)
                 .trim();
             if !root.is_empty() {
+                let (leaf_symbol_count, glob) = node
+                    .child_by_field_name("argument")
+                    .map(rust_use_grade)
+                    .unwrap_or((0, false));
                 out.push(Declaration {
                     line: line(node),
                     specifier: root.to_owned(),
                     kind: "rust-use",
                     hint: ResolutionHint::RustUse,
+                    leaf_symbol_count,
+                    glob,
+                    module_object: false,
                 });
             }
         }
@@ -1641,6 +1863,9 @@ fn extract_rust(node: Node<'_>, file: &SourceFile, out: &mut Vec<Declaration>) {
                     specifier: raw.to_owned(),
                     kind: "rust-extern-crate",
                     hint: ResolutionHint::Package,
+                    leaf_symbol_count: 0,
+                    glob: false,
+                    module_object: true,
                 });
             }
         }
@@ -1648,33 +1873,83 @@ fn extract_rust(node: Node<'_>, file: &SourceFile, out: &mut Vec<Declaration>) {
     }
 }
 
+fn rust_use_grade(node: Node<'_>) -> (u32, bool) {
+    match node.kind() {
+        "use_wildcard" => (0, true),
+        "scoped_use_list" => node
+            .child_by_field_name("list")
+            .map(rust_use_grade)
+            .unwrap_or((0, false)),
+        "use_list" => {
+            let mut leaf_symbol_count = 0_u32;
+            let mut glob = false;
+            let mut cursor = node.walk();
+            for child in node.named_children(&mut cursor) {
+                let (child_leaves, child_glob) = rust_use_grade(child);
+                leaf_symbol_count = leaf_symbol_count.saturating_add(child_leaves);
+                glob |= child_glob;
+            }
+            (leaf_symbol_count, glob)
+        }
+        "use_as_clause" => (1, false),
+        "identifier" | "scoped_identifier" | "crate" | "self" | "super" | "metavariable" => {
+            (1, false)
+        }
+        _ => (0, false),
+    }
+}
+
 fn extract_python(node: Node<'_>, file: &SourceFile, out: &mut Vec<Declaration>) {
     match node.kind() {
         "import_statement" => {
-            let raw = text(node, file)
-                .trim()
-                .strip_prefix("import ")
-                .unwrap_or("");
-            for item in raw.split(',') {
-                let s = item.split_whitespace().next().unwrap_or("");
-                if !s.is_empty() {
+            let mut cursor = node.walk();
+            for item in node.named_children(&mut cursor) {
+                if matches!(item.kind(), "dotted_name" | "aliased_import") {
+                    let name = if item.kind() == "aliased_import" {
+                        item.child_by_field_name("name").unwrap_or(item)
+                    } else {
+                        item
+                    };
+                    let specifier = text(name, file).trim();
+                    if specifier.is_empty() {
+                        continue;
+                    }
                     out.push(Declaration {
                         line: line(node),
-                        specifier: s.to_owned(),
+                        specifier: specifier.to_owned(),
                         kind: "python-import",
                         hint: ResolutionHint::Package,
+                        leaf_symbol_count: 0,
+                        glob: false,
+                        module_object: true,
                     });
                 }
             }
         }
         "import_from_statement" => {
-            let raw = text(node, file).trim().strip_prefix("from ").unwrap_or("");
-            if let Some((module, _)) = raw.split_once(" import ") {
+            if let Some(module) = node.child_by_field_name("module_name") {
+                let mut leaf_symbol_count = 0_u32;
+                let mut glob = false;
+                let mut cursor = node.walk();
+                for child in node.named_children(&mut cursor) {
+                    match child.kind() {
+                        "aliased_import" | "dotted_name" => {
+                            if child.id() != module.id() {
+                                leaf_symbol_count = leaf_symbol_count.saturating_add(1);
+                            }
+                        }
+                        "wildcard_import" => glob = true,
+                        _ => {}
+                    }
+                }
                 out.push(Declaration {
                     line: line(node),
-                    specifier: module.trim().to_owned(),
+                    specifier: text(module, file).trim().to_owned(),
                     kind: "python-from",
                     hint: ResolutionHint::Package,
+                    leaf_symbol_count,
+                    glob,
+                    module_object: false,
                 });
             }
         }
@@ -1686,6 +1961,7 @@ fn extract_js(node: Node<'_>, file: &SourceFile, out: &mut Vec<Declaration>) {
     match node.kind() {
         "import_statement" | "export_statement" => {
             if let Some(source) = node.child_by_field_name("source") {
+                let (leaf_symbol_count, glob, module_object) = js_import_grade(node);
                 out.push(Declaration {
                     line: line(node),
                     specifier: unquote(text(source, file)),
@@ -1695,6 +1971,9 @@ fn extract_js(node: Node<'_>, file: &SourceFile, out: &mut Vec<Declaration>) {
                         "js-export-from"
                     },
                     hint: ResolutionHint::Path,
+                    leaf_symbol_count,
+                    glob,
+                    module_object,
                 });
             }
         }
@@ -1722,11 +2001,69 @@ fn extract_js(node: Node<'_>, file: &SourceFile, out: &mut Vec<Declaration>) {
                         "js-dynamic-import"
                     },
                     hint: ResolutionHint::Path,
+                    leaf_symbol_count: 0,
+                    glob: false,
+                    module_object: true,
                 });
             }
         }
         _ => {}
     }
+}
+
+fn js_import_grade(node: Node<'_>) -> (u32, bool, bool) {
+    let mut leaf_symbol_count = 0_u32;
+    let mut glob = false;
+    let mut module_object = false;
+    let mut cursor = node.walk();
+    for child in node.named_children(&mut cursor) {
+        match child.kind() {
+            "import_clause" => {
+                let mut clause_cursor = child.walk();
+                for clause_child in child.named_children(&mut clause_cursor) {
+                    match clause_child.kind() {
+                        "identifier" => leaf_symbol_count = leaf_symbol_count.saturating_add(1),
+                        "namespace_import" => module_object = true,
+                        "named_imports" => {
+                            leaf_symbol_count = leaf_symbol_count.saturating_add(
+                                count_named_children(clause_child, "import_specifier"),
+                            );
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            "export_clause" => {
+                leaf_symbol_count = leaf_symbol_count
+                    .saturating_add(count_named_children(child, "export_specifier"));
+            }
+            "namespace_export" => module_object = true,
+            _ => {}
+        }
+    }
+    if node.kind() == "export_statement"
+        && leaf_symbol_count == 0
+        && !module_object
+        && textless_export_is_glob(node)
+    {
+        glob = true;
+    }
+    (leaf_symbol_count, glob, module_object)
+}
+
+fn count_named_children(node: Node<'_>, kind: &str) -> u32 {
+    let mut cursor = node.walk();
+    node.named_children(&mut cursor)
+        .filter(|child| child.kind() == kind)
+        .count()
+        .try_into()
+        .unwrap_or(u32::MAX)
+}
+
+fn textless_export_is_glob(node: Node<'_>) -> bool {
+    let mut cursor = node.walk();
+    node.children(&mut cursor)
+        .any(|child| !child.is_named() && child.kind() == "*")
 }
 
 fn extract_go(node: Node<'_>, file: &SourceFile, out: &mut Vec<Declaration>) {
@@ -1737,6 +2074,9 @@ fn extract_go(node: Node<'_>, file: &SourceFile, out: &mut Vec<Declaration>) {
                 specifier: unquote(text(path, file)),
                 kind: "go-import",
                 hint: ResolutionHint::GoPackage,
+                leaf_symbol_count: 0,
+                glob: false,
+                module_object: true,
             });
         }
     } else if node.kind() == "import_declaration"
@@ -1747,6 +2087,9 @@ fn extract_go(node: Node<'_>, file: &SourceFile, out: &mut Vec<Declaration>) {
             specifier: unquote(text(path, file)),
             kind: "go-import",
             hint: ResolutionHint::GoPackage,
+            leaf_symbol_count: 0,
+            glob: false,
+            module_object: true,
         });
     }
 }

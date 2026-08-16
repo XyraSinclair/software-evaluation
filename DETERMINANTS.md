@@ -702,6 +702,7 @@ bridge (below).
 | T4 | **Endomorphic closure** — the API is an algebra | generative | Self-returning public methods / public methods per impl; owned-endo split from `&mut Self` builder-endo; `(T,T)→T` monoid census | setter-chain builders (separated); closure ≠ lawfulness — laws are property-testing territory, never static | none; new |
 | T5 | **Ownership-evasion density** — the compiler-*evaded* mutation half of G3 | diagnostic | `RefCell/Cell/Mutex/RwLock` mentions + borrow/lock sites, `Rc/Arc` separately, `.clone()` / call expressions | hand-rolled `unsafe` interior mutability dodges it (discipline's unsafe count rises — cross-check); concurrent servers legitimately live here | discipline counts compiler-*checked* mutation only; this is the aliased half |
 | T6 | **Newtype adoption vs primitive obsession** | generative | bare wide-primitive mentions / public signature type mentions; newtype supply; `pub`-field newtypes counted as costume | numeric/parser code where the primitive is the domain; distribution only | G5 named it *later*; distinct from T1 (leaf width, not composite shape) |
+| T7 | **Import-surface coeffect grade** — declared context-dependence width | diagnostic | per-language glob and module-object declarations / use declarations; internal non-glob edge-grade distribution; glob-bearing internal and external edges / their edge denominators; plug edges (grade ≤2) / non-glob internal edges | a glob may be used narrowly; wildcard re-export/prelude idioms are legitimate and still flagged because ambient authority remains ambient; module objects are bounded by an unseen module surface rather than enumerated leaves | adds declaration-width/reviewability to `seval deps`; graph fan-out counts targets, not the width of authority granted at each target |
 
 Implemented 2026-08-15 as `seval typespace` (T1–T6; every ratio an
 integer numerator/denominator with a closure identity, all marked proxy over
@@ -714,6 +715,21 @@ endomorphic methods 14/25 public; shared-mutable concentrated in the service
 state; wide primitives 1064/1651 public positions with zero newtype supply — the
 instrument measuring metric/report records, a legitimately primitive-heavy
 domain.
+
+Implemented 2026-08-16 as the `seval deps` **coeffect-grading instrument**.
+The PL lineage is Petricek, Orchard, and Mycroft's unified analysis of
+context-dependence (ICALP 2013, DOI 10.1007/978-3-642-39212-2_35) and calculus
+of context-dependent computation (ICFP 2014, DOI 10.1145/2628136.2628160),
+extended by Gaboardi et al.'s graded effect/coeffect account (ICFP 2016, DOI
+10.1145/2951913.2951939). Shi, Zhang, and Cui, *A Programming Paradigm for
+Spatiotemporal Composability* (2026, `cordiverse/paper`, §6.3), supply the
+runtime-declaration interpretation: narrow statically declared capability sets
+are reviewable; ambient authority defeats that review. This coordinate grades
+the import declaration stream with finite named-leaf counts, glob/∞, and a
+separate module-object class. It measures **declared** context-dependence width,
+not runtime behavior. A glob can be exercised narrowly. Wildcard re-export and
+prelude patterns are legitimate; flagging them is intentional because the
+declaration still grants ambient, statically unenumerated authority.
 
 Culled on the record: annotation-burden ratio (direction-free), totality census
 (no Rust checker; the honest partiality signal is already discipline's

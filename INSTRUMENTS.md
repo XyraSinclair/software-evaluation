@@ -101,7 +101,7 @@ explicit coverage field rather than silently passing as clean.
 | `seval functions PATH` | AST function spaces, including analyzer-recognized closures | deterministic hotspot rankings by cognitive/cyclomatic complexity, SLOC, arguments, exits, maintainability, or Halstead effort | whether a hotspot is wrong, unjustified, or worth changing |
 | `seval files PATH` | recognized source files | deterministic file-level hotspot rankings on the same dimensions | architectural boundaries, ownership, coupling, or fitness-to-intent |
 | `seval metrics-compare LEFT RIGHT` | independently analyzed sides; files match only at identical root-relative path and language | raw and normalized `right - left` deltas, function-tail shifts, and matched/left-only/right-only file partitions | an overall winner or any intrinsic good/bad direction |
-| `seval deps PATH` | import declarations in recognized source plus direct dependency rows in Cargo, npm, Python, requirements, and Go manifests | declaration evidence, conservative internal resolution, all-edge and resolved-internal fan-in/out, SCCs, cycles, components, condensation depth, bounded exact non-self transitive reachability, exact improved trophic incoherence, directory modularity, and a detected-community witness | runtime loading, feature/alias/build-condition resolution, transitive/lockfile dependencies, causal change impact, an optimal community partition, or architectural quality |
+| `seval deps PATH` | import/dependency declarations in recognized source plus direct dependency rows in Cargo, npm, Python, requirements, and Go manifests | declaration evidence, coeffect grading of declared import width, conservative internal resolution, all-edge and resolved-internal fan-in/out, SCCs, cycles, components, condensation depth, bounded exact non-self transitive reachability, exact improved trophic incoherence, directory modularity, and a detected-community witness | runtime symbol use/loading, feature/alias/build-condition resolution, transitive/lockfile dependencies, causal change impact, an optimal community partition, or architectural quality |
 | `seval duplicates PATH` | normalized AST leaf-token windows meeting explicit token/line thresholds | maximal non-overlapping structural clone groups, occurrences, and duplicated token/line mass | semantic equivalence, intent, whether duplication is justified, or absence of clones below the thresholds |
 | `seval api PATH` | externally reachable Rust declarations plus declarations representable under the other languages' documented lexical publicness rules | symbol rows, kinds, visibility basis, parameters, generics, adjacent documentation, and symbols/kSLOC | runtime reachability outside Rust's resolved module visibility, compatibility, stability, usability, or API quality |
 | `seval discipline PATH` | function spaces (functions, methods, closures/lambdas/arrows) in recognized source files, each construct attributed to its innermost space | per function: syntactic purity (no nonlocal write, no `&mut`/pointer parameter, no `unsafe`, no call into a documented per-language effect list) and its four components; mutation census (bindings, mutable bindings, reassignments, shadowings, max mutable live range); shape (params, bool params, statements, single-expression body, unit return, max call-chain length); error shape (`?`/Go err-return propagation, `unwrap`/`expect`, panic-like, broad and empty catches, ignored results); lexical type honesty (string-literal conditions, TS `any`, unannotated params, type-ignore comments); per file magic numbers, magic strings, and global mutable state; repo totals, pure fraction, and nearest-rank tails | semantic purity, effect reachability through unresolved calls, whether a mutation or catch is justified, type-level correctness; per-language uncovered fields report 0 by construction (see the module's limitations) |
@@ -270,6 +270,49 @@ unresolved references, trait-object or macro-expanded flow, or that a large
 working set is a defect — `main` legitimately reaches almost everything.
 The rust-analyzer/HIR bridge is the named investment that would lift
 resolution past this ceiling.
+
+### Import-surface coeffect grading
+
+`seval deps PATH` grades the same declaration objects passed to dependency
+resolution; it does not run an independent import parser. The extraction shape
+found here is one `Declaration` for an entire Rust `use` statement, so
+`use foo::{A, B, c::D}` remains one declaration with prefix `foo` and three
+named leaves rather than three declarations requiring re-aggregation. Python
+`import a, b` remains two resolver declarations because it names two module
+specifier targets; its denominator is therefore the resolver's exact static
+use-declaration stream, not physical source lines.
+
+The grade algebra is represented without a composite score:
+
+- each named leaf contributes one (`use foo as bar` remains one);
+- a nested Rust use tree contributes the count of its leaf names;
+- a glob is recorded separately as statically unbounded/ambient authority;
+- JavaScript namespace imports, Python bare imports, Rust `extern crate`, and
+  Go package imports are module-object declarations: bounded by the imported
+  module's surface but not enumerated at the declaration site;
+- Rust `mod`, JavaScript `require`, and dynamic `import()` remain in the
+  dependency graph/evidence stream but are not in the static use-declaration
+  denominator.
+
+Per language, the report gives glob imports / use declarations and
+module-object imports / use declarations. For each unique edge, `edge_grade` is
+the exact sum of named leaves across its evidence and `edge_has_glob` records
+whether finite addition is incomplete. Internal non-glob edges report
+nearest-rank p50/p90/max over their explicit edge denominator; plug edges are
+grade ≤2 / non-glob internal edges. Internal and external ambient-authority
+fractions are glob-bearing edges / all edges of that classification. Exact
+integers and denominators are authoritative; f64 fields are display-only. The
+epistemic class is `declared_context_dependence_width`.
+
+This coordinate measures declaration reviewability, not runtime use. A glob
+may be used narrowly. Wildcard re-export/prelude idioms are legitimate and are
+still flagged deliberately: ambient authority remains ambient even when the
+idiom is justified. The theoretical lineage is Petricek, Orchard, and Mycroft
+(ICALP 2013, DOI 10.1007/978-3-642-39212-2_35; ICFP 2014, DOI
+10.1145/2628136.2628160), Gaboardi et al. (ICFP 2016, DOI
+10.1145/2951913.2951939), and Shi, Zhang, and Cui (2026,
+*A Programming Paradigm for Spatiotemporal Composability*, `cordiverse/paper`,
+§6.3).
 
 ### Dependency propagation profile
 
