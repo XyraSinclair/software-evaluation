@@ -7,8 +7,9 @@ the exact mechanical frontier. It answers:
 > bounds, which Pareto orders remain possible, and is any one order necessary?
 
 It does not attach probabilities to missing values, learn criterion weights, or
-replace the exact `qualified_order`. The exact comparator and the identified
-set are reported together.
+replace the exact `qualified_order`. The exact comparator, mathematical
+identified set, and provenance-qualified identified conclusion are reported
+separately.
 
 ## Why identified sets
 
@@ -28,7 +29,7 @@ unidentified until a sound bound is preregistered.
 This follows the partial-identification discipline: preserve the whole set of
 values licensed by evidence instead of selecting an unjustified point. The
 necessary/possible distinction is adapted from robust ordinal regression with
-imprecise evaluations. The global order remains Pareto rather than additive.
+imprecise evaluations. The global relation remains Pareto rather than additive.
 
 ## Local attainable outcomes
 
@@ -39,7 +40,7 @@ For a lower-is-better coordinate:
 ```text
 right-better is possible  iff r₋ < l₊
 left-better is possible   iff l₋ < r₊
-equivalent is possible    iff L ∩ R is nonempty
+equivalent is possible    iff L and R overlap
 ```
 
 For a higher-is-better coordinate, the strict inequalities reverse through the
@@ -48,8 +49,12 @@ upper endpoints:
 ```text
 right-better is possible  iff r₊ > l₋
 left-better is possible   iff l₊ > r₋
-equivalent is possible    iff L ∩ R is nonempty
+equivalent is possible    iff L and R overlap
 ```
+
+The implementation applies the exact frontier's floating-point equivalence
+tolerance at strict and touching boundaries, so singleton intervals recover the
+point comparator rather than creating a second numeric semantics.
 
 These conditions are exact for the two intervals. A local coordinate can admit
 one, two, or all three outcomes.
@@ -57,7 +62,7 @@ one, two, or all three outcomes.
 ## Sharp global order set
 
 For each of the six signals, the comparator obtains its attainable local
-outcomes. It then propagates the two sufficient state bits:
+outcomes. It then propagates the only two state bits needed by Pareto order:
 
 ```text
 has any right-better coordinate?
@@ -73,16 +78,34 @@ After all six coordinates:
 | both | `tradeoff` |
 | neither | `equivalent` |
 
-The dynamic program explores at most four states, rather than enumerating
+The dynamic program explores at most four states rather than enumerating
 `3^6` assignments. Its output is the exact set of Pareto orders attainable in
 the Cartesian product of the coordinate intervals.
 
-`necessary_order` is present exactly when this set has one member. The report
-also exposes two weaker necessary relations:
+`sharp_order_set.necessary_order` is present exactly when this mathematical set
+has one member. The report also exposes two weaker necessary relations:
 
 - `right_necessarily_not_worse`: every attainable order is
   `right-dominates` or `equivalent`;
 - `left_necessarily_not_worse`: the symmetric condition.
+
+## Qualification is separate from uniqueness
+
+A unique order can be computed from two arrays of intervals even when the
+arrays came from incompatible analyzers or unpinned artifacts. That is a valid
+mathematical observation about the arrays, but not a valid software-routing
+fact.
+
+The report therefore distinguishes:
+
+- `sharp_order_set.necessary_order`: uniqueness over the declared interval box;
+- `readiness.qualified_identified_set`: whether schema, configuration,
+  analyzer receipts, canonical registries, interval coverage, and artifact
+  identities are compatible;
+- `qualified_necessary_order`: present only when both of the above hold.
+
+Configuration drift or an unstable artifact can leave the raw interval order
+mathematically unique while suppressing `qualified_necessary_order`.
 
 ## Why the product-box approximation is conservative
 
@@ -101,11 +124,10 @@ Consequences:
 
 ## Canonical contract validation
 
-Qualification now validates each public profile against the complete
-preregistered contract, not merely against the other profile. For every signal
-it checks:
+Both exact and identified comparison use one shared ordered contract. It checks:
 
-- ID and family;
+- exact signal IDs and order;
+- exact family IDs, order, and membership;
 - polarity;
 - source analyzer;
 - unit;
@@ -113,12 +135,16 @@ it checks:
 - allowed status transitions;
 - finite nonnegative numeric fields and natural `[0, 1]` domains where
   applicable;
-- positive supporting denominator for observed or bounded values;
-- consistency of the directional coverage ledger;
-- exact family membership.
+- positive supporting denominators for observed or bounded values;
+- exact directional coverage ledger;
+- exactly four analyzer receipts in canonical order;
+- complete, error-free, covered, named, validly digested analyzer receipts;
+- valid and equal analysis configuration;
+- structurally valid stable Git snapshot identities.
 
 This prevents two mutually consistent forged profiles from changing a signal's
-polarity or projection and obtaining a `qualified_order`.
+polarity or projection and obtaining either an exact or identified qualified
+order.
 
 ## Command
 
@@ -130,15 +156,16 @@ cargo run --release --bin seval-frontier -- identify \
   /tmp/project-before /tmp/project-after --format json
 ```
 
-Exit status is `0` when a necessary order exists, `1` when the identified set is
-ambiguous or incomplete, and `2` for invalid input or configuration.
+Exit status is `0` only when `qualified_necessary_order` exists, `1` when the
+identified set is ambiguous, incomplete, or unqualified, and `2` for invalid
+input or configuration.
 
 ## Non-claims
 
 The intervals describe measurement bounds already implied by the instruments.
 They do not quantify semantic error in cognitive complexity, syntactic purity,
-symbol reachability, or clone structure. A necessary order is still only a
-routing fact over six mechanical proxies.
+symbol reachability, or clone structure. A qualified necessary order is still
+only a routing fact over six mechanical proxies.
 
 No probabilistic dominance claim is made. If empirical calibration later
 supports distributions over residual uncertainty, that belongs in a separately
