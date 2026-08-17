@@ -95,6 +95,7 @@ fn exact_intervals_recover_the_qualified_pareto_order() {
         report.base.qualified_order,
         Some(PartialOrder::RightDominates)
     );
+    assert!(report.readiness.qualified_identified_set);
     assert!(report.sharp_order_set.complete);
     assert_eq!(
         report.sharp_order_set.possible_orders,
@@ -104,8 +105,31 @@ fn exact_intervals_recover_the_qualified_pareto_order() {
         report.sharp_order_set.necessary_order,
         Some(PartialOrder::RightDominates)
     );
+    assert_eq!(
+        report.qualified_necessary_order,
+        Some(PartialOrder::RightDominates)
+    );
     assert!(report.sharp_order_set.right_necessarily_not_worse);
     assert!(!report.sharp_order_set.left_necessarily_not_worse);
+}
+
+#[test]
+fn approximate_point_equivalence_matches_the_exact_comparator() {
+    let left = profile("left", 0.5);
+    let mut right = profile("right", 0.5);
+    right.signals[0].value = Some(0.5 + 1e-12);
+
+    let report = compare_profiles(left, right);
+
+    assert_eq!(report.base.qualified_order, Some(PartialOrder::Equivalent));
+    assert_eq!(
+        report.sharp_order_set.possible_orders,
+        vec![PartialOrder::Equivalent]
+    );
+    assert_eq!(
+        report.qualified_necessary_order,
+        Some(PartialOrder::Equivalent)
+    );
 }
 
 #[test]
@@ -122,6 +146,10 @@ fn one_exact_regression_makes_tradeoff_necessary() {
     );
     assert_eq!(
         report.sharp_order_set.necessary_order,
+        Some(PartialOrder::Tradeoff)
+    );
+    assert_eq!(
+        report.qualified_necessary_order,
         Some(PartialOrder::Tradeoff)
     );
 }
@@ -142,6 +170,7 @@ fn a_censored_lower_bound_can_prove_a_regression() {
     let report = compare_profiles(left, right);
 
     assert_eq!(report.base.qualified_order, None);
+    assert!(report.readiness.qualified_identified_set);
     assert!(report.sharp_order_set.complete);
     assert_eq!(
         report.sharp_order_set.possible_orders,
@@ -149,6 +178,10 @@ fn a_censored_lower_bound_can_prove_a_regression() {
     );
     assert_eq!(
         report.sharp_order_set.necessary_order,
+        Some(PartialOrder::LeftDominates)
+    );
+    assert_eq!(
+        report.qualified_necessary_order,
         Some(PartialOrder::LeftDominates)
     );
     assert!(report.sharp_order_set.left_necessarily_not_worse);
@@ -169,6 +202,7 @@ fn a_promising_censored_lower_bound_does_not_invent_improvement() {
 
     let report = compare_profiles(left, right);
 
+    assert!(report.readiness.qualified_identified_set);
     assert_eq!(
         report.sharp_order_set.possible_orders,
         vec![
@@ -178,6 +212,7 @@ fn a_promising_censored_lower_bound_does_not_invent_improvement() {
         ]
     );
     assert_eq!(report.sharp_order_set.necessary_order, None);
+    assert_eq!(report.qualified_necessary_order, None);
     assert!(!report.sharp_order_set.right_necessarily_not_worse);
     assert!(!report.sharp_order_set.left_necessarily_not_worse);
 }
@@ -203,6 +238,7 @@ fn low_symbol_coverage_yields_a_bounded_but_ambiguous_order_set() {
 
     let report = compare_profiles(left, right);
 
+    assert!(report.readiness.qualified_identified_set);
     assert!(report.sharp_order_set.complete);
     assert_eq!(
         report.sharp_order_set.possible_orders,
@@ -213,6 +249,7 @@ fn low_symbol_coverage_yields_a_bounded_but_ambiguous_order_set() {
         ]
     );
     assert_eq!(report.sharp_order_set.necessary_order, None);
+    assert_eq!(report.qualified_necessary_order, None);
 }
 
 #[test]
@@ -228,24 +265,67 @@ fn missing_or_malformed_registries_have_no_complete_identified_set() {
     );
     missing.signals[0].value = None;
     let report = compare_profiles(left.clone(), missing);
+    assert!(!report.readiness.interval_surface_complete);
+    assert!(!report.readiness.qualified_identified_set);
     assert!(!report.sharp_order_set.complete);
     assert!(report.sharp_order_set.possible_orders.is_empty());
-    assert_eq!(report.sharp_order_set.necessary_order, None);
+    assert_eq!(report.qualified_necessary_order, None);
 
     let mut duplicate = profile("right", 0.5);
     duplicate.signals.push(duplicate.signals[0].clone());
     let report = compare_profiles(left, duplicate);
+    assert!(!report.readiness.signal_registries_valid);
     assert!(!report.sharp_order_set.registry_valid);
     assert!(!report.sharp_order_set.complete);
     assert!(report.sharp_order_set.possible_orders.is_empty());
+    assert_eq!(report.qualified_necessary_order, None);
 }
 
-fn mark_unusable(
-    profile: &mut FrontierProfile,
-    index: usize,
-    status: SignalStatus,
-    reason: &str,
-) {
+#[test]
+fn canonical_metadata_forgery_invalidates_the_identified_set() {
+    let mut left = profile("left", 0.6);
+    let mut right = profile("right", 0.5);
+    left.signals[0].polarity = SignalPolarity::HigherIsBetter;
+    right.signals[0].polarity = SignalPolarity::HigherIsBetter;
+
+    let report = compare_profiles(left, right);
+
+    assert!(!report.readiness.signal_registries_valid);
+    assert!(!report.readiness.qualified_identified_set);
+    assert!(!report.sharp_order_set.registry_valid);
+    assert!(report.sharp_order_set.possible_orders.is_empty());
+    assert_eq!(report.qualified_necessary_order, None);
+}
+
+#[test]
+fn unique_interval_order_is_not_qualified_across_provenance_drift() {
+    let left = profile("left", 0.6);
+
+    let mut config_drift = profile("right", 0.5);
+    config_drift.config.duplicate_min_tokens += 1;
+    let report = compare_profiles(left.clone(), config_drift);
+    assert_eq!(
+        report.sharp_order_set.necessary_order,
+        Some(PartialOrder::RightDominates)
+    );
+    assert!(!report.readiness.analysis_config_compatible);
+    assert!(!report.readiness.qualified_identified_set);
+    assert_eq!(report.qualified_necessary_order, None);
+
+    let mut unpinned = profile("right", 0.5);
+    unpinned.artifact.git = None;
+    unpinned.artifact.identity_error = Some("fixture unpinned".to_owned());
+    let report = compare_profiles(left, unpinned);
+    assert_eq!(
+        report.sharp_order_set.necessary_order,
+        Some(PartialOrder::RightDominates)
+    );
+    assert!(!report.readiness.artifacts_commit_pinned);
+    assert!(!report.readiness.qualified_identified_set);
+    assert_eq!(report.qualified_necessary_order, None);
+}
+
+fn mark_unusable(profile: &mut FrontierProfile, index: usize, status: SignalStatus, reason: &str) {
     let signal = &mut profile.signals[index];
     signal.status = status;
     signal.unavailable_reason = Some(reason.to_owned());
@@ -288,6 +368,11 @@ fn profile(name: &str, lower_value: f64) -> FrontierProfile {
             unavailable_reason: None,
         })
         .collect();
+    let (revision_digit, tree_digit) = if name == "left" {
+        ('1', '3')
+    } else {
+        ('2', '4')
+    };
 
     FrontierProfile {
         schema_version: "seval.frontier.v1".to_owned(),
@@ -296,9 +381,9 @@ fn profile(name: &str, lower_value: f64) -> FrontierProfile {
             git: Some(ArtifactSnapshot {
                 id: format!("fixture:{name}"),
                 root: PathBuf::from(format!("/{name}")),
-                revision: format!("{name:0<40}"),
-                tree_digest: format!("{name:0<64}"),
-                kind: "git".to_owned(),
+                revision: revision_digit.to_string().repeat(40),
+                tree_digest: tree_digit.to_string().repeat(40),
+                kind: "git-repository".to_owned(),
             }),
             identity_error: None,
         },
@@ -312,7 +397,7 @@ fn profile(name: &str, lower_value: f64) -> FrontierProfile {
                 implementation: Some(format!("{id}.v1")),
                 elapsed_ms: 0,
                 payload_sha256: Some("00".repeat(32)),
-                coverage: None,
+                coverage: Some(serde_json::json!({"fixture": true})),
                 limitations: Vec::new(),
                 error: None,
             })
@@ -337,10 +422,7 @@ fn family(id: &str, signals: &[SignalFixture]) -> SignalFamily {
     SignalFamily {
         id: id.to_owned(),
         label: id.to_owned(),
-        signal_ids: signals
-            .iter()
-            .map(|signal| signal.id.to_owned())
-            .collect(),
+        signal_ids: signals.iter().map(|signal| signal.id.to_owned()).collect(),
         rule: "fixture".to_owned(),
     }
 }
