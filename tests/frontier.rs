@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use software_evaluation::frontier::{
-    AnalyzerReceipt, AnalyzerStatus, DirectionalCoverage, FrontierArtifact, FrontierConfig,
+    AnalyzerEvidence, AnalyzerStatus, DirectionalCoverage, FrontierArtifact, FrontierConfig,
     FrontierProfile, FrontierSignal, PartialOrder, SignalFamily, SignalOutcome, SignalPolarity,
     SignalStatus, compare_profiles,
 };
@@ -178,7 +178,7 @@ fn missing_evidence_fails_closed_without_hiding_observed_deltas() {
 }
 
 #[test]
-fn malformed_receipts_registries_and_configurations_never_qualify() {
+fn malformed_evidence_registries_and_configurations_never_qualify() {
     let left = profile("left", 0.6);
 
     let mut implementation_drift = profile("right", 0.5);
@@ -187,10 +187,10 @@ fn malformed_receipts_registries_and_configurations_never_qualify() {
     assert!(!comparison.readiness.analyzer_implementations_compatible);
     assert_eq!(comparison.qualified_order, None);
 
-    let mut failed_receipt = profile("right", 0.5);
-    failed_receipt.analyzers[0].status = AnalyzerStatus::Failed;
-    failed_receipt.analyzers[0].error = Some("fixture analyzer failure".to_owned());
-    let comparison = compare_profiles(left.clone(), failed_receipt);
+    let mut failed_evidence = profile("right", 0.5);
+    failed_evidence.analyzers[0].status = AnalyzerStatus::Failed;
+    failed_evidence.analyzers[0].error = Some("fixture analyzer failure".to_owned());
+    let comparison = compare_profiles(left.clone(), failed_evidence);
     assert!(!comparison.readiness.analyzer_implementations_compatible);
     assert_eq!(comparison.qualified_order, None);
 
@@ -206,11 +206,11 @@ fn malformed_receipts_registries_and_configurations_never_qualify() {
     assert!(!comparison.readiness.analyzer_implementations_compatible);
     assert_eq!(comparison.qualified_order, None);
 
-    let mut duplicate_receipt = profile("right", 0.5);
-    duplicate_receipt
+    let mut duplicate_evidence = profile("right", 0.5);
+    duplicate_evidence
         .analyzers
-        .push(duplicate_receipt.analyzers[0].clone());
-    let comparison = compare_profiles(left.clone(), duplicate_receipt);
+        .push(duplicate_evidence.analyzers[0].clone());
+    let comparison = compare_profiles(left.clone(), duplicate_evidence);
     assert!(!comparison.readiness.analyzer_implementations_compatible);
     assert_eq!(comparison.qualified_order, None);
 
@@ -307,7 +307,7 @@ fn profile(name: &str, lower_value: f64) -> FrontierProfile {
         elapsed_ms: 0,
         analyzers: ["shape", "symbols", "discipline", "duplicates"]
             .into_iter()
-            .map(|id| AnalyzerReceipt {
+            .map(|id| AnalyzerEvidence {
                 id: id.to_owned(),
                 status: AnalyzerStatus::Complete,
                 implementation: Some(format!("{id}.v1")),

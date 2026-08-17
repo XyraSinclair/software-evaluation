@@ -151,7 +151,7 @@ fn normalized_clone_is_maximal_stable_and_rejects_a_structural_near_miss() {
     assert_eq!(
         group.digest.len(),
         64,
-        "digest must be a full SHA-256 hex receipt"
+        "digest must be a full SHA-256 hex evidence"
     );
     assert!(group.digest.bytes().all(|byte| byte.is_ascii_hexdigit()));
 

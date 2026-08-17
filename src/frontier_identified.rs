@@ -11,7 +11,7 @@
 //! The result is the sharp set of Pareto orders attainable in the Cartesian
 //! product of those intervals. A unique order is therefore necessary under the
 //! declared bounds. Qualification still requires compatible configurations,
-//! receipts, schemas, canonical signal registries, and stable Git identities.
+//! evidence, schemas, canonical signal registries, and stable Git identities.
 //! No probability distribution, criterion weight, or hidden scalarization is
 //! introduced.
 
@@ -149,7 +149,7 @@ pub struct IdentifiedComparison {
     pub readiness: IdentifiedReadiness,
     pub sharp_order_set: SharpOrderSet,
     /// A unique interval-box order promoted to a routing fact only after the
-    /// full schema/configuration/receipt/artifact contract passes.
+    /// full schema/configuration/evidence/artifact contract passes.
     pub qualified_necessary_order: Option<PartialOrder>,
     pub signals: Vec<IdentifiedSignalComparison>,
     pub assumptions: Vec<String>,
@@ -234,7 +234,8 @@ fn identified_readiness(
         blockers.push("analysis-affecting configurations differ or are invalid".to_owned());
     }
     if !analyzer_implementations_compatible {
-        blockers.push("analyzer receipt registries or implementations are incompatible".to_owned());
+        blockers
+            .push("analyzer evidence registries or implementations are incompatible".to_owned());
     }
     if !artifacts_commit_pinned {
         blockers.push("both artifacts require valid stable Git snapshot identities".to_owned());

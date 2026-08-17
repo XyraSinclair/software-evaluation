@@ -100,7 +100,7 @@ The report therefore distinguishes:
 
 - `sharp_order_set.necessary_order`: uniqueness over the declared interval box;
 - `readiness.qualified_identified_set`: whether schema, configuration,
-  analyzer receipts, canonical registries, interval coverage, and artifact
+  analyzer evidence, canonical registries, interval coverage, and artifact
   identities are compatible;
 - `qualified_necessary_order`: present only when both of the above hold.
 
@@ -137,8 +137,8 @@ Both exact and identified comparison use one shared ordered contract. It checks:
   applicable;
 - positive supporting denominators for observed or bounded values;
 - exact directional coverage ledger;
-- exactly four analyzer receipts in canonical order;
-- complete, error-free, covered, named, validly digested analyzer receipts;
+- exactly four analyzer evidence in canonical order;
+- complete, error-free, covered, named, validly digested analyzer evidence;
 - valid and equal analysis configuration;
 - structurally valid stable Git snapshot identities.
 

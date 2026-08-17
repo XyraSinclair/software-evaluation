@@ -1,10 +1,10 @@
 //! Compositional execution for evidence-producing criterion programs.
 //!
-//! A receipt certifies what this kernel recorded for one attempted evaluation:
+//! A attestation certifies what this kernel recorded for one attempted evaluation:
 //! the supplied program descriptor and artifact identity, the applicability and
 //! execution status, the program's estimate, resource use reported by the
 //! program, kernel-measured wall time, the number of program invocations, and
-//! (when successful) the digest of the serialized observation. A receipt does
+//! (when successful) the digest of the serialized observation. A attestation does
 //! not certify that an artifact digest identifies the claimed contents, that
 //! evidence is true or complete, that reported non-time resources are accurate,
 //! or that a criterion program is correct, calibrated, deterministic, or
@@ -15,7 +15,7 @@
 //! [`serde_json::to_vec`]. This is deterministic for a given in-memory value and
 //! serializer version, but the kernel does not claim canonical JSON key
 //! ordering. A future canonical serializer can replace this scheme by versioning
-//! the receipt protocol.
+//! the attestation protocol.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
@@ -231,7 +231,7 @@ pub enum ProgramStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ProgramReceipt {
+pub struct ProgramAttestation {
     pub program: ProgramDescriptor,
     pub artifact_id: String,
     pub artifact_tree_digest: String,
@@ -281,7 +281,7 @@ impl Continuation {
 pub struct EvaluationStep {
     pub observation: Option<Value>,
     pub evidence: Vec<EvidenceItem>,
-    pub receipt: ProgramReceipt,
+    pub attestation: ProgramAttestation,
     pub posterior: BeliefState,
     pub continuation: Continuation,
 }
@@ -443,8 +443,8 @@ pub fn evaluate_pipeline(
         )?;
 
         let is_last = index + 1 == programs.len();
-        if is_last && step.receipt.status == ProgramStatus::Completed {
-            let actual = &step.receipt.actual_resources;
+        if is_last && step.attestation.status == ProgramStatus::Completed {
+            let actual = &step.attestation.actual_resources;
             let overran_resources = actual.usd > remaining_before.usd
                 || actual.wall_time_ms > remaining_before.wall_time_ms
                 || actual.programs > remaining_before.programs;
@@ -663,7 +663,7 @@ fn execute_program(
             Ok(EvaluationStep {
                 observation: None,
                 evidence: Vec::new(),
-                receipt: receipt(
+                attestation: attestation(
                     artifact,
                     descriptor,
                     started_unix_ms,
@@ -786,7 +786,7 @@ fn finish_program_output(
         }
     };
 
-    let receipt_message = if output.limitations.is_empty() {
+    let attestation_message = if output.limitations.is_empty() {
         None
     } else {
         Some(format!("limitations: {}", output.limitations.join("; ")))
@@ -795,7 +795,7 @@ fn finish_program_output(
     Ok(EvaluationStep {
         observation: Some(output.observation),
         evidence: output.evidence,
-        receipt: receipt(
+        attestation: attestation(
             artifact,
             descriptor,
             started_unix_ms,
@@ -804,7 +804,7 @@ fn finish_program_output(
             actual_resources,
             Some(observation_digest),
             ProgramStatus::Completed,
-            receipt_message,
+            attestation_message,
         ),
         posterior,
         continuation,
@@ -829,7 +829,7 @@ fn executed_invariant_failure_step(
     EvaluationStep {
         observation: None,
         evidence: Vec::new(),
-        receipt: receipt(
+        attestation: attestation(
             artifact,
             descriptor,
             started_unix_ms,
@@ -863,7 +863,7 @@ fn nonexecuted_stop_step(
     EvaluationStep {
         observation: None,
         evidence: Vec::new(),
-        receipt: receipt(
+        attestation: attestation(
             artifact,
             descriptor,
             started_unix_ms,
@@ -896,7 +896,7 @@ fn nonexecuted_failure_step(
     EvaluationStep {
         observation: None,
         evidence: Vec::new(),
-        receipt: receipt(
+        attestation: attestation(
             artifact,
             descriptor,
             started_unix_ms,
@@ -930,7 +930,7 @@ fn budget_blocked_step(
     EvaluationStep {
         observation: None,
         evidence: Vec::new(),
-        receipt: receipt(
+        attestation: attestation(
             artifact,
             descriptor,
             started_unix_ms,
@@ -951,7 +951,7 @@ fn budget_blocked_step(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn receipt(
+fn attestation(
     artifact: &ArtifactSnapshot,
     program: ProgramDescriptor,
     started_unix_ms: u128,
@@ -961,8 +961,8 @@ fn receipt(
     observation_digest: Option<String>,
     status: ProgramStatus,
     message: Option<String>,
-) -> ProgramReceipt {
-    ProgramReceipt {
+) -> ProgramAttestation {
+    ProgramAttestation {
         program,
         artifact_id: artifact.id.clone(),
         artifact_tree_digest: artifact.tree_digest.clone(),

@@ -38,9 +38,9 @@ on a thread-local stack:
 This avoids a process-global path cache, whose identity would be insufficient
 when two concurrent scans materialize different snapshots of the same path.
 
-## Content receipt
+## Content evidence
 
-`SourceCorpusReceipt` records:
+`SourceCorpusEvidence` records:
 
 - schema version;
 - reported input root;
@@ -78,7 +78,7 @@ Changes to documentation, configuration, generated assets, or other unsupported
 files can leave the source-corpus digest unchanged.
 
 The Git commit and tree digest remain the whole-artifact identity. The corpus
-receipt is a subordinate receipt for the exact bytes and parses used by the
+evidence is a subordinate evidence for the exact bytes and parses used by the
 source analyzers, not a replacement for Git provenance.
 
 ## Output-equivalence ratchet
@@ -104,16 +104,16 @@ independent paths. Analyzer-specific failure, missingness, and censoring remain
 separate from substrate failure.
 
 The frontier profile's total elapsed time includes corpus construction.
-Individual analyzer receipt times begin after materialization and therefore
+Individual analyzer evidence times begin after materialization and therefore
 measure instrument work over the prepared corpus.
 
 ## Remaining residue
 
 The next versioned change should:
 
-1. add the corpus manifest digest and work receipt directly to the frontier
+1. add the corpus manifest digest and work evidence directly to the frontier
    schema;
-2. require each source analyzer receipt to name that digest;
+2. require each source analyzer evidence to name that digest;
 3. replace thread-scoped compatibility lookup with explicit typed
    `&SourceCorpus` analyzer entry points;
 4. use shared immutable byte bodies without changing existing public report

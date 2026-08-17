@@ -124,11 +124,11 @@ func choose(flag bool) int {
         uncached_duplicates
     );
 
-    let receipt = corpus.receipt();
+    let evidence = corpus.evidence();
     let stats = corpus.cache_stats();
-    assert_eq!(receipt.supported_files, 4);
-    assert_eq!(receipt.file_reads, 4);
-    assert_eq!(receipt.parses, 4);
+    assert_eq!(evidence.supported_files, 4);
+    assert_eq!(evidence.file_reads, 4);
+    assert_eq!(evidence.parses, 4);
     assert_eq!(stats.source_tree_hits, 4);
     assert_eq!(stats.parse_tree_hits, 13);
 }

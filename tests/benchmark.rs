@@ -3,7 +3,7 @@ use std::process::{Command, Output};
 
 use serde_json::Value;
 use software_evaluation::benchmark::{
-    BenchmarkError, BenchmarkReport, BenchmarkSpec, RateDistribution, RunReceipt, run_benchmark,
+    BenchmarkError, BenchmarkReport, BenchmarkSpec, RateDistribution, RunAttestation, run_benchmark,
 };
 use tempfile::TempDir;
 
@@ -25,7 +25,7 @@ fn spec(program: &str, args: &[&str]) -> BenchmarkSpec {
     }
 }
 
-fn all_measured(report: &BenchmarkReport) -> impl Iterator<Item = &RunReceipt> {
+fn all_measured(report: &BenchmarkReport) -> impl Iterator<Item = &RunAttestation> {
     std::iter::once(&report.first_measured_run).chain(report.warmed_samples.iter())
 }
 
@@ -66,7 +66,7 @@ fn nearest_rank_u128(mut values: Vec<u128>, percentile: usize) -> Option<u128> {
         .copied()
 }
 
-fn expected_rates(samples: &[RunReceipt], numerator: u64) -> Vec<f64> {
+fn expected_rates(samples: &[RunAttestation], numerator: u64) -> Vec<f64> {
     let mut rates = samples
         .iter()
         .map(|sample| numerator as f64 * 1_000_000_000.0 / sample.elapsed_ns.max(1) as f64)
@@ -77,7 +77,7 @@ fn expected_rates(samples: &[RunReceipt], numerator: u64) -> Vec<f64> {
 
 fn assert_rate_distribution(
     distribution: &RateDistribution,
-    samples: &[RunReceipt],
+    samples: &[RunAttestation],
     numerator: u64,
 ) {
     // Precommitted oracle: every warmed sample contributes exactly one rate,
@@ -113,12 +113,12 @@ fn exact_argv_and_both_output_streams_are_captured_as_bytes() {
     assert!(report.successful);
     assert_eq!(report.command.program, PRINTF);
     assert_eq!(report.command.args, exact_argv.args);
-    for receipt in all_measured(&report) {
-        assert!(receipt.started);
-        assert_eq!(receipt.exit_code, Some(0));
-        assert_eq!(receipt.stdout, b"argument with spaces|tail");
-        assert!(receipt.stderr.is_empty());
-        assert!(receipt.spawn_error.is_none());
+    for attestation in all_measured(&report) {
+        assert!(attestation.started);
+        assert_eq!(attestation.exit_code, Some(0));
+        assert_eq!(attestation.stdout, b"argument with spaces|tail");
+        assert!(attestation.stderr.is_empty());
+        assert!(attestation.spawn_error.is_none());
     }
 
     let directory = TempDir::new().expect("temporary cwd");
@@ -138,12 +138,12 @@ fn exact_argv_and_both_output_streams_are_captured_as_bytes() {
     let mut stderr_spec = spec(CAT, &[missing]);
     stderr_spec.cwd = Some(directory.path().to_path_buf());
     let stderr_report = run_benchmark(&stderr_spec).expect("cat benchmark must be observed");
-    let receipt = &stderr_report.first_measured_run;
-    assert!(receipt.started);
-    assert_eq!(receipt.exit_code, reference.status.code());
-    assert_eq!(receipt.stdout, reference.stdout);
-    assert_eq!(receipt.stderr, reference.stderr);
-    assert!(!receipt.success);
+    let attestation = &stderr_report.first_measured_run;
+    assert!(attestation.started);
+    assert_eq!(attestation.exit_code, reference.status.code());
+    assert_eq!(attestation.stdout, reference.stdout);
+    assert_eq!(attestation.stderr, reference.stderr);
+    assert!(!attestation.success);
 }
 
 #[test]
@@ -161,32 +161,32 @@ fn failures_and_timeouts_preserve_requested_sample_denominators_and_terminal_evi
     assert_eq!(failure.coverage.warmed_distribution_denominator, 3);
     assert_eq!(failure.warmed_samples.len(), 3);
     assert_eq!(failure.warmed_latency_ns.sample_count, 3);
-    for receipt in failure.warmups.iter().chain(all_measured(&failure)) {
-        assert!(receipt.stdout.is_empty());
-        assert!(receipt.stderr.is_empty());
+    for attestation in failure.warmups.iter().chain(all_measured(&failure)) {
+        assert!(attestation.stdout.is_empty());
+        assert!(attestation.stderr.is_empty());
         assert!(
-            receipt.started && receipt.exit_code.is_some(),
-            "empty output is evidence only when start and process exit are observed: {receipt:?}"
+            attestation.started && attestation.exit_code.is_some(),
+            "empty output is evidence only when start and process exit are observed: {attestation:?}"
         );
-        assert!(!receipt.success);
+        assert!(!attestation.success);
     }
 
     let mut timeout_spec = spec(SLEEP, &["1"]);
     timeout_spec.measured_runs = 2;
     timeout_spec.timeout_ms = 10;
-    let timeout = run_benchmark(&timeout_spec).expect("timeouts must produce receipts");
+    let timeout = run_benchmark(&timeout_spec).expect("timeouts must produce attestations");
 
     assert!(!timeout.successful);
     assert_eq!(timeout.coverage.observed_measured_runs, 2);
     assert_eq!(timeout.warmed_samples.len(), 1);
     assert_eq!(timeout.warmed_latency_ns.sample_count, 1);
-    for receipt in all_measured(&timeout) {
-        assert!(receipt.started);
-        assert!(receipt.timed_out);
-        assert!(receipt.termination_occurred);
-        assert!(!receipt.success);
-        assert!(receipt.spawn_error.is_none());
-        assert!(receipt.exit_code.is_some() || receipt.termination_signal.is_some());
+    for attestation in all_measured(&timeout) {
+        assert!(attestation.started);
+        assert!(attestation.timed_out);
+        assert!(attestation.termination_occurred);
+        assert!(!attestation.success);
+        assert!(attestation.spawn_error.is_none());
+        assert!(attestation.exit_code.is_some() || attestation.termination_signal.is_some());
     }
 }
 
@@ -391,7 +391,7 @@ fn cli_json_preserves_observations_rates_argv_and_success_exit_code() {
 }
 
 #[test]
-fn cli_text_reports_nonzero_run_receipts_and_returns_failure_exit_code() {
+fn cli_text_reports_nonzero_run_attestations_and_returns_failure_exit_code() {
     let output = run_cli(&[
         "bench", "--warmup", "1", "--runs", "3", "--format", "text", "--", FALSE,
     ]);

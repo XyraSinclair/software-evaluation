@@ -43,7 +43,7 @@ pub fn compare_profiles(left: FrontierProfile, right: FrontierProfile) -> Fronti
     }
     if !analyzer_implementations_compatible {
         blockers.push(
-            "underlying analyzer receipts are missing, extra, duplicated, failed, undigested, unnamed, uncovered, or implementation-incompatible"
+            "underlying analyzer evidence is missing, extra, duplicated, failed, undigested, unnamed, uncovered, or implementation-incompatible"
                 .to_owned(),
         );
     }

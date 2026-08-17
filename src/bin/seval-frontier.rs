@@ -15,7 +15,7 @@ use software_evaluation::frontier_identified::{
 #[command(
     name = "seval-frontier",
     version,
-    about = "Receipt-bearing Pareto surface for fast software-quality routing"
+    about = "Evidence-bearing Pareto surface for fast software-quality routing"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -190,7 +190,7 @@ fn print_profile(report: &FrontierProfile) {
     }
     for analyzer in &report.analyzers {
         println!(
-            "receipt: {} status={} elapsed={}ms digest={}",
+            "evidence: {} status={} elapsed={}ms digest={}",
             analyzer.id,
             analyzer_status(analyzer.status),
             analyzer.elapsed_ms,
