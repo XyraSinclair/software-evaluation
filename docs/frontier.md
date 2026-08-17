@@ -20,11 +20,16 @@ cargo run --release --bin seval-frontier -- compare \
 
 cargo run --release --bin seval-frontier -- compare \
   /tmp/project-before /tmp/project-after --format json
+
+cargo run --release --bin seval-frontier -- identify \
+  /tmp/project-before /tmp/project-after --format json
 ```
 
 A profile exits `0` when at least one directional signal is observed and `1`
-when none is. A comparison exits `0` only when it can emit a qualified partial
-order. Invalid input or configuration exits `2`.
+when none is. An exact comparison exits `0` only when it can emit a qualified
+partial order. An identified comparison exits `0` only when every value
+assignment compatible with declared bounds induces the same Pareto order.
+Invalid input or configuration exits `2`.
 
 ## The six-signal kernel
 
@@ -68,8 +73,9 @@ The report always exposes the order on the observed intersection. It exposes a
    valid observation digest and a named implementation; implementations match
    across the two profiles.
 4. Analysis-affecting configurations are exactly equal.
-5. Each profile contains exactly one instance of every preregistered signal and
-   no undeclared directional signals.
+5. Each profile exactly satisfies the canonical preregistered signal and family
+   contract: IDs, polarity, units, analyzers, projection pointers, status/value
+   domains, supporting denominators, and coverage ledger.
 6. Every declared signal is observed with a finite value on both artifacts.
 
 Missingness never silently changes the denominator. Analyzer failure, panic,
@@ -81,6 +87,28 @@ immutable read isolation. A transient worktree mutation reverted between those
 two observations could escape detection. Materializing one immutable,
 content-digested source corpus for all analyzers is the next provenance and
 computational-parsimony step.
+
+## Sharp identified orders
+
+`compare` deliberately refuses to use censored or coverage-gated coordinates in
+a qualified exact order. `identify` asks a different, still fail-closed
+question: which Pareto orders are compatible with every declared measurement
+bound?
+
+It currently preregisters only bounds already implied by the instruments:
+
+- finite observed values are singleton intervals;
+- capped clone density is `[reported density, +∞)`;
+- coverage-gated symbol working-set fraction is `[resolved fraction, 1]`.
+
+The command reports the exact set of Pareto orders attainable in the Cartesian
+product of those intervals. `necessary_order` is emitted only when that set has
+one member. The product box is an outer approximation of any unknown dependence
+between signals: it can preserve extra ambiguity, but uniqueness over the larger
+box remains sound for every subset.
+
+See [Sharp identified Pareto orders](identified-orders.md) for the derivation,
+contract, examples, and research lineage.
 
 ## Receipts
 
@@ -104,7 +132,10 @@ A qualified dominance result establishes only this:
 > Under one declared mechanical instrument configuration, every admitted proxy
 > moved weakly in the same direction and at least one moved strictly.
 
-It cannot establish behavior, correctness, security, performance, operational
+An identified necessary order establishes the analogous statement across every
+value assignment in the declared measurement bounds.
+
+Neither can establish behavior, correctness, security, performance, operational
 fitness, documentation truth, maintainability, product value, or intent. Those
 remain separate evidence classes and decision inputs.
 
@@ -120,6 +151,7 @@ rich observations
     -> family-local guards
     -> global strict Pareto order
     -> optional qualified routing fact
+    -> optional necessary order over identified bounds
 ```
 
 No weight vector is hidden in that pipeline. A single regression blocks
