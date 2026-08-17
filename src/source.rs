@@ -188,7 +188,7 @@ impl SourceCorpusSession {
             update_manifest_field(&mut manifest, file.path.as_bytes());
             update_manifest_field(&mut manifest, file.language.name().as_bytes());
             manifest.update(bytes.to_be_bytes());
-            manifest.update(&digest);
+            manifest.update(digest);
             manifest.update([u8::from(observation.has_syntax_errors)]);
 
             file_receipts.push(SourceFileReceipt {

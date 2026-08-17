@@ -307,26 +307,21 @@ pub fn profile_path(
     };
     let runs = thread::scope(|scope| {
         let corpus = source_corpus.as_ref();
-        let shape = scope.spawn(|| {
-            with_source_corpus(corpus, || {
-                run_analyzer(SHAPE, || analyze_shape(input))
-            })
+        let duplicate_config = &duplicate_config;
+        let shape = scope.spawn(move || {
+            with_source_corpus(corpus, || run_analyzer(SHAPE, || analyze_shape(input)))
         });
-        let symbols = scope.spawn(|| {
-            with_source_corpus(corpus, || {
-                run_analyzer(SYMBOLS, || analyze_symbols(input))
-            })
+        let symbols = scope.spawn(move || {
+            with_source_corpus(corpus, || run_analyzer(SYMBOLS, || analyze_symbols(input)))
         });
-        let discipline = scope.spawn(|| {
+        let discipline = scope.spawn(move || {
             with_source_corpus(corpus, || {
                 run_analyzer(DISCIPLINE, || analyze_discipline(input))
             })
         });
-        let duplicates = scope.spawn(|| {
+        let duplicates = scope.spawn(move || {
             with_source_corpus(corpus, || {
-                run_analyzer(DUPLICATES, || {
-                    analyze_duplicates(input, &duplicate_config)
-                })
+                run_analyzer(DUPLICATES, || analyze_duplicates(input, duplicate_config))
             })
         });
         vec![
@@ -367,10 +362,7 @@ pub fn profile_path(
     })
 }
 
-fn with_source_corpus<T>(
-    corpus: Option<&SourceCorpusSession>,
-    operation: impl FnOnce() -> T,
-) -> T {
+fn with_source_corpus<T>(corpus: Option<&SourceCorpusSession>, operation: impl FnOnce() -> T) -> T {
     match corpus {
         Some(corpus) => corpus.scope(operation),
         None => operation(),

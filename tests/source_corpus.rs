@@ -88,9 +88,8 @@ func choose(flag bool) int {
         let shape = scope.spawn(|| corpus.scope(|| analyze_shape(root)));
         let symbols = scope.spawn(|| corpus.scope(|| analyze_symbols(root)));
         let discipline = scope.spawn(|| corpus.scope(|| analyze_discipline(root)));
-        let duplicates = scope.spawn(|| {
-            corpus.scope(|| analyze_duplicates(root, &duplicate_config))
-        });
+        let duplicates =
+            scope.spawn(|| corpus.scope(|| analyze_duplicates(root, &duplicate_config)));
         (
             shape.join().expect("shape thread").expect("cached shape"),
             symbols
