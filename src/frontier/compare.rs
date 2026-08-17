@@ -1,9 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use super::contract::{
+use crate::frontier_contract::{
     artifact_is_pinned, compatible_config, compatible_implementations, valid_signal_registry,
 };
+
 use super::*;
 
 pub fn compare_paths(
