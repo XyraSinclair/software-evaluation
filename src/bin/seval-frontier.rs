@@ -6,6 +6,9 @@ use software_evaluation::frontier::{
     AnalyzerStatus, FrontierComparison, FrontierConfig, FrontierProfile, PartialOrder,
     SignalOutcome, SignalStatus, compare_paths, profile_path,
 };
+use software_evaluation::frontier_identified::{
+    IdentifiedComparison, IntervalBasis, IntervalEvidence, compare_paths as compare_identified_paths,
+};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -31,6 +34,15 @@ enum Command {
     },
     /// Compare two trees by strict Pareto order; never count favorable axes.
     Compare {
+        left: PathBuf,
+        right: PathBuf,
+        #[command(flatten)]
+        analysis: AnalysisArgs,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Enumerate every Pareto order compatible with declared censoring and coverage bounds.
+    Identify {
         left: PathBuf,
         right: PathBuf,
         #[command(flatten)]
@@ -111,6 +123,24 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
                 OutputFormat::Json => print_json(&report)?,
             }
             Ok(if report.qualified_order.is_some() {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            })
+        }
+        Command::Identify {
+            left,
+            right,
+            analysis,
+            format,
+        } => {
+            let report = compare_identified_paths(&left, &right, &analysis.config())
+                .map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Text => print_identified_comparison(&report),
+                OutputFormat::Json => print_json(&report)?,
+            }
+            Ok(if report.sharp_order_set.necessary_order.is_some() {
                 ExitCode::SUCCESS
             } else {
                 ExitCode::from(1)
@@ -218,6 +248,63 @@ fn print_comparison(report: &FrontierComparison) {
     }
 }
 
+fn print_identified_comparison(report: &IdentifiedComparison) {
+    println!("left: {}", artifact_label(&report.base.left));
+    println!("right: {}", artifact_label(&report.base.right));
+    println!(
+        "point order on observed intersection: {}",
+        partial_order(report.base.order_on_observed_intersection)
+    );
+    match report.base.qualified_order {
+        Some(order) => println!("qualified exact order: {}", partial_order(order)),
+        None => println!("qualified exact order: unavailable"),
+    }
+    let possible = report
+        .sharp_order_set
+        .possible_orders
+        .iter()
+        .map(|order| partial_order(*order))
+        .collect::<Vec<_>>()
+        .join(", ");
+    println!(
+        "identified set: complete={} registry={} comparable={}/6 possible={}",
+        report.sharp_order_set.complete,
+        report.sharp_order_set.registry_valid,
+        report.sharp_order_set.comparable_signals,
+        if possible.is_empty() { "none" } else { &possible },
+    );
+    match report.sharp_order_set.necessary_order {
+        Some(order) => println!("necessary order: {}", partial_order(order)),
+        None => println!("necessary order: unavailable"),
+    }
+    println!(
+        "necessary weak relations: right-not-worse={} left-not-worse={}",
+        report.sharp_order_set.right_necessarily_not_worse,
+        report.sharp_order_set.left_necessarily_not_worse,
+    );
+    for id in &report.sharp_order_set.unusable_signal_ids {
+        println!("identified blocker: {id}");
+    }
+    for signal in &report.signals {
+        let outcomes = signal
+            .possible_outcomes
+            .iter()
+            .map(|outcome| signal_outcome(*outcome))
+            .collect::<Vec<_>>()
+            .join(", ");
+        println!(
+            "signal: {} left={} right={} possible={}",
+            signal.id,
+            render_interval(signal.left.as_ref()),
+            render_interval(signal.right.as_ref()),
+            if outcomes.is_empty() { "none" } else { &outcomes },
+        );
+        if let Some(reason) = &signal.reason {
+            println!("  reason: {reason}");
+        }
+    }
+}
+
 fn artifact_label(report: &FrontierProfile) -> String {
     report.artifact.git.as_ref().map_or_else(
         || report.artifact.input.clone(),
@@ -229,6 +316,26 @@ fn render_number(value: Option<f64>) -> String {
     value
         .map(|value| format!("{value:.6}"))
         .unwrap_or_else(|| "n/a".to_owned())
+}
+
+fn render_interval(evidence: Option<&IntervalEvidence>) -> String {
+    let Some(evidence) = evidence else {
+        return "n/a".to_owned();
+    };
+    let interval = evidence.interval;
+    let bounds = interval.upper.map_or_else(
+        || format!("[{:.6}, +inf)", interval.lower),
+        |upper| format!("[{:.6}, {upper:.6}]", interval.lower),
+    );
+    format!("{} basis={}", bounds, interval_basis(evidence.basis))
+}
+
+fn interval_basis(basis: IntervalBasis) -> &'static str {
+    match basis {
+        IntervalBasis::ExactObservation => "exact-observation",
+        IntervalBasis::CoverageLowerBound => "coverage-lower-bound",
+        IntervalBasis::CensoringLowerBound => "censoring-lower-bound",
+    }
 }
 
 fn analyzer_status(status: AnalyzerStatus) -> &'static str {
