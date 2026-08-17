@@ -413,11 +413,7 @@ struct PartitionAccumulator {
 }
 
 impl PartitionAccumulator {
-    fn new(
-        granularity: &'static str,
-        community_of: fn(&str) -> String,
-        paths: &[String],
-    ) -> Self {
+    fn new(granularity: &'static str, community_of: fn(&str) -> String, paths: &[String]) -> Self {
         let mut file_counts: BTreeMap<String, usize> = BTreeMap::new();
         for path in paths {
             *file_counts.entry(community_of(path)).or_default() += 1;
@@ -453,9 +449,9 @@ impl PartitionAccumulator {
     }
 
     fn finish(self, total: u128) -> Result<CochangePartition, CochangeLayoutError> {
-        let cross = total
-            .checked_sub(self.intra)
-            .ok_or_else(|| CochangeLayoutError::Invariant("intra mass exceeded total".to_owned()))?;
+        let cross = total.checked_sub(self.intra).ok_or_else(|| {
+            CochangeLayoutError::Invariant("intra mass exceeded total".to_owned())
+        })?;
         // Exact rational Q in scaled units: Σ_c (4W·e_c − d_c²) over 4W².
         // The fixed-point scale cancels in the ratio.
         let modularity_numerator = (total != 0).then(|| {

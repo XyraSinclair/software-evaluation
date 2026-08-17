@@ -480,8 +480,7 @@ pub(crate) fn solve_exact_linear_system(
                 .skip(column + 1)
                 .zip(&pivot_trailing)
             {
-                *coefficient = coefficient.clone()
-                    - factor.clone() * pivot_coefficient.clone();
+                *coefficient = coefficient.clone() - factor.clone() * pivot_coefficient.clone();
             }
             right_hand_side[row] =
                 right_hand_side[row].clone() - factor * right_hand_side[column].clone();

@@ -24,19 +24,65 @@ use crate::tests_analysis::{FileRole, classify_file};
 // merely share a prefix and misses effects reached through aliases or unlisted
 // namespaces.
 const RUST_EFFECT_PREFIXES: &[&str] = &[
-    "std::fs", "std::io", "std::net", "std::process", "std::env", "std::thread", "std::time",
-    "tokio::", "println!", "eprintln!", "print!", "eprint!", "dbg!", "log::", "tracing::",
+    "std::fs",
+    "std::io",
+    "std::net",
+    "std::process",
+    "std::env",
+    "std::thread",
+    "std::time",
+    "tokio::",
+    "println!",
+    "eprintln!",
+    "print!",
+    "eprint!",
+    "dbg!",
+    "log::",
+    "tracing::",
 ];
 const PYTHON_EFFECT_PREFIXES: &[&str] = &[
-    "open", "print", "input", "os.", "sys.", "subprocess.", "socket.", "random.", "time.",
-    "datetime.now", "logging.", "requests.", "shutil.", "pathlib.Path.write", "pathlib.Path.read",
+    "open",
+    "print",
+    "input",
+    "os.",
+    "sys.",
+    "subprocess.",
+    "socket.",
+    "random.",
+    "time.",
+    "datetime.now",
+    "logging.",
+    "requests.",
+    "shutil.",
+    "pathlib.Path.write",
+    "pathlib.Path.read",
 ];
 const JS_EFFECT_PREFIXES: &[&str] = &[
-    "console.", "fetch", "fs.", "process.", "Date.now", "new Date", "Math.random", "localStorage",
-    "sessionStorage", "document.", "window.", "setTimeout", "setInterval", "require(",
+    "console.",
+    "fetch",
+    "fs.",
+    "process.",
+    "Date.now",
+    "new Date",
+    "Math.random",
+    "localStorage",
+    "sessionStorage",
+    "document.",
+    "window.",
+    "setTimeout",
+    "setInterval",
+    "require(",
 ];
 const GO_EFFECT_PREFIXES: &[&str] = &[
-    "fmt.Print", "fmt.Fprint", "os.", "io.", "net.", "log.", "time.Now", "time.Sleep", "rand.",
+    "fmt.Print",
+    "fmt.Fprint",
+    "os.",
+    "io.",
+    "net.",
+    "log.",
+    "time.Now",
+    "time.Sleep",
+    "rand.",
     "http.",
 ];
 
@@ -368,7 +414,11 @@ pub fn rank_functions(
     rows
 }
 
-pub fn rank_files(report: &DisciplineReport, sort: DisciplineSort, top: usize) -> Vec<&FileDiscipline> {
+pub fn rank_files(
+    report: &DisciplineReport,
+    sort: DisciplineSort,
+    top: usize,
+) -> Vec<&FileDiscipline> {
     let mut rows: Vec<&FileDiscipline> = report.files.iter().collect();
     rows.sort_by(|a, b| {
         b.sort_key(sort)
@@ -455,7 +505,8 @@ fn coverage(
     }
     let functions_total = functions.len() as u64;
     let pure_functions = functions.iter().filter(|f| f.syntactically_pure).count() as u64;
-    let pure_fraction = (functions_total != 0).then(|| pure_functions as f64 / functions_total as f64);
+    let pure_fraction =
+        (functions_total != 0).then(|| pure_functions as f64 / functions_total as f64);
 
     let mut per_language: BTreeMap<SourceLanguage, u64> = BTreeMap::new();
     for function in functions {
@@ -463,7 +514,10 @@ fn coverage(
     }
     let functions_per_language = per_language
         .into_iter()
-        .map(|(language, functions)| LanguageFunctionCount { language, functions })
+        .map(|(language, functions)| LanguageFunctionCount {
+            language,
+            functions,
+        })
         .collect();
 
     let tails = DisciplineTails {
@@ -593,7 +647,10 @@ fn is_function_space(language: SourceLanguage, kind: &str) -> bool {
                 | "generator_function_declaration"
         ),
         SourceLanguage::Go => {
-            matches!(kind, "function_declaration" | "method_declaration" | "func_literal")
+            matches!(
+                kind,
+                "function_declaration" | "method_declaration" | "func_literal"
+            )
         }
     }
 }
@@ -1007,9 +1064,7 @@ fn visit_param(
             {
                 let names_here: Vec<Node<'_>> = {
                     let mut cursor = child.walk();
-                    child
-                        .children_by_field_name("name", &mut cursor)
-                        .collect()
+                    child.children_by_field_name("name", &mut cursor).collect()
                 };
                 let is_pointer = child
                     .child_by_field_name("type")
@@ -1063,9 +1118,9 @@ fn single_expression_body(file: &SourceFile, node: Node<'_>) -> bool {
             "closure_expression" => node
                 .child_by_field_name("body")
                 .is_some_and(|body| body.kind() != "block"),
-            _ => node.child_by_field_name("body").is_some_and(|body| {
-                body.kind() == "block" && block_is_single_expression(body)
-            }),
+            _ => node
+                .child_by_field_name("body")
+                .is_some_and(|body| body.kind() == "block" && block_is_single_expression(body)),
         },
         SourceLanguage::JavaScript | SourceLanguage::TypeScript | SourceLanguage::Tsx => {
             node.kind() == "arrow_function"
@@ -1084,7 +1139,10 @@ fn block_is_single_expression(block: Node<'_>) -> bool {
     let mut tail = false;
     for child in block.named_children(&mut cursor) {
         match child.kind() {
-            "let_declaration" | "expression_statement" | "line_comment" | "block_comment"
+            "let_declaration"
+            | "expression_statement"
+            | "line_comment"
+            | "block_comment"
             | "empty_statement" => statements += 1,
             _ => tail = true,
         }
@@ -1213,7 +1271,12 @@ fn observe_rust(file: &SourceFile, node: Node<'_>, frame: &mut Frame, line: usiz
         }
         "if_expression" | "while_expression" => {
             if let Some(condition) = node.child_by_field_name("condition") {
-                scan_conditions(file, SourceLanguage::Rust, condition, &mut frame.string_literal_conditions);
+                scan_conditions(
+                    file,
+                    SourceLanguage::Rust,
+                    condition,
+                    &mut frame.string_literal_conditions,
+                );
             }
         }
         "match_expression" => {
@@ -1247,7 +1310,12 @@ fn observe_python(file: &SourceFile, node: Node<'_>, frame: &mut Frame, line: us
         "except_clause" => observe_except(file, node, frame),
         "if_statement" | "elif_clause" | "while_statement" => {
             if let Some(condition) = node.child_by_field_name("condition") {
-                scan_conditions(file, SourceLanguage::Python, condition, &mut frame.string_literal_conditions);
+                scan_conditions(
+                    file,
+                    SourceLanguage::Python,
+                    condition,
+                    &mut frame.string_literal_conditions,
+                );
             }
         }
         _ => {}
@@ -1292,7 +1360,12 @@ fn observe_js(file: &SourceFile, node: Node<'_>, frame: &mut Frame, line: usize)
         "catch_clause" => observe_catch(file, node, frame),
         "if_statement" | "while_statement" | "do_statement" => {
             if let Some(condition) = node.child_by_field_name("condition") {
-                scan_conditions(file, language, condition, &mut frame.string_literal_conditions);
+                scan_conditions(
+                    file,
+                    language,
+                    condition,
+                    &mut frame.string_literal_conditions,
+                );
             }
         }
         "switch_statement" => {
@@ -1349,7 +1422,12 @@ fn observe_go(file: &SourceFile, node: Node<'_>, frame: &mut Frame, line: usize)
                 {
                     frame.try_propagations += 1;
                 }
-                scan_conditions(file, SourceLanguage::Go, condition, &mut frame.string_literal_conditions);
+                scan_conditions(
+                    file,
+                    SourceLanguage::Go,
+                    condition,
+                    &mut frame.string_literal_conditions,
+                );
             }
         }
         "expression_switch_statement" => {
@@ -1376,8 +1454,10 @@ fn observe_go_assignment(file: &SourceFile, node: Node<'_>, frame: &mut Frame, l
         let mut cursor = left.walk();
         left.named_children(&mut cursor).collect()
     };
-    let all_blank =
-        !lefts.is_empty() && lefts.iter().all(|n| n.kind() == "identifier" && text(file, *n) == "_");
+    let all_blank = !lefts.is_empty()
+        && lefts
+            .iter()
+            .all(|n| n.kind() == "identifier" && text(file, *n) == "_");
     if operator == "=" && all_blank {
         let rights: Vec<Node<'_>> = right.map_or_else(Vec::new, |right| {
             let mut cursor = right.walk();
@@ -1481,11 +1561,15 @@ fn is_statement_kind(language: SourceLanguage, kind: &str) -> bool {
         SourceLanguage::Rust => matches!(kind, "expression_statement" | "let_declaration"),
         SourceLanguage::Python => kind.ends_with("_statement"),
         SourceLanguage::JavaScript | SourceLanguage::TypeScript | SourceLanguage::Tsx => {
-            kind.ends_with("_statement") || matches!(kind, "lexical_declaration" | "variable_declaration")
+            kind.ends_with("_statement")
+                || matches!(kind, "lexical_declaration" | "variable_declaration")
         }
         SourceLanguage::Go => {
             kind.ends_with("_statement")
-                || matches!(kind, "short_var_declaration" | "var_declaration" | "const_declaration")
+                || matches!(
+                    kind,
+                    "short_var_declaration" | "var_declaration" | "const_declaration"
+                )
         }
     }
 }
@@ -1543,7 +1627,10 @@ fn assign_target_root(file: &SourceFile, node: Node<'_>) -> Option<(String, bool
     let mut through = false;
     loop {
         match cur.kind() {
-            "identifier" | "field_identifier" | "property_identifier" | "type_identifier"
+            "identifier"
+            | "field_identifier"
+            | "property_identifier"
+            | "type_identifier"
             | "shorthand_property_identifier" => {
                 return Some((text(file, cur).to_owned(), through));
             }
@@ -1798,9 +1885,7 @@ fn block_returns(block: Node<'_>) -> bool {
         return true;
     }
     let mut cursor = block.walk();
-    block
-        .named_children(&mut cursor)
-        .any(block_returns)
+    block.named_children(&mut cursor).any(block_returns)
 }
 
 fn is_go_err_check(file: &SourceFile, condition: Node<'_>) -> bool {
@@ -1833,7 +1918,10 @@ fn count_magic_literals(file: &SourceFile, root: Node<'_>) -> (u64, u64) {
     fn is_excluded_decl(language: SourceLanguage, kind: &str) -> bool {
         match language {
             SourceLanguage::Rust => {
-                matches!(kind, "const_item" | "static_item" | "enum_item" | "type_item")
+                matches!(
+                    kind,
+                    "const_item" | "static_item" | "enum_item" | "type_item"
+                )
             }
             SourceLanguage::JavaScript | SourceLanguage::TypeScript | SourceLanguage::Tsx => {
                 matches!(kind, "enum_declaration" | "type_alias_declaration")
@@ -1877,7 +1965,10 @@ enum MagicLiteral {
 
 fn magic_literal_kind(file: &SourceFile, node: Node<'_>) -> Option<MagicLiteral> {
     let kind = node.kind();
-    if matches!(kind, "integer_literal" | "float_literal" | "integer" | "float" | "int_literal") {
+    if matches!(
+        kind,
+        "integer_literal" | "float_literal" | "integer" | "float" | "int_literal"
+    ) {
         let raw = text(file, node).replace('_', "");
         let cleaned = raw.trim_end_matches(|c: char| c.is_ascii_alphabetic());
         let Ok(mut value) = cleaned.parse::<f64>() else {
@@ -1889,7 +1980,8 @@ fn magic_literal_kind(file: &SourceFile, node: Node<'_>) -> Option<MagicLiteral>
         {
             value = -value;
         }
-        (!(value == 0.0 || value == 1.0 || value == -1.0 || value == 2.0)).then_some(MagicLiteral::Number)
+        (!(value == 0.0 || value == 1.0 || value == -1.0 || value == 2.0))
+            .then_some(MagicLiteral::Number)
     } else if is_string_literal(kind) {
         // A Python docstring is a bare string expression statement.
         let docstring = file.language == SourceLanguage::Python
@@ -1903,10 +1995,12 @@ fn magic_literal_kind(file: &SourceFile, node: Node<'_>) -> Option<MagicLiteral>
 }
 
 fn is_negation(file: &SourceFile, parent: Node<'_>) -> bool {
-    matches!(parent.kind(), "unary_expression" | "prefix_expression" | "negated_expression")
-        && parent
-            .child(0)
-            .is_some_and(|operator| text(file, operator) == "-")
+    matches!(
+        parent.kind(),
+        "unary_expression" | "prefix_expression" | "negated_expression"
+    ) && parent
+        .child(0)
+        .is_some_and(|operator| text(file, operator) == "-")
 }
 
 fn string_content_length(file: &SourceFile, node: Node<'_>) -> usize {

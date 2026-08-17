@@ -17,7 +17,7 @@ jobs:
         with:
           toolchain: 1.97.0
           components: rustfmt, clippy
-      - run: rustfmt --edition 2024 --check src/source.rs src/frontier.rs src/frontier/compare.rs src/frontier/signals.rs src/frontier_contract.rs src/frontier_identified.rs src/frontier_probes.rs src/bin/seval-frontier.rs src/bin/seval-order-probes.rs tests/source.rs tests/source_corpus.rs tests/frontier.rs tests/frontier_identified.rs tests/frontier_probes.rs
+      - run: cargo fmt --check
       - run: cargo test --all-targets --locked
       - run: cargo run --locked --bin seval-frontier -- profile . --format json > /tmp/frontier.json
       - run: |

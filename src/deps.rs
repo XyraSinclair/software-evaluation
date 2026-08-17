@@ -652,13 +652,9 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         .filter(|edge| edge.classification == DependencyClassification::Internal)
         .map(|edge| (edge.source.as_str(), edge.target.as_str()))
         .collect::<BTreeSet<_>>();
-    let trophic_incoherence = trophic_incoherence(
-        &known,
-        &directed_internal_edges,
-        &sccs,
-        TROPHIC_NODE_LIMIT,
-    )
-    .map_err(DependencyError::Invariant)?;
+    let trophic_incoherence =
+        trophic_incoherence(&known, &directed_internal_edges, &sccs, TROPHIC_NODE_LIMIT)
+            .map_err(DependencyError::Invariant)?;
     let spectral_certificates = spectral_certificates(
         &known,
         &directed_internal_edges,
@@ -692,8 +688,7 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
     let unresolved_edges = edges.len() - internal_edges - external_edges;
     let import_grading = import_grading(&source_tree.files, &declarations, &edges);
     let evidence_count = edges.iter().map(|e| e.evidence.len()).sum();
-    let (manifest_dependencies, manifest_count, unreadable_manifests) =
-        inventory_manifests(input)?;
+    let (manifest_dependencies, manifest_count, unreadable_manifests) = inventory_manifests(input)?;
     let non_registry_manifest_dependency_count = manifest_dependencies
         .iter()
         .filter(|d| d.source_kind != ManifestSourceKind::Registry)
@@ -817,24 +812,26 @@ fn import_grading(
     }
     let languages = language_counts
         .into_iter()
-        .map(|(language, (use_declarations, glob_imports, module_object_imports))| {
-            (
-                language,
-                LanguageImportGrading {
-                    epistemic_class: epistemic_class.to_owned(),
-                    use_declarations,
-                    glob_imports,
-                    glob_import_denominator: use_declarations,
-                    glob_import_fraction: exact_fraction(glob_imports, use_declarations),
-                    module_object_imports,
-                    module_object_import_denominator: use_declarations,
-                    module_object_import_fraction: exact_fraction(
-                        module_object_imports,
+        .map(
+            |(language, (use_declarations, glob_imports, module_object_imports))| {
+                (
+                    language,
+                    LanguageImportGrading {
+                        epistemic_class: epistemic_class.to_owned(),
                         use_declarations,
-                    ),
-                },
-            )
-        })
+                        glob_imports,
+                        glob_import_denominator: use_declarations,
+                        glob_import_fraction: exact_fraction(glob_imports, use_declarations),
+                        module_object_imports,
+                        module_object_import_denominator: use_declarations,
+                        module_object_import_fraction: exact_fraction(
+                            module_object_imports,
+                            use_declarations,
+                        ),
+                    },
+                )
+            },
+        )
         .collect();
 
     let internal: Vec<_> = edges
@@ -852,10 +849,7 @@ fn import_grading(
         .map(|edge| edge.edge_grade)
         .collect();
     non_glob_grades.sort_unstable();
-    let plug_edges = non_glob_grades
-        .iter()
-        .filter(|grade| **grade <= 2)
-        .count();
+    let plug_edges = non_glob_grades.iter().filter(|grade| **grade <= 2).count();
     let non_glob_internal_edges = non_glob_grades.len();
     let glob_bearing_external_edges = external.iter().filter(|edge| edge.edge_has_glob).count();
 
@@ -867,10 +861,7 @@ fn import_grading(
             internal_edges: internal.len(),
             glob_bearing_edges: glob_bearing_internal_edges,
             glob_bearing_edge_denominator: internal.len(),
-            glob_bearing_edge_fraction: exact_fraction(
-                glob_bearing_internal_edges,
-                internal.len(),
-            ),
+            glob_bearing_edge_fraction: exact_fraction(glob_bearing_internal_edges, internal.len()),
             non_glob_internal_edges,
             edge_grade_p50: nearest_rank_u64(&non_glob_grades, 50),
             edge_grade_p90: nearest_rank_u64(&non_glob_grades, 90),
@@ -885,10 +876,7 @@ fn import_grading(
             external_edges: external.len(),
             glob_bearing_edges: glob_bearing_external_edges,
             glob_bearing_edge_denominator: external.len(),
-            glob_bearing_edge_fraction: exact_fraction(
-                glob_bearing_external_edges,
-                external.len(),
-            ),
+            glob_bearing_edge_fraction: exact_fraction(glob_bearing_external_edges, external.len()),
         },
     }
 }
@@ -1051,8 +1039,8 @@ fn dependency_propagation(
         .sum::<u128>();
     let mutual_possible_pairs =
         (source_files >= 2).then(|| (source_files as u128) * (source_files as u128 - 1));
-    let mutual_reachability_fraction = mutual_possible_pairs
-        .map(|possible| mutually_reachable_pairs as f64 / possible as f64);
+    let mutual_reachability_fraction =
+        mutual_possible_pairs.map(|possible| mutually_reachable_pairs as f64 / possible as f64);
 
     let largest_weak_component_files = internal_weak.iter().map(Vec::len).max().unwrap_or(0);
     let member_component: BTreeMap<&str, usize> = internal_weak
@@ -1062,7 +1050,10 @@ fn dependency_propagation(
         .collect();
     let mut component_pairs = vec![0u128; internal_weak.len()];
     for component in cycles {
-        if let Some(&index) = component.first().and_then(|f| member_component.get(f.as_str())) {
+        if let Some(&index) = component
+            .first()
+            .and_then(|f| member_component.get(f.as_str()))
+        {
             component_pairs[index] += (component.len() as u128) * (component.len() as u128 - 1);
         }
     }
@@ -1236,8 +1227,7 @@ fn detected_louvain_partition<'a>(
         })
         .collect::<BTreeMap<_, _>>();
     for &(left, right) in undirected {
-        let (Some(&left_index), Some(&right_index)) =
-            (path_index.get(left), path_index.get(right))
+        let (Some(&left_index), Some(&right_index)) = (path_index.get(left), path_index.get(right))
         else {
             unreachable!("layout edge endpoints come from the analyzed path set")
         };
@@ -1456,10 +1446,8 @@ fn layout_headroom(
         .zip(parent_directory.modularity_numerator)
         .zip(detected.modularity_denominator)
         .map(|((detected_numerator, directory_numerator), denominator)| {
-            let (negative, magnitude) = signed_i128_difference(
-                detected_numerator,
-                directory_numerator,
-            );
+            let (negative, magnitude) =
+                signed_i128_difference(detected_numerator, directory_numerator);
             (negative, magnitude, denominator)
         });
     LayoutHeadroom {
@@ -1477,10 +1465,7 @@ fn layout_headroom(
 
 fn signed_i128_difference(left: i128, right: i128) -> (bool, u128) {
     match (left.is_negative(), right.is_negative()) {
-        (false, false) => (
-            left < right,
-            (left as u128).abs_diff(right as u128),
-        ),
+        (false, false) => (left < right, (left as u128).abs_diff(right as u128)),
         (true, true) => (
             left < right,
             left.unsigned_abs().abs_diff(right.unsigned_abs()),
@@ -1633,11 +1618,7 @@ fn layout_partition(
                 if let Some(witness) = agg.ba_edge_witnesses.first() {
                     selected.insert(witness.clone());
                 }
-                for witness in agg
-                    .ab_edge_witnesses
-                    .union(&agg.ba_edge_witnesses)
-                    .take(5)
-                {
+                for witness in agg.ab_edge_witnesses.union(&agg.ba_edge_witnesses).take(5) {
                     if selected.len() == 5 {
                         break;
                     }
@@ -1672,16 +1653,12 @@ fn layout_partition(
         .map(|pair| pair.e_ab + pair.e_ba)
         .sum::<usize>();
     let direction_inconsistency = (direction_inconsistency_denominator != 0).then(|| {
-        direction_inconsistency_numerator as f64
-            / direction_inconsistency_denominator as f64
+        direction_inconsistency_numerator as f64 / direction_inconsistency_denominator as f64
     });
     let mut rows: Vec<LayoutCommunity> = aggs
         .into_iter()
         .map(|(path, agg)| {
-            let mut endpoints = agg
-                .boundary_endpoint_counts
-                .into_iter()
-                .collect::<Vec<_>>();
+            let mut endpoints = agg.boundary_endpoint_counts.into_iter().collect::<Vec<_>>();
             endpoints.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
             let endpoint_total = agg.out_edges + agg.in_edges;
             let cover_target = endpoint_total - endpoint_total / 10;
@@ -2410,16 +2387,15 @@ fn condensation_depth_profile(
         cursor = next;
     }
     // Per-file distributions: every file inherits its SCC's depths.
-    let per_file =
-        |depths: &[usize]| -> Vec<usize> {
-            let mut values: Vec<usize> = sccs
-                .iter()
-                .enumerate()
-                .flat_map(|(i, files)| std::iter::repeat_n(depths[i], files.len()))
-                .collect();
-            values.sort_unstable();
-            values
-        };
+    let per_file = |depths: &[usize]| -> Vec<usize> {
+        let mut values: Vec<usize> = sccs
+            .iter()
+            .enumerate()
+            .flat_map(|(i, files)| std::iter::repeat_n(depths[i], files.len()))
+            .collect();
+        values.sort_unstable();
+        values
+    };
     let nearest_rank = |sorted: &[usize], hundredths: usize| -> usize {
         let rank = (sorted.len() * hundredths).div_ceil(100).max(1);
         sorted[rank - 1]
@@ -2859,14 +2835,13 @@ mod tests {
         assert_eq!(reachability.incoming, None);
         assert_eq!(reachability.outgoing, None);
 
-        let serialized =
-            serde_json::to_value(dependency_propagation(
-                adjacency.len(),
-                &[],
-                &[],
-                &reachability,
-            ))
-                .expect("serialize skipped reachability profile");
+        let serialized = serde_json::to_value(dependency_propagation(
+            adjacency.len(),
+            &[],
+            &[],
+            &reachability,
+        ))
+        .expect("serialize skipped reachability profile");
         assert_eq!(
             serialized["reachability_status"],
             expected_serialized_status
