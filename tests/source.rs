@@ -368,7 +368,10 @@ fn nested_and_concurrent_scopes_keep_their_own_immutable_snapshots() {
             );
         });
         let restored = load_source_tree(root).expect("restored outer tree");
-        assert!(Arc::ptr_eq(&outer.files[0].bytes, &restored.files[0].bytes));
+        assert!(Arc::ptr_eq(
+            &outer.files[0].bytes,
+            &restored.files[0].bytes
+        ));
     });
 
     std::thread::scope(|scope| {
