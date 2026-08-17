@@ -58,7 +58,7 @@ fn assert_forbidden_keys_absent(value: &Value) {
 }
 
 #[test]
-fn worker_reports_all_five_instruments_as_compact_independent_evidence() {
+fn worker_reports_all_six_instruments_as_compact_independent_evidence() {
     let result = analyze(&fixture("service_worker_complete"), provenance());
     let names = result
         .instruments
@@ -68,9 +68,16 @@ fn worker_reports_all_five_instruments_as_compact_independent_evidence() {
 
     assert_eq!(
         names,
-        BTreeSet::from(["api", "dependencies", "duplicates", "metrics", "tests"])
+        BTreeSet::from([
+            "api",
+            "dependencies",
+            "duplicates",
+            "frontier",
+            "metrics",
+            "tests",
+        ])
     );
-    assert_eq!(result.completed_instruments, 5);
+    assert_eq!(result.completed_instruments, 6);
     assert_eq!(result.failed_instruments, 0);
     for (name, instrument) in &result.instruments {
         assert_eq!(instrument.state, InstrumentState::Complete, "{name}");
@@ -202,7 +209,7 @@ fn worker_reports_all_five_instruments_as_compact_independent_evidence() {
 fn worker_records_malformed_dependency_manifest_as_named_skip() {
     let result = analyze(&fixture("service_worker_partial"), provenance());
 
-    assert_eq!(result.completed_instruments, 5);
+    assert_eq!(result.completed_instruments, 6);
     assert_eq!(result.failed_instruments, 0);
     let dependencies = &result.instruments["dependencies"];
     assert_eq!(dependencies.state, InstrumentState::Complete);

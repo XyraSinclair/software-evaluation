@@ -1,3 +1,4 @@
+use crate::service::archive::SkippedEntry;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -56,6 +57,10 @@ pub struct CompactResult {
     pub instruments: BTreeMap<String, InstrumentResult>,
     pub completed_instruments: usize,
     pub failed_instruments: usize,
+    /// Files the archive extractor skipped by name (over the per-file
+    /// byte cap); the analysis below observed the tree without them.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub archive_skips: Vec<SkippedEntry>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
