@@ -16,11 +16,14 @@ A JSON model declares:
 - `priors` (optional): raw nonnegative mass per world. Either every world has
   a prior or none does; partial priors are rejected, never filled in. Supplied
   priors are normalized, and the raw mass plus normalized weights are reported
-  as evidence.
+  as evidence. The reported floating-point weights sum to one up to rounding;
+  dominance decisions recompute normalization in exact rational arithmetic
+  from the raw masses.
 - `probes`: named deterministic experiments. Each maps **every** world to an
-  outcome label (partial observation functions are rejected) and carries a
-  componentwise cost: dollars, latency, invocations. No combined cost
-  magnitude exists.
+  outcome label (partial observation functions are rejected) and carries an
+  explicit componentwise cost: dollars, latency, invocations — every
+  component required, so a missing cost can never masquerade as a free
+  probe. No combined cost magnitude exists.
 
 ```json
 {
@@ -67,12 +70,21 @@ set of possible orders and compares:
 
 - worst-case remaining-order count (lower is better),
 - each cost component (lower is better),
-- and, only when an explicit prior exists, expected remaining-order count
-  (lower) and the mutual information I(Order; Outcome) in bits (higher).
+- and, only when an explicit prior exists, the expected remaining-order
+  count (lower is better), evaluated in exact rational arithmetic from the
+  declared raw masses so a floating-point ulp can never evict a
+  mathematically tied probe.
 
-Guaranteed Hartley information — log2(total orders) − log2(worst-case
-remaining) — is reported but is not a separate dominance axis, because for a
-fixed model it is a monotone function of the worst case.
+The expected count is measure-consistent: an order carried only by
+zero-prior-mass worlds contributes nothing, so a measure-zero distinction
+cannot decide dominance. The purely possibilistic view of the same probe
+lives in the worst-case count, which ignores priors entirely.
+
+Two quantities are reported but are never dominance axes: guaranteed
+Hartley information — log2(total orders) − log2(worst-case remaining) — is
+a monotone function of the worst case for a fixed model, and the mutual
+information I(Order; Outcome) in bits is transcendental and therefore not
+exactly computable, which disqualifies it from licensing evictions.
 
 ## What is refused
 

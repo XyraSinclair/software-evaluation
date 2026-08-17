@@ -3,8 +3,8 @@
 //! A probe model declares a finite set of possible latent worlds, the Pareto
 //! [`PartialOrder`] each world induces on the quality frontier, and a set of
 //! deterministic candidate probes, each mapping every world to an outcome
-//! label at a componentwise cost. This module ranks nothing. It computes two
-//! different nondominated sets:
+//! label at an explicit componentwise cost. This module ranks nothing. It
+//! computes two different nondominated sets:
 //!
 //! - The **Blackwell-cost frontier** removes a probe only when another probe's
 //!   outcome partition refines its partition (for deterministic finite
@@ -14,22 +14,30 @@
 //!   cost dimension, with at least one strict advantage.
 //! - The **order-information frontier** first quotients away distinctions
 //!   between worlds that induce the same Pareto order, then compares
-//!   worst-case remaining-order counts, optional prior-backed expected
-//!   information, and componentwise cost. A probe that only separates worlds
-//!   with identical induced orders earns no order information here, however
-//!   fine its partition.
+//!   worst-case remaining-order counts, the exact prior-backed expected
+//!   remaining-order count, and componentwise cost. A probe that only
+//!   separates worlds with identical induced orders earns no order
+//!   information here, however fine its partition.
 //!
-//! No exchange rate between information and cost is ever introduced, and no
-//! probe score is produced. Unresolved tradeoffs survive on both frontiers.
+//! Dominance axes are exactly computable: counts, declared costs compared
+//! as given, and expected remaining orders evaluated in exact rational
+//! arithmetic from the declared prior masses. Mutual information in bits is
+//! reported for context but is never a dominance axis, because a
+//! transcendental quantity evaluated in floating point cannot honestly
+//! license an eviction. No exchange rate between information and cost is
+//! ever introduced, and no probe score is produced. Unresolved tradeoffs
+//! survive on both frontiers.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fmt::Write as _;
 
+use num_rational::BigRational;
+use num_traits::{FromPrimitive, ToPrimitive, Zero};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 use crate::frontier::PartialOrder;
+use crate::source::hex_digest;
 
 pub const PROBE_SCHEMA_VERSION: &str = "seval.order-probes.v1";
 
@@ -42,7 +50,7 @@ pub struct ProbeModel {
     /// none does; a partial prior is rejected rather than filled in.
     #[serde(default)]
     pub priors: Option<BTreeMap<String, f64>>,
-    pub probes: Vec<ProbeSpec>,
+    pub probes: Vec<OrderProbeSpec>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -55,9 +63,10 @@ pub struct WorldSpec {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct ProbeSpec {
+pub struct OrderProbeSpec {
     pub name: String,
-    #[serde(default)]
+    /// Explicit componentwise cost. Every component is required; a missing
+    /// or partial cost is rejected rather than filled in with zeros.
     pub cost: CostVector,
     /// Total observation function: every declared world must map to exactly
     /// one outcome label. Partial mappings are rejected.
@@ -65,8 +74,8 @@ pub struct ProbeSpec {
 }
 
 /// Componentwise cost. There is deliberately no combined magnitude.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, default)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CostVector {
     pub dollars: f64,
     pub latency_ms: f64,
@@ -131,9 +140,11 @@ pub enum ProbeModelError {
 
 /// Normalization evidence for an explicitly supplied prior.
 #[derive(Debug, Clone, Serialize)]
-pub struct PriorReceipt {
+pub struct PriorEvidence {
     pub raw_mass: f64,
-    /// Normalized weights in world order; they sum to one by construction.
+    /// Normalized weights in world order, rendered in floating point; they
+    /// sum to one up to rounding. Dominance decisions never consume these:
+    /// they are recomputed in exact rational arithmetic from the raw masses.
     pub weights: Vec<f64>,
 }
 
@@ -156,10 +167,11 @@ pub struct OutcomeReport {
 pub struct ProbeReport {
     pub name: String,
     pub cost: CostVector,
-    /// Outcome-preimage partition of the worlds: sorted blocks of sorted
-    /// names. Outcome labels are deliberately excluded so relabeled but
-    /// observationally identical probes are recognized as equivalent.
-    pub partition: Vec<Vec<String>>,
+    /// Outcome-preimage partition of the worlds: canonically sorted blocks
+    /// of sorted names. Outcome labels are deliberately excluded so
+    /// relabeled but observationally identical probes are recognized as
+    /// equivalent.
+    pub partition: Vec<BTreeSet<String>>,
     /// SHA-256 over the length-delimited canonical partition.
     pub partition_sha256: String,
     pub outcomes: Vec<OutcomeReport>,
@@ -170,10 +182,17 @@ pub struct ProbeReport {
     /// Hartley information about the order guaranteed in the worst case:
     /// log2(total distinct orders) - log2(worst-case remaining orders).
     pub guaranteed_order_bits: f64,
-    /// Sum over outcomes of P(outcome) * |possible orders|; requires a prior.
+    /// Expected number of Pareto orders carried by positive-prior-mass
+    /// worlds after observing the probe: sum over outcomes of P(outcome)
+    /// times the count of orders with positive posterior mass. Rendered in
+    /// floating point; dominance uses the exact rational value.
     pub expected_remaining_orders: Option<f64>,
-    /// I(Order; Outcome) in bits under the normalized prior.
+    /// I(Order; Outcome) in bits under the normalized prior. Reported for
+    /// context only; never a dominance axis.
     pub order_outcome_mutual_information_bits: Option<f64>,
+    /// Exact rational expected remaining orders, used for dominance.
+    #[serde(skip)]
+    expected_remaining_orders_exact: Option<BigRational>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -189,7 +208,7 @@ pub struct ProbeAnalysis {
     pub worlds: Vec<WorldReport>,
     /// Distinct induced Pareto orders across all declared worlds, sorted.
     pub distinct_orders: Vec<PartialOrder>,
-    pub prior: Option<PriorReceipt>,
+    pub prior: Option<PriorEvidence>,
     pub probes: Vec<ProbeReport>,
     /// Probes not Blackwell-cost dominated, in declaration order.
     pub blackwell_frontier: Vec<String>,
@@ -202,24 +221,28 @@ pub struct ProbeAnalysis {
 /// Validate a declared model and compute both probe frontiers.
 pub fn analyze_model(model: &ProbeModel) -> Result<ProbeAnalysis, ProbeModelError> {
     let orders = validate_worlds(&model.worlds)?;
-    let weights = validate_priors(model, &orders)?;
+    let exact_weights = validate_priors(model, &orders)?;
     validate_probes(model, &orders)?;
 
     let distinct_orders: BTreeSet<PartialOrder> = orders.values().copied().collect();
     let total_orders = distinct_orders.len();
 
-    let mut probes = Vec::with_capacity(model.probes.len());
-    let mut partitions: Vec<Vec<BTreeSet<String>>> = Vec::with_capacity(model.probes.len());
-    for probe in &model.probes {
-        let (report, partition) =
-            analyze_probe(probe, &orders, total_orders, weights.as_deref(), model);
-        probes.push(report);
-        partitions.push(partition);
-    }
+    let probes: Vec<ProbeReport> = model
+        .probes
+        .iter()
+        .map(|probe| {
+            analyze_probe(
+                probe,
+                &orders,
+                total_orders,
+                exact_weights.as_deref(),
+                model,
+            )
+        })
+        .collect();
 
-    let (blackwell_frontier, blackwell_dominance) = blackwell_frontier(&probes, &partitions);
-    let (order_information_frontier, order_dominance) =
-        order_information_frontier(&probes, weights.is_some());
+    let (blackwell_frontier, blackwell_dominance) = frontier_by(&probes, blackwell_dominates);
+    let (order_information_frontier, order_dominance) = frontier_by(&probes, order_dominates);
 
     Ok(ProbeAnalysis {
         schema_version: PROBE_SCHEMA_VERSION.to_owned(),
@@ -232,9 +255,12 @@ pub fn analyze_model(model: &ProbeModel) -> Result<ProbeAnalysis, ProbeModelErro
             })
             .collect(),
         distinct_orders: distinct_orders.into_iter().collect(),
-        prior: weights.as_ref().map(|weights| PriorReceipt {
+        prior: exact_weights.as_ref().map(|weights| PriorEvidence {
             raw_mass: raw_prior_mass(model),
-            weights: weights.clone(),
+            weights: weights
+                .iter()
+                .map(|weight| weight.to_f64().unwrap_or(f64::NAN))
+                .collect(),
         }),
         probes,
         blackwell_frontier,
@@ -259,10 +285,13 @@ fn validate_worlds(
     Ok(orders)
 }
 
+/// Validate priors and return the exact normalized weight per world, in
+/// world declaration order. Every f64 is an exact rational, so normalizing
+/// raw masses in [`BigRational`] arithmetic is exact end to end.
 fn validate_priors(
     model: &ProbeModel,
     orders: &BTreeMap<String, PartialOrder>,
-) -> Result<Option<Vec<f64>>, ProbeModelError> {
+) -> Result<Option<Vec<BigRational>>, ProbeModelError> {
     let Some(priors) = &model.priors else {
         return Ok(None);
     };
@@ -280,7 +309,6 @@ fn validate_priors(
             });
         }
     }
-    let mut mass = 0.0_f64;
     for (world, value) in priors {
         if !value.is_finite() || *value < 0.0 {
             return Err(ProbeModelError::InvalidPrior {
@@ -288,18 +316,19 @@ fn validate_priors(
                 value: *value,
             });
         }
-        mass += *value;
     }
-    if mass <= 0.0 {
+    let raw: Vec<BigRational> = model
+        .worlds
+        .iter()
+        .map(|world| {
+            BigRational::from_f64(priors[&world.name]).expect("finite f64 is an exact rational")
+        })
+        .collect();
+    let mass: BigRational = raw.iter().sum();
+    if mass.is_zero() {
         return Err(ProbeModelError::ZeroPriorMass);
     }
-    Ok(Some(
-        model
-            .worlds
-            .iter()
-            .map(|world| priors[&world.name] / mass)
-            .collect(),
-    ))
+    Ok(Some(raw.into_iter().map(|value| value / &mass).collect()))
 }
 
 fn raw_prior_mass(model: &ProbeModel) -> f64 {
@@ -352,12 +381,12 @@ fn validate_probes(
 }
 
 fn analyze_probe(
-    probe: &ProbeSpec,
+    probe: &OrderProbeSpec,
     orders: &BTreeMap<String, PartialOrder>,
     total_orders: usize,
-    weights: Option<&[f64]>,
+    exact_weights: Option<&[BigRational]>,
     model: &ProbeModel,
-) -> (ProbeReport, Vec<BTreeSet<String>>) {
+) -> ProbeReport {
     // Outcome label -> preimage worlds.
     let mut preimages: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
     for (world, outcome) in &probe.observations {
@@ -383,62 +412,89 @@ fn analyze_probe(
     let mut partition: Vec<BTreeSet<String>> = preimages.into_values().collect();
     partition.sort_by(|left, right| left.first().cmp(&right.first()));
 
-    let (expected_remaining_orders, mutual_information) = weights
-        .map(|weights| prior_statistics(&outcomes, orders, weights, model))
-        .unzip();
+    let (expected_exact, mutual_information) = match exact_weights {
+        Some(weights) => {
+            let (expected, information) = prior_statistics(&outcomes, orders, weights, model);
+            (Some(expected), Some(information))
+        }
+        None => (None, None),
+    };
 
-    let report = ProbeReport {
+    ProbeReport {
         name: probe.name.clone(),
         cost: probe.cost,
-        partition: partition
-            .iter()
-            .map(|block| block.iter().cloned().collect())
-            .collect(),
         partition_sha256: partition_digest(&partition),
+        partition,
         outcomes,
         worst_case_remaining_orders,
         guaranteed_eliminated_orders: total_orders - worst_case_remaining_orders,
         guaranteed_order_bits: (total_orders as f64).log2()
             - (worst_case_remaining_orders as f64).log2(),
-        expected_remaining_orders,
+        expected_remaining_orders: expected_exact
+            .as_ref()
+            .map(|expected| expected.to_f64().unwrap_or(f64::NAN)),
         order_outcome_mutual_information_bits: mutual_information,
-    };
-    (report, partition)
+        expected_remaining_orders_exact: expected_exact,
+    }
 }
 
-/// Expected remaining-order count and I(Order; Outcome) in bits under the
-/// normalized prior. Zero-mass outcomes contribute nothing to either.
+/// Exact expected remaining-order count and I(Order; Outcome) in bits under
+/// the normalized prior.
+///
+/// Both quantities are measure-consistent: an order carried only by
+/// zero-prior-mass worlds contributes to neither, so a measure-zero
+/// distinction can never decide dominance. The purely possibilistic view of
+/// the same probe lives in `worst_case_remaining_orders`.
 fn prior_statistics(
     outcomes: &[OutcomeReport],
     orders: &BTreeMap<String, PartialOrder>,
-    weights: &[f64],
+    exact_weights: &[BigRational],
     model: &ProbeModel,
-) -> (f64, f64) {
-    let weight_of: BTreeMap<&str, f64> = model
+) -> (BigRational, f64) {
+    let exact_weight_of: BTreeMap<&str, &BigRational> = model
         .worlds
         .iter()
-        .zip(weights)
-        .map(|(world, weight)| (world.name.as_str(), *weight))
+        .zip(exact_weights)
+        .map(|(world, weight)| (world.name.as_str(), weight))
+        .collect();
+    let float_weight_of: BTreeMap<&str, f64> = model
+        .worlds
+        .iter()
+        .zip(exact_weights)
+        .map(|(world, weight)| (world.name.as_str(), weight.to_f64().unwrap_or(f64::NAN)))
         .collect();
 
     let mut order_mass: BTreeMap<PartialOrder, f64> = BTreeMap::new();
     for world in &model.worlds {
-        *order_mass.entry(world.order).or_default() += weight_of[world.name.as_str()];
+        *order_mass.entry(world.order).or_default() += float_weight_of[world.name.as_str()];
     }
 
-    let mut expected_remaining = 0.0;
+    let mut expected_remaining = BigRational::zero();
     let mut mutual_information = 0.0;
     for outcome in outcomes {
+        let outcome_mass_exact: BigRational = outcome
+            .worlds
+            .iter()
+            .map(|world| exact_weight_of[world.as_str()].clone())
+            .sum();
+        let positive_mass_orders: BTreeSet<PartialOrder> = outcome
+            .worlds
+            .iter()
+            .filter(|world| !exact_weight_of[world.as_str()].is_zero())
+            .map(|world| orders[world.as_str()])
+            .collect();
+        expected_remaining += outcome_mass_exact
+            * BigRational::from_usize(positive_mass_orders.len())
+                .expect("usize converts to a rational");
+
         let outcome_mass: f64 = outcome
             .worlds
             .iter()
-            .map(|world| weight_of[world.as_str()])
+            .map(|world| float_weight_of[world.as_str()])
             .sum();
-        expected_remaining += outcome_mass * outcome.possible_orders.len() as f64;
-
         let mut joint: BTreeMap<PartialOrder, f64> = BTreeMap::new();
         for world in &outcome.worlds {
-            *joint.entry(orders[world]).or_default() += weight_of[world.as_str()];
+            *joint.entry(orders[world]).or_default() += float_weight_of[world.as_str()];
         }
         for (order, mass) in joint {
             if mass > 0.0 && outcome_mass > 0.0 {
@@ -459,12 +515,7 @@ fn partition_digest(partition: &[BTreeSet<String>]) -> String {
             hasher.update(world.as_bytes());
         }
     }
-    let digest = hasher.finalize();
-    let mut rendered = String::with_capacity(digest.len() * 2);
-    for byte in digest {
-        let _ = write!(&mut rendered, "{byte:02x}");
-    }
-    rendered
+    hex_digest(&hasher.finalize())
 }
 
 /// True when every block of `finer` is contained in some block of `coarser`.
@@ -474,47 +525,28 @@ fn refines(finer: &[BTreeSet<String>], coarser: &[BTreeSet<String>]) -> bool {
         .all(|block| coarser.iter().any(|candidate| block.is_subset(candidate)))
 }
 
-fn blackwell_frontier(
+/// Shared nondominated-set scan: a probe survives unless some other probe
+/// dominates it under the given predicate. First dominator wins for the
+/// dominance record; declaration order is preserved.
+fn frontier_by(
     probes: &[ProbeReport],
-    partitions: &[Vec<BTreeSet<String>>],
+    dominates: impl Fn(&ProbeReport, &ProbeReport) -> Option<String>,
 ) -> (Vec<String>, Vec<DominanceRecord>) {
     let mut dominance = Vec::new();
     let mut frontier = Vec::new();
     for (index, probe) in probes.iter().enumerate() {
-        let mut dominated_by = None;
-        for (other_index, other) in probes.iter().enumerate() {
-            if index == other_index {
-                continue;
-            }
-            let strictly_finer = refines(&partitions[other_index], &partitions[index])
-                && partitions[other_index] != partitions[index];
-            let equivalent = partitions[other_index] == partitions[index];
-            let refines_this = strictly_finer || equivalent;
-            if !refines_this || !other.cost.leq(probe.cost) {
-                continue;
-            }
-            let strictly_cheaper = other.cost.strictly_cheaper_somewhere(probe.cost);
-            if strictly_finer || strictly_cheaper {
-                let mut reasons = Vec::new();
-                if strictly_finer {
-                    reasons.push("strictly finer outcome partition");
-                } else {
-                    reasons.push("observationally equivalent partition");
-                }
-                if strictly_cheaper {
-                    reasons.push("strictly cheaper in at least one cost component");
-                } else {
-                    reasons.push("no more expensive in any cost component");
-                }
-                dominated_by = Some(DominanceRecord {
+        let record = probes
+            .iter()
+            .enumerate()
+            .filter(|(other_index, _)| *other_index != index)
+            .find_map(|(_, other)| {
+                dominates(other, probe).map(|reason| DominanceRecord {
                     dominated: probe.name.clone(),
                     by: other.name.clone(),
-                    reason: reasons.join("; "),
-                });
-                break;
-            }
-        }
-        match dominated_by {
+                    reason,
+                })
+            });
+        match record {
             Some(record) => dominance.push(record),
             None => frontier.push(probe.name.clone()),
         }
@@ -522,46 +554,38 @@ fn blackwell_frontier(
     (frontier, dominance)
 }
 
-fn order_information_frontier(
-    probes: &[ProbeReport],
-    has_prior: bool,
-) -> (Vec<String>, Vec<DominanceRecord>) {
-    let mut dominance = Vec::new();
-    let mut frontier = Vec::new();
-    for (index, probe) in probes.iter().enumerate() {
-        let mut dominated_by = None;
-        for (other_index, other) in probes.iter().enumerate() {
-            if index == other_index {
-                continue;
-            }
-            if let Some(reason) = order_dominates(other, probe, has_prior) {
-                dominated_by = Some(DominanceRecord {
-                    dominated: probe.name.clone(),
-                    by: other.name.clone(),
-                    reason,
-                });
-                break;
-            }
-        }
-        match dominated_by {
-            Some(record) => dominance.push(record),
-            None => frontier.push(probe.name.clone()),
-        }
+/// Reason `candidate` Blackwell-cost dominates `probe`, if it does.
+fn blackwell_dominates(candidate: &ProbeReport, probe: &ProbeReport) -> Option<String> {
+    let equivalent = candidate.partition == probe.partition;
+    let strictly_finer = !equivalent && refines(&candidate.partition, &probe.partition);
+    if (!equivalent && !strictly_finer) || !candidate.cost.leq(probe.cost) {
+        return None;
     }
-    (frontier, dominance)
+    let strictly_cheaper = candidate.cost.strictly_cheaper_somewhere(probe.cost);
+    if !strictly_finer && !strictly_cheaper {
+        return None;
+    }
+    let partition_clause = if strictly_finer {
+        "strictly finer outcome partition"
+    } else {
+        "observationally equivalent partition"
+    };
+    let cost_clause = if strictly_cheaper {
+        "strictly cheaper in at least one cost component"
+    } else {
+        "no more expensive in any cost component"
+    };
+    Some(format!("{partition_clause}; {cost_clause}"))
 }
 
 /// Reason `candidate` order-information dominates `probe`, if it does.
 ///
 /// Axes: worst-case remaining orders (lower), each cost component (lower),
-/// and with a prior also expected remaining orders (lower) and
-/// I(Order; Outcome) (higher). Guaranteed bits are excluded as an axis: for a
-/// fixed model they are a monotone function of the worst case.
-fn order_dominates(
-    candidate: &ProbeReport,
-    probe: &ProbeReport,
-    has_prior: bool,
-) -> Option<String> {
+/// and, when a prior exists, the exact rational expected remaining-order
+/// count (lower). Guaranteed bits are excluded as an axis (for a fixed
+/// model they are a monotone function of the worst case), and mutual
+/// information is excluded because it is not exactly computable.
+fn order_dominates(candidate: &ProbeReport, probe: &ProbeReport) -> Option<String> {
     if candidate.worst_case_remaining_orders > probe.worst_case_remaining_orders
         || !candidate.cost.leq(probe.cost)
     {
@@ -569,31 +593,26 @@ fn order_dominates(
     }
     let mut strict = candidate.worst_case_remaining_orders < probe.worst_case_remaining_orders
         || candidate.cost.strictly_cheaper_somewhere(probe.cost);
-    if has_prior {
-        let candidate_expected = candidate.expected_remaining_orders.unwrap_or(f64::NAN);
-        let probe_expected = probe.expected_remaining_orders.unwrap_or(f64::NAN);
-        let candidate_information = candidate
-            .order_outcome_mutual_information_bits
-            .unwrap_or(f64::NAN);
-        let probe_information = probe
-            .order_outcome_mutual_information_bits
-            .unwrap_or(f64::NAN);
-        if !(candidate_expected <= probe_expected && candidate_information >= probe_information) {
+    let mut expected_clause = None;
+    if let (Some(candidate_expected), Some(probe_expected)) = (
+        &candidate.expected_remaining_orders_exact,
+        &probe.expected_remaining_orders_exact,
+    ) {
+        if candidate_expected > probe_expected {
             return None;
         }
-        strict = strict
-            || candidate_expected < probe_expected
-            || candidate_information > probe_information;
+        strict = strict || candidate_expected < probe_expected;
+        expected_clause = Some("exactly weakly better expected remaining orders");
     }
     strict.then(|| {
         let mut clauses = vec![format!(
             "worst-case remaining orders {} <= {}",
             candidate.worst_case_remaining_orders, probe.worst_case_remaining_orders
         )];
-        if has_prior {
-            clauses.push("weakly better expected remaining orders and order information".into());
+        if let Some(clause) = expected_clause {
+            clauses.push(clause.to_owned());
         }
-        clauses.push("cost weakly lower in every component".into());
+        clauses.push("cost weakly lower in every component".to_owned());
         clauses.join("; ")
     })
 }

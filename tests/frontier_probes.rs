@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 
 use software_evaluation::frontier::PartialOrder;
 use software_evaluation::frontier_probes::{
-    CostVector, ProbeModel, ProbeModelError, ProbeSpec, WorldSpec, analyze_model,
+    CostVector, OrderProbeSpec, ProbeModel, ProbeModelError, WorldSpec, analyze_model,
 };
 
 fn world(name: &str, order: PartialOrder) -> WorldSpec {
@@ -17,8 +17,8 @@ fn world(name: &str, order: PartialOrder) -> WorldSpec {
     }
 }
 
-fn probe(name: &str, cost: CostVector, observations: &[(&str, &str)]) -> ProbeSpec {
-    ProbeSpec {
+fn probe(name: &str, cost: CostVector, observations: &[(&str, &str)]) -> OrderProbeSpec {
+    OrderProbeSpec {
         name: name.to_owned(),
         cost,
         observations: observations
@@ -284,4 +284,52 @@ fn invalid_costs_and_unknown_worlds_are_rejected() {
         analyze_model(&unknown_world),
         Err(ProbeModelError::UnknownObservedWorld { .. })
     ));
+}
+
+#[test]
+fn measure_zero_worlds_cannot_decide_prior_backed_dominance() {
+    // w-ghost carries the only Tradeoff order but has zero prior mass. It
+    // still widens the possibilistic worst case, yet must not inflate the
+    // measure-consistent expected remaining-order count, and a distinction
+    // carried only by zero-mass worlds must not evict an otherwise tied
+    // probe.
+    let mut priors = BTreeMap::new();
+    priors.insert("w-right".to_owned(), 1.0);
+    priors.insert("w-left".to_owned(), 1.0);
+    priors.insert("w-ghost".to_owned(), 0.0);
+    let model = ProbeModel {
+        worlds: vec![
+            world("w-right", PartialOrder::RightDominates),
+            world("w-left", PartialOrder::LeftDominates),
+            world("w-ghost", PartialOrder::Tradeoff),
+        ],
+        priors: Some(priors),
+        probes: vec![
+            probe(
+                "ghost-with-right",
+                dollars(1.0),
+                &[("w-right", "a"), ("w-ghost", "a"), ("w-left", "b")],
+            ),
+            probe(
+                "ghost-with-left",
+                dollars(1.0),
+                &[("w-right", "a"), ("w-ghost", "b"), ("w-left", "b")],
+            ),
+        ],
+    };
+    let analysis = analyze_model(&model).expect("valid model");
+    for report in &analysis.probes {
+        assert_eq!(report.worst_case_remaining_orders, 2);
+        assert_eq!(
+            report.expected_remaining_orders,
+            Some(1.0),
+            "zero-mass w-ghost must not count toward expected remaining orders"
+        );
+    }
+    assert_eq!(
+        analysis.order_information_frontier,
+        vec!["ghost-with-right", "ghost-with-left"],
+        "a distinction carried only by a zero-mass world must not decide dominance"
+    );
+    assert!(analysis.order_dominance.is_empty());
 }
