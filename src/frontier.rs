@@ -1,4 +1,4 @@
-//! A compact, receipt-bearing Pareto surface over the strongest fast
+//! A compact, evidence-bearing Pareto surface over the strongest fast
 //! mechanical software-quality proxies already implemented by this crate.
 //!
 //! The frontier is deliberately not a score. It pairs mutually policing
@@ -111,7 +111,7 @@ pub struct FrontierProfile {
     pub artifact: FrontierArtifact,
     pub config: FrontierConfig,
     pub elapsed_ms: u128,
-    pub analyzers: Vec<AnalyzerReceipt>,
+    pub analyzers: Vec<AnalyzerEvidence>,
     pub signals: Vec<FrontierSignal>,
     pub families: Vec<SignalFamily>,
     pub coverage: DirectionalCoverage,
@@ -136,7 +136,7 @@ pub enum AnalyzerStatus {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct AnalyzerReceipt {
+pub struct AnalyzerEvidence {
     pub id: String,
     pub status: AnalyzerStatus,
     pub implementation: Option<String>,
@@ -274,7 +274,7 @@ pub struct FrontierComparison {
 
 #[derive(Debug)]
 struct AnalyzerRun {
-    receipt: AnalyzerReceipt,
+    evidence: AnalyzerEvidence,
     value: Option<Value>,
 }
 
@@ -337,9 +337,9 @@ pub fn profile_path(
     let mut analyzers = Vec::with_capacity(runs.len());
     for run in runs {
         if let Some(value) = run.value {
-            values.insert(run.receipt.id.clone(), value);
+            values.insert(run.evidence.id.clone(), value);
         }
-        analyzers.push(run.receipt);
+        analyzers.push(run.evidence);
     }
     let signals = signals::project(&values, config);
     let mut limitations = signals::limitations();
@@ -381,7 +381,7 @@ where
             .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).map(|value| (bytes, value)))
         {
             Ok((bytes, value)) => AnalyzerRun {
-                receipt: AnalyzerReceipt {
+                evidence: AnalyzerEvidence {
                     id: id.to_owned(),
                     status: AnalyzerStatus::Complete,
                     implementation: value
@@ -421,7 +421,7 @@ fn join_analyzer(id: &str, result: thread::Result<AnalyzerRun>) -> AnalyzerRun {
 
 fn failed_run(id: &str, status: AnalyzerStatus, elapsed_ms: u128, error: String) -> AnalyzerRun {
     AnalyzerRun {
-        receipt: AnalyzerReceipt {
+        evidence: AnalyzerEvidence {
             id: id.to_owned(),
             status,
             implementation: None,

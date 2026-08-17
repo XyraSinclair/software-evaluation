@@ -354,7 +354,7 @@ fn empty_initial_commit_supports_snapshot_and_both_repository_programs() {
     assert!(
         run.steps
             .iter()
-            .all(|step| step.receipt.status == ProgramStatus::Completed)
+            .all(|step| step.attestation.status == ProgramStatus::Completed)
     );
 
     let static_shape: StaticRepoShape = observation(
@@ -407,7 +407,7 @@ fn empty_initial_commit_supports_snapshot_and_both_repository_programs() {
 }
 
 #[test]
-fn two_repository_programs_complete_with_zero_dollars_and_auditable_receipts() {
+fn two_repository_programs_complete_with_zero_dollars_and_auditable_evidence() {
     let repository = init_repo();
     write_file(
         repository.path(),
@@ -441,14 +441,14 @@ fn two_repository_programs_complete_with_zero_dollars_and_auditable_receipts() {
     assert_eq!(run.stopped_reason, StopReason::Complete);
     assert_eq!(run.remaining.usd, 0.0);
     assert_eq!(run.remaining.programs, 0);
-    assert_eq!(run.steps[0].receipt.status, ProgramStatus::Completed);
-    assert_eq!(run.steps[1].receipt.status, ProgramStatus::Completed);
-    assert_eq!(run.steps[0].receipt.program.version, "1");
-    assert_eq!(run.steps[1].receipt.program.id, "repo.git-change-shape");
-    assert_eq!(run.steps[1].receipt.program.version, "2");
+    assert_eq!(run.steps[0].attestation.status, ProgramStatus::Completed);
+    assert_eq!(run.steps[1].attestation.status, ProgramStatus::Completed);
+    assert_eq!(run.steps[0].attestation.program.version, "1");
+    assert_eq!(run.steps[1].attestation.program.id, "repo.git-change-shape");
+    assert_eq!(run.steps[1].attestation.program.version, "2");
     assert_ne!(
-        run.steps[0].receipt.program.id,
-        run.steps[1].receipt.program.id
+        run.steps[0].attestation.program.id,
+        run.steps[1].attestation.program.id
     );
 
     let static_stdout = git(
@@ -456,7 +456,7 @@ fn two_repository_programs_complete_with_zero_dollars_and_auditable_receipts() {
         ["ls-tree", "-r", "-z", "--long", &artifact.revision],
     )
     .stdout;
-    // v2 receipts the full timestamp-aware N+1 probe, not the truncated parsed window:
+    // v2 evidence the full timestamp-aware N+1 probe, not the truncated parsed window:
     // requested N=2 therefore independently reconstructs `git log -n 3` byte-for-byte.
     let history_stdout = git(
         repository.path(),
@@ -476,23 +476,23 @@ fn two_repository_programs_complete_with_zero_dollars_and_auditable_receipts() {
 
     for (step, stdout) in run.steps.iter().zip([static_stdout, history_stdout]) {
         assert!(!stdout.is_empty(), "fixture Git evidence must be nonempty");
-        assert_eq!(step.receipt.actual_resources.usd, 0.0);
-        assert_eq!(step.receipt.actual_resources.programs, 1);
+        assert_eq!(step.attestation.actual_resources.usd, 0.0);
+        assert_eq!(step.attestation.actual_resources.programs, 1);
         assert_eq!(
-            step.receipt.actual_resources.bytes_read,
+            step.attestation.actual_resources.bytes_read,
             u64::try_from(stdout.len()).expect("fixture output length fits u64")
         );
-        assert!(step.receipt.actual_resources.bytes_read > 0);
+        assert!(step.attestation.actual_resources.bytes_read > 0);
         assert_eq!(step.evidence.len(), 1);
         assert_eq!(
             step.evidence[0].digest.as_deref(),
             Some(sha256_hex(&stdout).as_str())
         );
         let observation_digest = step
-            .receipt
+            .attestation
             .observation_digest
             .as_deref()
-            .expect("completed receipt records an observation digest");
+            .expect("completed attestation records an observation digest");
         assert_eq!(observation_digest.len(), 64);
         assert!(
             observation_digest

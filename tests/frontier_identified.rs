@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use software_evaluation::frontier::{
-    AnalyzerReceipt, AnalyzerStatus, DirectionalCoverage, FrontierArtifact, FrontierConfig,
+    AnalyzerEvidence, AnalyzerStatus, DirectionalCoverage, FrontierArtifact, FrontierConfig,
     FrontierProfile, FrontierSignal, PartialOrder, SignalFamily, SignalPolarity, SignalStatus,
 };
 use software_evaluation::frontier_identified::compare_profiles;
@@ -391,7 +391,7 @@ fn profile(name: &str, lower_value: f64) -> FrontierProfile {
         elapsed_ms: 0,
         analyzers: ["shape", "symbols", "discipline", "duplicates"]
             .into_iter()
-            .map(|id| AnalyzerReceipt {
+            .map(|id| AnalyzerEvidence {
                 id: id.to_owned(),
                 status: AnalyzerStatus::Complete,
                 implementation: Some(format!("{id}.v1")),

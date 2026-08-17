@@ -37,11 +37,11 @@ jobs:
           ]
           assert report["schema_version"] == "seval.frontier.v1"
           assert [signal["id"] for signal in report["signals"]] == expected
-          assert [receipt["id"] for receipt in report["analyzers"]] == [
+          assert [evidence["id"] for evidence in report["analyzers"]] == [
               "shape", "symbols", "discipline", "duplicates"
           ]
-          assert all(receipt["status"] == "complete" for receipt in report["analyzers"])
-          assert all(receipt["coverage"] is not None for receipt in report["analyzers"])
+          assert all(evidence["status"] == "complete" for evidence in report["analyzers"])
+          assert all(evidence["coverage"] is not None for evidence in report["analyzers"])
           assert report["artifact"]["git"] is not None
           assert not any(
               "fell back to independent discovery" in limitation

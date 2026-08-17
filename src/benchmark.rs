@@ -50,9 +50,9 @@ pub struct BenchmarkReport {
     pub environment: BenchmarkEnvironment,
     pub timestamp_unix_ns: u128,
     pub successful: bool,
-    pub warmups: Vec<RunReceipt>,
-    pub first_measured_run: RunReceipt,
-    pub warmed_samples: Vec<RunReceipt>,
+    pub warmups: Vec<RunAttestation>,
+    pub first_measured_run: RunAttestation,
+    pub warmed_samples: Vec<RunAttestation>,
     pub warmed_latency_ns: LatencyDistribution,
     pub warmed_units_per_second: Option<RateDistribution>,
     pub warmed_bytes_per_second: Option<RateDistribution>,
@@ -89,7 +89,7 @@ pub struct BenchmarkEnvironment {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct RunReceipt {
+pub struct RunAttestation {
     pub ordinal: u32,
     pub started: bool,
     pub spawn_error: Option<String>,
@@ -282,7 +282,7 @@ fn is_executable(_metadata: &fs::Metadata) -> bool {
     true
 }
 
-fn run_once(spec: &BenchmarkSpec, cwd: &Path, ordinal: u32) -> RunReceipt {
+fn run_once(spec: &BenchmarkSpec, cwd: &Path, ordinal: u32) -> RunAttestation {
     let started_at = Instant::now();
     let spawned = Command::new(&spec.program)
         .args(&spec.args)
@@ -329,7 +329,7 @@ fn run_once(spec: &BenchmarkSpec, cwd: &Path, ordinal: u32) -> RunReceipt {
     let stderr = join_capture(stderr_thread);
     let (exit_code, termination_signal) = status_parts(status.as_ref());
     let success = !timed_out && status.as_ref().is_some_and(ExitStatus::success);
-    RunReceipt {
+    RunAttestation {
         ordinal,
         started: true,
         spawn_error: None,
@@ -345,8 +345,8 @@ fn run_once(spec: &BenchmarkSpec, cwd: &Path, ordinal: u32) -> RunReceipt {
     }
 }
 
-fn spawn_failure(ordinal: u32, elapsed: Duration, error: io::Error) -> RunReceipt {
-    RunReceipt {
+fn spawn_failure(ordinal: u32, elapsed: Duration, error: io::Error) -> RunAttestation {
+    RunAttestation {
         ordinal,
         started: false,
         spawn_error: Some(error.to_string()),
@@ -382,7 +382,7 @@ fn status_parts(status: Option<&ExitStatus>) -> (Option<i32>, Option<i32>) {
     (status.and_then(ExitStatus::code), None)
 }
 
-fn latency_distribution(samples: &[RunReceipt]) -> LatencyDistribution {
+fn latency_distribution(samples: &[RunAttestation]) -> LatencyDistribution {
     let mut values: Vec<u128> = samples.iter().map(|sample| sample.elapsed_ns).collect();
     values.sort_unstable();
     LatencyDistribution {
@@ -396,7 +396,7 @@ fn latency_distribution(samples: &[RunReceipt]) -> LatencyDistribution {
     }
 }
 
-fn rate_distribution(samples: &[RunReceipt], numerator: u64) -> RateDistribution {
+fn rate_distribution(samples: &[RunAttestation], numerator: u64) -> RateDistribution {
     let mut values: Vec<f64> = samples
         .iter()
         .map(|sample| {

@@ -150,22 +150,22 @@ fn zero_dollar_programs_continue_to_the_next_step_and_distinct_digests_accumulat
     .expect("zero-cost programs should fit a zero-dollar budget");
 
     assert_eq!(run.steps.len(), 2);
-    assert_eq!(run.steps[0].receipt.status, ProgramStatus::Completed);
+    assert_eq!(run.steps[0].attestation.status, ProgramStatus::Completed);
     assert!(matches!(
         run.steps[0].continuation,
         Continuation::Continue { .. }
     ));
-    assert_eq!(run.steps[1].receipt.status, ProgramStatus::Completed);
+    assert_eq!(run.steps[1].attestation.status, ProgramStatus::Completed);
     assert_eq!(run.stopped_reason, StopReason::Complete);
     assert_eq!(run.remaining.usd, 0.0);
 
     let first_digest = run.steps[0]
-        .receipt
+        .attestation
         .observation_digest
         .as_ref()
         .expect("completed observation has a digest");
     let second_digest = run.steps[1]
-        .receipt
+        .attestation
         .observation_digest
         .as_ref()
         .expect("completed observation has a digest");
@@ -191,7 +191,10 @@ fn program_invocation_estimate_blocks_execution_when_no_invocations_remain() {
     .expect("a budget block is a recorded evaluation outcome");
 
     assert_eq!(run.steps.len(), 1);
-    assert_eq!(run.steps[0].receipt.status, ProgramStatus::BudgetBlocked);
+    assert_eq!(
+        run.steps[0].attestation.status,
+        ProgramStatus::BudgetBlocked
+    );
     assert_eq!(run.stopped_reason, StopReason::ProgramLimit);
     assert!(run.steps[0].observation.is_none());
     assert_eq!(run.posterior, prior);
@@ -251,18 +254,18 @@ fn malformed_belief_updates_fail_closed_without_changing_the_prior() {
         let run = run_program("rev-a", "tree-a", &program);
         let step = &run.steps[0];
 
-        assert_eq!(step.receipt.status, ProgramStatus::Failed, "{name}");
+        assert_eq!(step.attestation.status, ProgramStatus::Failed, "{name}");
         assert_eq!(run.stopped_reason, StopReason::ProgramFailed, "{name}");
         assert!(step.observation.is_none(), "{name}");
-        assert!(step.receipt.observation_digest.is_none(), "{name}");
+        assert!(step.attestation.observation_digest.is_none(), "{name}");
         assert_eq!(run.posterior, prior, "{name}");
         assert!(
-            step.receipt
+            step.attestation
                 .message
                 .as_deref()
                 .is_some_and(|message| message.contains(expected_message)),
             "{name}: {:?}",
-            step.receipt.message
+            step.attestation.message
         );
     }
 }
@@ -410,8 +413,8 @@ fn equal_completed_prefixes_stopped_by_program_limit_are_not_comparable() {
 
     assert_eq!(left.steps.len(), 1);
     assert_eq!(right.steps.len(), 1);
-    assert_eq!(left.steps[0].receipt.status, ProgramStatus::Completed);
-    assert_eq!(right.steps[0].receipt.status, ProgramStatus::Completed);
+    assert_eq!(left.steps[0].attestation.status, ProgramStatus::Completed);
+    assert_eq!(right.steps[0].attestation.status, ProgramStatus::Completed);
     assert_eq!(left.stopped_reason, StopReason::ProgramLimit);
     assert_eq!(right.stopped_reason, StopReason::ProgramLimit);
 

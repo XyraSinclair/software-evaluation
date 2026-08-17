@@ -69,7 +69,7 @@ The report always exposes the order on the observed intersection. It exposes a
    commit and tree, with no tracked or non-ignored untracked changes at either
    observation.
 2. Frontier schema versions match the running implementation.
-3. Each required analyzer has exactly one complete, error-free receipt with a
+3. Each required analyzer has exactly one complete, error-free evidence with a
    valid observation digest and a named implementation; implementations match
    across the two profiles.
 4. Analysis-affecting configurations are exactly equal.
@@ -110,9 +110,9 @@ box remains sound for every subset.
 See [Sharp identified Pareto orders](identified-orders.md) for the derivation,
 contract, examples, and research lineage.
 
-## Receipts
+## Evidence
 
-The four underlying analyzers run concurrently. Each receipt contains:
+The four underlying analyzers run concurrently. Each evidence contains:
 
 - analyzer identity and implementation string,
 - completion/failure/panic status,
@@ -123,7 +123,7 @@ The four underlying analyzers run concurrently. Each receipt contains:
 
 The compact frontier report retains projected values rather than duplicating
 large symbol and function tables. The digest allows a separately archived raw
-observation to be checked against the receipt and independently reprojected.
+observation to be checked against the evidence and independently reprojected.
 
 ## What this can establish
 

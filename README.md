@@ -13,7 +13,7 @@ Built on three refusals:
   the owner's values; a weighted average would launder them.
 - **No unsupported verdicts.** In a conforming evaluation, every number and
   judgment resolves in two hops to a replayable command, transcript, or judge
-  receipt — see [PROVENANCE.md](PROVENANCE.md).
+  evidence — see [PROVENANCE.md](PROVENANCE.md).
 - **No manufactured oracles.** Axes with no computable truth (fitness-to-
   intent, conceptual parsimony) are triangulated across ≥2 independent
   judges; agreement compresses, disagreement is reported as the finding and
@@ -43,14 +43,14 @@ below, while generic criterion execution is currently a library API:
    probability, redundancy-aware conditional information, and Pareto frontiers.
 3. **Criterion execution:** run independently shaped programs through
    `evaluate(artifact, program, evidence, decision, resources)` and retain the
-   typed observation, evidence, receipt, posterior state, and continuation.
+   typed observation, evidence, evidence, posterior state, and continuation.
 4. **Repository profiling and comparison:** run two deterministic proxy
    programs against committed Git snapshots, then derive matched numeric deltas
    without assigning a winner or an overall quality score.
 5. **One-off source and execution measurement:** tabulate AST complexity,
    dependency topology, normalized clones, externally reachable Rust API plus
    documented lexical proxies for other languages, test machinery, and
-   direct-argv benchmark receipts; source-tree comparisons remain explicit
+   direct-argv benchmark evidence; source-tree comparisons remain explicit
    `right - left` differences without a global score.
 
 ```console
@@ -83,7 +83,7 @@ $ cargo run --release -- bench --warmup 1 --runs 20 -- ./program --exact-arg
 Both programs run at committed `HEAD` and reject tracked uncommitted changes;
 untracked files are ignored because they are outside the measured snapshot.
 Every observation carries its classifier, Git command, Git version, raw-output
-SHA-256 digest, resource vector, limitations, and a kernel-measured receipt.
+SHA-256 digest, resource vector, limitations, and a kernel-measured evidence.
 `repo-compare` applies the same program versions and budgets independently to
 both repositories, rejects incomplete or structurally incompatible results,
 and reports `right - left` at matched JSON Pointer paths. Delta direction is
@@ -98,7 +98,7 @@ committed-tree denominator. JSON preserves every row; text provides a bounded
 operational table; SVG renders paired absolute and size-normalized language
 facets with raw-value log ticks, explicit missingness, coordinate extrema, and
 a bounded history-only ledger. The output never multiplies change, size, and
-complexity into a score. Tree, blob-batch, and history receipts retain exact
+complexity into a score. Tree, blob-batch, and history evidence retain exact
 Git commands, versions, byte counts, and SHA-256 digests.
 
 The worktree instruments analyze the current file or directory, not a commit

@@ -78,7 +78,7 @@ pub struct ParsedSource<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct SourceFileReceipt {
+pub struct SourceFileEvidence {
     pub path: String,
     pub language: SourceLanguage,
     pub bytes: u64,
@@ -87,7 +87,7 @@ pub struct SourceFileReceipt {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct SourceCorpusReceipt {
+pub struct SourceCorpusEvidence {
     pub schema_version: String,
     /// Reported input root; excluded from the content manifest digest.
     pub root: String,
@@ -101,7 +101,7 @@ pub struct SourceCorpusReceipt {
     pub filesystem_discoveries: usize,
     pub file_reads: usize,
     pub parses: usize,
-    pub files: Vec<SourceFileReceipt>,
+    pub files: Vec<SourceFileEvidence>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -151,7 +151,7 @@ struct SourceCorpus {
     key: PathBuf,
     tree: SourceTree,
     parsed: BTreeMap<PathBuf, CachedParse>,
-    receipt: SourceCorpusReceipt,
+    evidence: SourceCorpusEvidence,
     source_tree_hits: AtomicUsize,
     parse_tree_hits: AtomicUsize,
 }
@@ -169,7 +169,7 @@ impl SourceCorpusSession {
         let key = input_key(input);
         let tree = load_source_tree_uncached(input)?;
         let mut parsed = BTreeMap::new();
-        let mut file_receipts = Vec::with_capacity(tree.files.len());
+        let mut file_evidence = Vec::with_capacity(tree.files.len());
         let mut total_bytes = 0u64;
         let mut syntax_error_files = 0usize;
         let mut manifest = Sha256::new();
@@ -191,7 +191,7 @@ impl SourceCorpusSession {
             manifest.update(digest);
             manifest.update([u8::from(observation.has_syntax_errors)]);
 
-            file_receipts.push(SourceFileReceipt {
+            file_evidence.push(SourceFileEvidence {
                 path: file.path.clone(),
                 language: file.language,
                 bytes,
@@ -208,7 +208,7 @@ impl SourceCorpusSession {
             );
         }
 
-        let receipt = SourceCorpusReceipt {
+        let evidence = SourceCorpusEvidence {
             schema_version: SOURCE_CORPUS_SCHEMA_VERSION.to_owned(),
             root: tree.root.clone(),
             manifest_sha256: hex_digest(Sha256::finalize(manifest).as_ref()),
@@ -220,14 +220,14 @@ impl SourceCorpusSession {
             filesystem_discoveries: 1,
             file_reads: tree.files.len(),
             parses: tree.files.len(),
-            files: file_receipts,
+            files: file_evidence,
         };
         Ok(Self {
             corpus: Arc::new(SourceCorpus {
                 key,
                 tree,
                 parsed,
-                receipt,
+                evidence,
                 source_tree_hits: AtomicUsize::new(0),
                 parse_tree_hits: AtomicUsize::new(0),
             }),
@@ -245,8 +245,8 @@ impl SourceCorpusSession {
     }
 
     #[must_use]
-    pub fn receipt(&self) -> &SourceCorpusReceipt {
-        &self.corpus.receipt
+    pub fn evidence(&self) -> &SourceCorpusEvidence {
+        &self.corpus.evidence
     }
 
     #[must_use]

@@ -176,13 +176,13 @@ pub fn compare_evaluation_runs(
     for (step_index, (left_step, right_step)) in left.steps.iter().zip(&right.steps).enumerate() {
         ensure_matching_descriptors(
             step_index,
-            &left_step.receipt.program,
-            &right_step.receipt.program,
+            &left_step.attestation.program,
+            &right_step.attestation.program,
         )?;
 
-        let descriptor = &left_step.receipt.program;
-        ensure_completed(descriptor, "left", left_step.receipt.status)?;
-        ensure_completed(descriptor, "right", right_step.receipt.status)?;
+        let descriptor = &left_step.attestation.program;
+        ensure_completed(descriptor, "left", left_step.attestation.status)?;
+        ensure_completed(descriptor, "right", right_step.attestation.status)?;
 
         let left_observation =
             observation_or_error(descriptor, "left", left_step.observation.as_ref())?;

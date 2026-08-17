@@ -278,7 +278,7 @@ enum Command {
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
         format: OutputFormat,
     },
-    /// Benchmark an exact argv repeatedly and emit resource receipts.
+    /// Benchmark an exact argv repeatedly and emit resource attestations.
     Bench {
         /// Warmup invocations, excluded from measured distributions.
         #[arg(long, default_value_t = 1)]
@@ -801,15 +801,15 @@ fn print_repo_run(report: &EvaluationRun) -> Result<(), String> {
     for step in &report.steps {
         println!(
             "program: {}@{} criterion={} status={:?} elapsed={}ms bytes_read={}",
-            step.receipt.program.id,
-            step.receipt.program.version,
-            step.receipt.program.criterion,
-            step.receipt.status,
-            step.receipt.elapsed_ms,
-            step.receipt.actual_resources.bytes_read,
+            step.attestation.program.id,
+            step.attestation.program.version,
+            step.attestation.program.criterion,
+            step.attestation.status,
+            step.attestation.elapsed_ms,
+            step.attestation.actual_resources.bytes_read,
         );
-        if let Some(message) = &step.receipt.message {
-            println!("  receipt: {message}");
+        if let Some(message) = &step.attestation.message {
+            println!("  attestation: {message}");
         }
         for evidence in &step.evidence {
             println!(

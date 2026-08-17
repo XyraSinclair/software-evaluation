@@ -1,7 +1,7 @@
 use std::cmp::Reverse;
 
 use software_evaluation::api_surface::ApiReport;
-use software_evaluation::benchmark::{BenchmarkReport, RunReceipt};
+use software_evaluation::benchmark::{BenchmarkReport, RunAttestation};
 use software_evaluation::cochange::CochangeLayoutReport;
 use software_evaluation::cochange_support::{CochangeSupportReport, ExactRatio, SupportMassBin};
 use software_evaluation::deps::DependencyReport;
@@ -1604,7 +1604,7 @@ pub fn print_benchmark(report: &BenchmarkReport) {
     print_limitations(&report.limitations);
 }
 
-fn print_run(label: &str, run: &RunReceipt) {
+fn print_run(label: &str, run: &RunAttestation) {
     println!(
         "{label} #{}: success={} exit={:?} signal={:?} timeout={} elapsed={} stdout={}B stderr={}B peak-rss={}",
         run.ordinal,
@@ -1685,7 +1685,7 @@ pub fn print_cochange_layout(report: &CochangeLayoutReport, top: usize) {
             .map_or_else(|| "n/a".to_owned(), |v| v.to_string()),
     );
     println!(
-        "history_receipt git_version={} command={} stdout_sha256={} stdout_bytes={}",
+        "history_evidence git_version={} command={} stdout_sha256={} stdout_bytes={}",
         h.git_version, h.command, h.stdout_sha256, h.stdout_bytes
     );
     println!(
@@ -1697,7 +1697,7 @@ pub fn print_cochange_layout(report: &CochangeLayoutReport, top: usize) {
         u.files_never_touched,
     );
     println!(
-        "source_tree_receipt git_version={} command={} stdout_sha256={} stdout_bytes={}",
+        "source_tree_evidence git_version={} command={} stdout_sha256={} stdout_bytes={}",
         p.git_version, p.ls_tree_command, p.ls_tree_stdout_sha256, p.ls_tree_stdout_bytes
     );
     println!(

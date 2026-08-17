@@ -271,18 +271,18 @@ fn corpus_materialization_is_content_digested_and_reused_without_copying_bytes()
     write_file(root, "notes.txt", "unsupported\n");
 
     let session = SourceCorpusSession::activate(root).expect("materialize source corpus");
-    let receipt = session.receipt();
-    assert_eq!(receipt.schema_version, "seval.source-corpus.v1");
-    assert_eq!(receipt.enumerated_files, 3);
-    assert_eq!(receipt.supported_files, 2);
-    assert_eq!(receipt.skipped_files, 1);
-    assert_eq!(receipt.filesystem_discoveries, 1);
-    assert_eq!(receipt.file_reads, 2);
-    assert_eq!(receipt.parses, 2);
-    assert_eq!(receipt.files.len(), 2);
-    assert_eq!(receipt.manifest_sha256.len(), 64);
+    let evidence = session.evidence();
+    assert_eq!(evidence.schema_version, "seval.source-corpus.v1");
+    assert_eq!(evidence.enumerated_files, 3);
+    assert_eq!(evidence.supported_files, 2);
+    assert_eq!(evidence.skipped_files, 1);
+    assert_eq!(evidence.filesystem_discoveries, 1);
+    assert_eq!(evidence.file_reads, 2);
+    assert_eq!(evidence.parses, 2);
+    assert_eq!(evidence.files.len(), 2);
+    assert_eq!(evidence.manifest_sha256.len(), 64);
     assert!(
-        receipt
+        evidence
             .manifest_sha256
             .bytes()
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
@@ -315,12 +315,12 @@ fn corpus_manifest_is_stable_and_changes_with_source_identity() {
 
     let first = SourceCorpusSession::activate(root)
         .expect("first corpus")
-        .receipt()
+        .evidence()
         .manifest_sha256
         .clone();
     let second = SourceCorpusSession::activate(root)
         .expect("second corpus")
-        .receipt()
+        .evidence()
         .manifest_sha256
         .clone();
     assert_eq!(first, second);
@@ -328,7 +328,7 @@ fn corpus_manifest_is_stable_and_changes_with_source_identity() {
     write_file(root, "value.rs", "fn value() -> u8 { 2 }\n");
     let changed_bytes = SourceCorpusSession::activate(root)
         .expect("changed-byte corpus")
-        .receipt()
+        .evidence()
         .manifest_sha256
         .clone();
     assert_ne!(first, changed_bytes);
@@ -336,7 +336,7 @@ fn corpus_manifest_is_stable_and_changes_with_source_identity() {
     fs::rename(root.join("value.rs"), root.join("renamed.rs")).expect("rename fixture source");
     let changed_path = SourceCorpusSession::activate(root)
         .expect("changed-path corpus")
-        .receipt()
+        .evidence()
         .manifest_sha256
         .clone();
     assert_ne!(changed_bytes, changed_path);

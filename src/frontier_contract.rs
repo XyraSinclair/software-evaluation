@@ -274,7 +274,7 @@ fn valid_analyzer_registry(profile: &FrontierProfile) -> bool {
         && profile
             .analyzers
             .iter()
-            .map(|receipt| receipt.id.as_str())
+            .map(|evidence| evidence.id.as_str())
             .eq(ANALYZER_IDS)
 }
 
@@ -282,21 +282,21 @@ fn unique_complete_implementation<'a>(
     profile: &'a FrontierProfile,
     analyzer_id: &str,
 ) -> Option<&'a str> {
-    let receipt = profile
+    let evidence = profile
         .analyzers
         .iter()
-        .find(|receipt| receipt.id == analyzer_id)?;
-    if receipt.status != AnalyzerStatus::Complete
-        || receipt.error.is_some()
-        || receipt.coverage.is_none()
-        || !receipt
+        .find(|evidence| evidence.id == analyzer_id)?;
+    if evidence.status != AnalyzerStatus::Complete
+        || evidence.error.is_some()
+        || evidence.coverage.is_none()
+        || !evidence
             .payload_sha256
             .as_deref()
             .is_some_and(valid_sha256_hex)
     {
         return None;
     }
-    receipt
+    evidence
         .implementation
         .as_deref()
         .filter(|implementation| !implementation.trim().is_empty())

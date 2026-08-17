@@ -29,7 +29,7 @@ pub fn render_change_profile_text(report: &ChangeProfileReport, top: usize) -> S
     let p = &report.source_provenance;
     let _ = writeln!(
         out,
-        "history_receipt git_version={} command={} stdout_sha256={} stdout_bytes={}",
+        "history_evidence git_version={} command={} stdout_sha256={} stdout_bytes={}",
         h.git_version, h.command, h.stdout_sha256, h.stdout_bytes
     );
     let _ = writeln!(
@@ -45,12 +45,12 @@ pub fn render_change_profile_text(report: &ChangeProfileReport, top: usize) -> S
     );
     let _ = writeln!(
         out,
-        "source_tree_receipt git_version={} command={} stdout_sha256={} stdout_bytes={}",
+        "source_tree_evidence git_version={} command={} stdout_sha256={} stdout_bytes={}",
         p.git_version, p.ls_tree_command, p.ls_tree_stdout_sha256, p.ls_tree_stdout_bytes
     );
     let _ = writeln!(
         out,
-        "source_blob_receipt command={} protocol={} request_sha256={} stdout_sha256={} stdout_bytes={}",
+        "source_blob_evidence command={} protocol={} request_sha256={} stdout_sha256={} stdout_bytes={}",
         p.cat_file_command,
         p.cat_file_protocol,
         p.cat_file_request_sha256,
@@ -224,7 +224,7 @@ pub fn render_change_profile_svg(report: &ChangeProfileReport) -> Result<String,
     );
     let _ = write!(
         svg,
-        "<text x=\"32\" y=\"118\">source tree receipt: {} · {} bytes · SHA-256 {}</text>",
+        "<text x=\"32\" y=\"118\">source tree evidence: {} · {} bytes · SHA-256 {}</text>",
         xml_text(&p.git_version),
         p.ls_tree_stdout_bytes,
         xml_text(&p.ls_tree_stdout_sha256)
@@ -241,7 +241,7 @@ pub fn render_change_profile_svg(report: &ChangeProfileReport) -> Result<String,
         32.0,
         158.0,
         &format!(
-            "source blob receipt: request SHA-256 {} · {} bytes · stdout SHA-256 {}",
+            "source blob evidence: request SHA-256 {} · {} bytes · stdout SHA-256 {}",
             p.cat_file_request_sha256, p.cat_file_stdout_bytes, p.cat_file_stdout_sha256
         ),
         150,
@@ -262,7 +262,7 @@ pub fn render_change_profile_svg(report: &ChangeProfileReport) -> Result<String,
     );
     let _ = write!(
         svg,
-        "<text x=\"32\" y=\"218\">history receipt: {} · {} bytes · SHA-256 {}</text>",
+        "<text x=\"32\" y=\"218\">history evidence: {} · {} bytes · SHA-256 {}</text>",
         xml_text(&h.git_version),
         h.stdout_bytes,
         xml_text(&h.stdout_sha256)
