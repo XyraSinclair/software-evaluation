@@ -10,8 +10,10 @@
 //!
 //! The result is the sharp set of Pareto orders attainable in the Cartesian
 //! product of those intervals. A unique order is therefore necessary under the
-//! declared bounds. No probability distribution, criterion weight, or hidden
-//! scalarization is introduced.
+//! declared bounds. Qualification still requires compatible configurations,
+//! receipts, schemas, canonical signal registries, and stable Git identities.
+//! No probability distribution, criterion weight, or hidden scalarization is
+//! introduced.
 
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -22,24 +24,12 @@ use crate::frontier::{
     self, FrontierComparison, FrontierConfig, FrontierError, FrontierProfile, FrontierSignal,
     PartialOrder, SignalOutcome, SignalPolarity, SignalStatus,
 };
+use crate::frontier_contract::{signal_contract, signal_ids, valid_signal_registry};
 
 pub const IDENTIFIED_ORDER_SCHEMA_VERSION: &str = "seval.frontier.identified.v1";
 
-const LOCAL_COGNITIVE: &str = "reader.local-cognitive-p90";
 const SYMBOL_WORKING_SET: &str = "reader.symbol-working-set-p90-fraction";
-const SHALLOW_FUNCTIONS: &str = "interface.shallow-function-fraction";
-const SYNTACTIC_PURITY: &str = "effects.syntactic-pure-fraction";
-const MUTABLE_LIVE_RANGE: &str = "effects.mutable-live-range-p90-lines";
 const CLONE_DENSITY: &str = "uniformity.reported-clone-token-density";
-
-const SIGNAL_IDS: [&str; 6] = [
-    LOCAL_COGNITIVE,
-    SYMBOL_WORKING_SET,
-    SHALLOW_FUNCTIONS,
-    SYNTACTIC_PURITY,
-    MUTABLE_LIVE_RANGE,
-    CLONE_DENSITY,
-];
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct IdentifiedInterval {
@@ -130,7 +120,8 @@ pub struct SharpOrderSet {
     /// model, in deterministic display order.
     pub possible_orders: Vec<PartialOrder>,
     /// Present when every compatible assignment of bounded values induces the
-    /// same Pareto order.
+    /// same Pareto order. This is a mathematical property of the interval box,
+    /// not by itself a provenance-qualified routing fact.
     pub necessary_order: Option<PartialOrder>,
     /// True when no compatible assignment makes the right artifact worse on
     /// any admitted coordinate. Strict improvement need not be necessary.
@@ -140,10 +131,26 @@ pub struct SharpOrderSet {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct IdentifiedReadiness {
+    pub schema_compatible: bool,
+    pub analysis_config_compatible: bool,
+    pub analyzer_implementations_compatible: bool,
+    pub artifacts_commit_pinned: bool,
+    pub signal_registries_valid: bool,
+    pub interval_surface_complete: bool,
+    pub qualified_identified_set: bool,
+    pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct IdentifiedComparison {
     pub schema_version: String,
     pub base: FrontierComparison,
+    pub readiness: IdentifiedReadiness,
     pub sharp_order_set: SharpOrderSet,
+    /// A unique interval-box order promoted to a routing fact only after the
+    /// full schema/configuration/receipt/artifact contract passes.
+    pub qualified_necessary_order: Option<PartialOrder>,
     pub signals: Vec<IdentifiedSignalComparison>,
     pub assumptions: Vec<String>,
     pub limitations: Vec<String>,
@@ -162,15 +169,22 @@ pub fn compare_paths(
 
 #[must_use]
 pub fn compare_profiles(left: FrontierProfile, right: FrontierProfile) -> IdentifiedComparison {
-    let registry_valid = valid_registry(&left) && valid_registry(&right);
+    let signal_registries_valid = valid_signal_registry(&left) && valid_signal_registry(&right);
     let signals = compare_signal_sets(&left, &right);
-    let sharp_order_set = derive_sharp_order_set(&signals, registry_valid);
+    let sharp_order_set = derive_sharp_order_set(&signals, signal_registries_valid);
     let base = frontier::compare_profiles(left, right);
+    let readiness = identified_readiness(&base, signal_registries_valid, sharp_order_set.complete);
+    let qualified_necessary_order = readiness
+        .qualified_identified_set
+        .then_some(sharp_order_set.necessary_order)
+        .flatten();
 
     IdentifiedComparison {
         schema_version: IDENTIFIED_ORDER_SCHEMA_VERSION.to_owned(),
         base,
+        readiness,
         sharp_order_set,
+        qualified_necessary_order,
         signals,
         assumptions: vec![
             "Observed finite values are singleton identified intervals.".to_owned(),
@@ -190,9 +204,57 @@ pub fn compare_profiles(left: FrontierProfile, right: FrontierProfile) -> Identi
                 .to_owned(),
             "Missing, failed, or structurally invalid signals have no declared interval and prevent a complete identified order set."
                 .to_owned(),
-            "A necessary Pareto order is still only a routing statement over the six mechanical proxies, not proof of correctness, security, fitness, or maintainability."
+            "A qualified necessary order is still only a routing statement over the six mechanical proxies, not proof of correctness, security, fitness, or maintainability."
                 .to_owned(),
         ],
+    }
+}
+
+fn identified_readiness(
+    base: &FrontierComparison,
+    signal_registries_valid: bool,
+    interval_surface_complete: bool,
+) -> IdentifiedReadiness {
+    let schema_compatible = base.readiness.schema_compatible;
+    let analysis_config_compatible = base.readiness.analysis_config_compatible;
+    let analyzer_implementations_compatible =
+        base.readiness.analyzer_implementations_compatible;
+    let artifacts_commit_pinned = base.readiness.artifacts_commit_pinned;
+    let qualified_identified_set = schema_compatible
+        && analysis_config_compatible
+        && analyzer_implementations_compatible
+        && artifacts_commit_pinned
+        && signal_registries_valid
+        && interval_surface_complete;
+    let mut blockers = Vec::new();
+    if !schema_compatible {
+        blockers.push("frontier schema versions differ or are unsupported".to_owned());
+    }
+    if !analysis_config_compatible {
+        blockers.push("analysis-affecting configurations differ or are invalid".to_owned());
+    }
+    if !analyzer_implementations_compatible {
+        blockers.push("analyzer receipt registries or implementations are incompatible".to_owned());
+    }
+    if !artifacts_commit_pinned {
+        blockers.push("both artifacts require valid stable Git snapshot identities".to_owned());
+    }
+    if !signal_registries_valid {
+        blockers.push("one or both signal registries violate the canonical contract".to_owned());
+    }
+    if !interval_surface_complete {
+        blockers.push("one or more directional signals lack a preregistered identified interval"
+            .to_owned());
+    }
+    IdentifiedReadiness {
+        schema_compatible,
+        analysis_config_compatible,
+        analyzer_implementations_compatible,
+        artifacts_commit_pinned,
+        signal_registries_valid,
+        interval_surface_complete,
+        qualified_identified_set,
+        blockers,
     }
 }
 
@@ -200,10 +262,9 @@ fn compare_signal_sets(
     left: &FrontierProfile,
     right: &FrontierProfile,
 ) -> Vec<IdentifiedSignalComparison> {
-    SIGNAL_IDS
-        .iter()
+    signal_ids()
         .map(|id| {
-            let definition = definition(id);
+            let contract = signal_contract(id).expect("registered signal has a contract");
             match (
                 unique_signal(left, id, "left"),
                 unique_signal(right, id, "right"),
@@ -218,10 +279,10 @@ fn compare_signal_sets(
                         reasons.push(error);
                     }
                     IdentifiedSignalComparison {
-                        id: (*id).to_owned(),
-                        family: definition.family.to_owned(),
-                        label: (*id).to_owned(),
-                        polarity: definition.polarity,
+                        id: id.to_owned(),
+                        family: contract.family.to_owned(),
+                        label: id.to_owned(),
+                        polarity: contract.polarity,
                         compatible: false,
                         left: None,
                         right: None,
@@ -234,10 +295,7 @@ fn compare_signal_sets(
         .collect()
 }
 
-fn compare_signal(
-    left: &FrontierSignal,
-    right: &FrontierSignal,
-) -> IdentifiedSignalComparison {
+fn compare_signal(left: &FrontierSignal, right: &FrontierSignal) -> IdentifiedSignalComparison {
     let compatible = left.id == right.id
         && left.family == right.family
         && left.polarity == right.polarity
@@ -312,8 +370,8 @@ fn interval_evidence(signal: &FrontierSignal) -> Result<IntervalEvidence, String
             interval: IdentifiedInterval::lower_bounded(value)?,
             basis: IntervalBasis::CensoringLowerBound,
             source_status: signal.status,
-            interpretation: "reported clone mass is a lower bound because the group cap was reached"
-                .to_owned(),
+            interpretation:
+                "reported clone mass is a lower bound because the group cap was reached".to_owned(),
         }),
         SignalStatus::InsufficientCoverage if signal.id == SYMBOL_WORKING_SET => {
             if value > 1.0 {
@@ -350,26 +408,52 @@ fn local_possible_outcomes(
     let mut outcomes = Vec::with_capacity(3);
     match polarity {
         SignalPolarity::LowerIsBetter => {
-            if right.lower < left.upper_value() {
+            if strict_less_possible(right.lower, left.upper_value()) {
                 outcomes.push(SignalOutcome::RightBetter);
             }
-            if left.lower < right.upper_value() {
+            if strict_less_possible(left.lower, right.upper_value()) {
                 outcomes.push(SignalOutcome::LeftBetter);
             }
         }
         SignalPolarity::HigherIsBetter => {
-            if right.upper_value() > left.lower {
+            if strict_less_possible(left.lower, right.upper_value()) {
                 outcomes.push(SignalOutcome::RightBetter);
             }
-            if left.upper_value() > right.lower {
+            if strict_less_possible(right.lower, left.upper_value()) {
                 outcomes.push(SignalOutcome::LeftBetter);
             }
         }
     }
-    if left.overlaps(right) {
+    if equivalent_possible(left, right) {
         outcomes.push(SignalOutcome::Equivalent);
     }
     outcomes
+}
+
+fn strict_less_possible(lower: f64, upper: f64) -> bool {
+    if upper.is_infinite() {
+        return lower.is_finite();
+    }
+    lower < upper && !approximately_equal(lower, upper)
+}
+
+fn equivalent_possible(left: IdentifiedInterval, right: IdentifiedInterval) -> bool {
+    if left.overlaps(right) {
+        return true;
+    }
+    match (left.upper, right.upper) {
+        (Some(left_upper), Some(right_upper)) if left_upper < right.lower => {
+            approximately_equal(left_upper, right.lower)
+        }
+        (Some(left_upper), Some(right_upper)) if right_upper < left.lower => {
+            approximately_equal(right_upper, left.lower)
+        }
+        _ => false,
+    }
+}
+
+fn approximately_equal(left: f64, right: f64) -> bool {
+    (left - right).abs() <= 1e-12 + 1e-9 * left.abs().max(right.abs())
 }
 
 fn derive_sharp_order_set(
@@ -382,8 +466,9 @@ fn derive_sharp_order_set(
         .map(|signal| signal.id.clone())
         .collect::<Vec<_>>();
     let comparable_signals = signals.len().saturating_sub(unusable_signal_ids.len());
+    let expected_signals = signal_ids().len();
     let complete = registry_valid
-        && signals.len() == SIGNAL_IDS.len()
+        && signals.len() == expected_signals
         && unusable_signal_ids.is_empty();
     if !complete {
         return SharpOrderSet {
@@ -476,41 +561,6 @@ fn derive_sharp_order_set(
     }
 }
 
-fn valid_registry(profile: &FrontierProfile) -> bool {
-    if profile.signals.len() != SIGNAL_IDS.len() || profile.coverage.declared != SIGNAL_IDS.len() {
-        return false;
-    }
-    if !SIGNAL_IDS.iter().all(|id| {
-        profile
-            .signals
-            .iter()
-            .filter(|signal| signal.id == *id)
-            .count()
-            == 1
-    }) {
-        return false;
-    }
-
-    let observed = profile
-        .signals
-        .iter()
-        .filter(|signal| signal.status == SignalStatus::Observed)
-        .count();
-    let unusable = profile
-        .signals
-        .iter()
-        .filter(|signal| signal.status != SignalStatus::Observed)
-        .map(|signal| signal.id.as_str())
-        .collect::<BTreeSet<_>>();
-    let reported_unusable = profile
-        .coverage
-        .unusable_signal_ids
-        .iter()
-        .map(String::as_str)
-        .collect::<BTreeSet<_>>();
-    profile.coverage.observed == observed && unusable == reported_unusable
-}
-
 fn unique_signal<'a>(
     profile: &'a FrontierProfile,
     id: &str,
@@ -524,38 +574,6 @@ fn unique_signal<'a>(
         return Err(format!("{side} profile duplicates {id}"));
     }
     Ok(signal)
-}
-
-#[derive(Debug, Clone, Copy)]
-struct SignalDefinition {
-    family: &'static str,
-    polarity: SignalPolarity,
-}
-
-fn definition(id: &str) -> SignalDefinition {
-    match id {
-        LOCAL_COGNITIVE | SYMBOL_WORKING_SET => SignalDefinition {
-            family: "reader-load",
-            polarity: SignalPolarity::LowerIsBetter,
-        },
-        SHALLOW_FUNCTIONS => SignalDefinition {
-            family: "interface-depth",
-            polarity: SignalPolarity::LowerIsBetter,
-        },
-        SYNTACTIC_PURITY => SignalDefinition {
-            family: "effect-locality",
-            polarity: SignalPolarity::HigherIsBetter,
-        },
-        MUTABLE_LIVE_RANGE => SignalDefinition {
-            family: "effect-locality",
-            polarity: SignalPolarity::LowerIsBetter,
-        },
-        CLONE_DENSITY => SignalDefinition {
-            family: "uniformity",
-            polarity: SignalPolarity::LowerIsBetter,
-        },
-        _ => unreachable!("definition requested only for preregistered signals"),
-    }
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
