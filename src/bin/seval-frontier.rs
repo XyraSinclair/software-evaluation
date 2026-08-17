@@ -7,7 +7,8 @@ use software_evaluation::frontier::{
     SignalOutcome, SignalStatus, compare_paths, profile_path,
 };
 use software_evaluation::frontier_identified::{
-    IdentifiedComparison, IntervalBasis, IntervalEvidence, compare_paths as compare_identified_paths,
+    IdentifiedComparison, IntervalBasis, IntervalEvidence,
+    compare_paths as compare_identified_paths,
 };
 
 #[derive(Debug, Parser)]
@@ -140,7 +141,7 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
                 OutputFormat::Text => print_identified_comparison(&report),
                 OutputFormat::Json => print_json(&report)?,
             }
-            Ok(if report.sharp_order_set.necessary_order.is_some() {
+            Ok(if report.qualified_necessary_order.is_some() {
                 ExitCode::SUCCESS
             } else {
                 ExitCode::from(1)
@@ -271,20 +272,38 @@ fn print_identified_comparison(report: &IdentifiedComparison) {
         report.sharp_order_set.complete,
         report.sharp_order_set.registry_valid,
         report.sharp_order_set.comparable_signals,
-        if possible.is_empty() { "none" } else { &possible },
+        if possible.is_empty() {
+            "none"
+        } else {
+            &possible
+        },
     );
     match report.sharp_order_set.necessary_order {
-        Some(order) => println!("necessary order: {}", partial_order(order)),
-        None => println!("necessary order: unavailable"),
+        Some(order) => println!("mathematical necessary order: {}", partial_order(order)),
+        None => println!("mathematical necessary order: unavailable"),
+    }
+    match report.qualified_necessary_order {
+        Some(order) => println!("qualified necessary order: {}", partial_order(order)),
+        None => println!("qualified necessary order: unavailable"),
+    }
+    println!(
+        "identified readiness: schema={} config={} analyzers={} pinned={} registry={} intervals={} qualified={}",
+        report.readiness.schema_compatible,
+        report.readiness.analysis_config_compatible,
+        report.readiness.analyzer_implementations_compatible,
+        report.readiness.artifacts_commit_pinned,
+        report.readiness.signal_registries_valid,
+        report.readiness.interval_surface_complete,
+        report.readiness.qualified_identified_set,
+    );
+    for blocker in &report.readiness.blockers {
+        println!("identified blocker: {blocker}");
     }
     println!(
         "necessary weak relations: right-not-worse={} left-not-worse={}",
         report.sharp_order_set.right_necessarily_not_worse,
         report.sharp_order_set.left_necessarily_not_worse,
     );
-    for id in &report.sharp_order_set.unusable_signal_ids {
-        println!("identified blocker: {id}");
-    }
     for signal in &report.signals {
         let outcomes = signal
             .possible_outcomes
@@ -297,7 +316,11 @@ fn print_identified_comparison(report: &IdentifiedComparison) {
             signal.id,
             render_interval(signal.left.as_ref()),
             render_interval(signal.right.as_ref()),
-            if outcomes.is_empty() { "none" } else { &outcomes },
+            if outcomes.is_empty() {
+                "none"
+            } else {
+                &outcomes
+            },
         );
         if let Some(reason) = &signal.reason {
             println!("  reason: {reason}");
