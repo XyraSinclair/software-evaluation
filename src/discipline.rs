@@ -305,6 +305,10 @@ pub struct Tail {
 pub struct DisciplineTails {
     pub mutable_bindings: Tail,
     pub max_mutable_live_range_lines: Tail,
+    /// Same statistic restricted to functions with at least one mutable
+    /// binding; the unconditioned tail is dominated by binding-free
+    /// functions and sits at 0 through p90 on typical repositories.
+    pub mutable_live_range_lines_given_mutable: Tail,
     pub max_call_chain_len: Tail,
     pub params: Tail,
 }
@@ -316,6 +320,7 @@ pub struct DisciplineCoverage {
     pub skipped_unsupported_files: usize,
     pub syntax_error_files: u64,
     pub functions_total: u64,
+    pub functions_with_mutable_bindings: u64,
     pub functions_per_language: Vec<LanguageFunctionCount>,
     pub totals: DisciplineTotals,
     pub pure_functions: u64,
@@ -520,9 +525,17 @@ fn coverage(
         })
         .collect();
 
+    let with_mutable = functions
+        .iter()
+        .filter(|f| f.mutable_bindings > 0)
+        .cloned()
+        .collect::<Vec<_>>();
     let tails = DisciplineTails {
         mutable_bindings: tail(functions, |f| f.mutable_bindings),
         max_mutable_live_range_lines: tail(functions, |f| f.max_mutable_live_range_lines),
+        mutable_live_range_lines_given_mutable: tail(&with_mutable, |f| {
+            f.max_mutable_live_range_lines
+        }),
         max_call_chain_len: tail(functions, |f| f.max_call_chain_len),
         params: tail(functions, |f| f.params),
     };
@@ -533,6 +546,7 @@ fn coverage(
         skipped_unsupported_files: tree.skipped,
         syntax_error_files,
         functions_total,
+        functions_with_mutable_bindings: with_mutable.len() as u64,
         functions_per_language,
         totals,
         pure_functions,

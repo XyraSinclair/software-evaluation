@@ -80,8 +80,8 @@ const SIGNAL_CONTRACTS: [SignalContract; 6] = [
         analyzer_id: DISCIPLINE,
         unit: "source lines",
         json_pointers: &[
-            "/coverage/tails/max_mutable_live_range_lines/p90",
-            "/coverage/functions_total",
+            "/coverage/tails/mutable_live_range_lines_given_mutable/p90",
+            "/coverage/functions_with_mutable_bindings",
         ],
         bounded_by_one: false,
     },

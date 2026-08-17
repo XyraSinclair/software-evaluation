@@ -49,10 +49,10 @@ pub(super) fn project(
             "effect-locality",
             "mutable live-range p90",
             SignalPolarity::LowerIsBetter,
-            "/coverage/tails/max_mutable_live_range_lines/p90",
-            "/coverage/functions_total",
+            "/coverage/tails/mutable_live_range_lines_given_mutable/p90",
+            "/coverage/functions_with_mutable_bindings",
             "source lines",
-            "Tail of the longest syntactic mutable-binding live range per function.",
+            "Tail of the longest syntactic mutable-binding live range per function, conditioned on functions with at least one mutable binding.",
         ),
         clone_density(reports, config),
     ]

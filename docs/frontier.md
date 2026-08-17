@@ -43,7 +43,7 @@ coverage rule, and Goodhart counterweight.
 | reader load | symbol working-set p90 / other resolved symbols | lower | excluded below the declared reference-resolution coverage gate |
 | interface depth | shallow-function fraction | lower | cannot establish dominance if either reader-load coordinate regresses |
 | effect locality | syntactically pure function fraction | higher | paired with mutable live-range tail; syntactic purity is never treated as semantic purity |
-| effect locality | mutable-binding live-range p90 | lower | prevents purity gains obtained by concentrating state into longer-lived mutation |
+| effect locality | mutable-binding live-range p90, over functions with a mutable binding | lower | prevents purity gains obtained by concentrating state into longer-lived mutation; conditioning keeps binding-free functions from pinning the tail at 0 |
 | uniformity | reported normalized-clone token mass / considered tokens | lower | reaching the clone-group output cap censors the value rather than presenting a lower bound as complete |
 
 The clone coordinate is a **density of reported mass**, not unique token
