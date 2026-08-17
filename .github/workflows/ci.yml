@@ -110,4 +110,26 @@ jobs:
           assert full["worst_case_remaining_orders"] == 1
           assert full["guaranteed_eliminated_orders"] == 2
           PY
+      - run: cargo run --locked --bin seval-order-probes -- plan /tmp/probe-model.json --format json > /tmp/policies.json
+      - run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/policies.json", encoding="utf-8") as source:
+              report = json.load(source)
+
+          assert report["schema_version"] == "seval.order-policies.v1"
+          assert report["complete"] is True
+          signatures = [
+              (
+                  record["signature"]["worst_case_remaining_orders"],
+                  record["signature"]["worst_case_additional_probes"],
+              )
+              for record in report["policy_frontier"]
+          ]
+          # Stop-now abstention is always nondominated; full identification
+          # in one probe must also be achievable in this model.
+          assert (3, 0) in signatures
+          assert (1, 1) in signatures
+          PY
       - run: cargo clippy --lib --bin seval-frontier --bin seval-order-probes --locked -- -D warnings
