@@ -57,11 +57,26 @@ impl From<io::Error> for ArchiveError {
     }
 }
 
+/// A file the extractor deliberately left out of the analysis tree.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SkippedEntry {
+    pub path: String,
+    pub bytes: u64,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Extraction {
+    pub root: PathBuf,
+    /// Files over the per-file byte cap, skipped by name instead of
+    /// failing the whole archive; aggregate caps stay hard errors.
+    pub skipped_oversized: Vec<SkippedEntry>,
+}
+
 pub fn extract_zip(
     path: &Path,
     destination: &Path,
     limits: ArchiveLimits,
-) -> Result<PathBuf, ArchiveError> {
+) -> Result<Extraction, ArchiveError> {
     let metadata = fs::metadata(path)?;
     if metadata.len() > limits.compressed_bytes {
         return Err(ArchiveError::TooLarge);
@@ -73,7 +88,7 @@ pub fn extract_zip_reader<R: Read + Seek>(
     destination: &Path,
     limits: ArchiveLimits,
     compressed: u64,
-) -> Result<PathBuf, ArchiveError> {
+) -> Result<Extraction, ArchiveError> {
     let mut bytes = Vec::new();
     reader.read_to_end(&mut bytes)?;
     if bytes.len() as u64 > limits.compressed_bytes || compressed > limits.compressed_bytes {
@@ -88,6 +103,7 @@ pub fn extract_zip_reader<R: Read + Seek>(
     let mut seen = HashSet::new();
     let mut root: Option<String> = None;
     let mut total = 0u64;
+    let mut skipped_oversized = Vec::new();
     for i in 0..zip.len() {
         let mut entry = zip.by_index(i).map_err(|_| ArchiveError::Malformed)?;
         if entry.encrypted() {
@@ -136,7 +152,11 @@ pub fn extract_zip_reader<R: Read + Seek>(
         }
         if !entry.is_dir() {
             if entry.size() > limits.file_bytes {
-                return Err(ArchiveError::TooLarge);
+                skipped_oversized.push(SkippedEntry {
+                    path: normalized.to_string_lossy().into_owned(),
+                    bytes: entry.size(),
+                });
+                continue;
             }
             total = total
                 .checked_add(entry.size())
@@ -166,7 +186,10 @@ pub fn extract_zip_reader<R: Read + Seek>(
         }
     }
     let root = root.ok_or(ArchiveError::Malformed)?;
-    Ok(destination.join(root))
+    Ok(Extraction {
+        root: destination.join(root),
+        skipped_oversized,
+    })
 }
 
 fn reject_raw_duplicates(bytes: &[u8], entry_limit: usize) -> Result<(), ArchiveError> {

@@ -122,8 +122,8 @@ fn extract(
     let archive = workspace.path().join("repository.zip");
     fs::write(&archive, bytes).expect("write ZIP fixture");
     let destination = workspace.path().join("unpacked");
-    let root = extract_zip(&archive, &destination, limits)?;
-    Ok((workspace, root))
+    let extraction = extract_zip(&archive, &destination, limits)?;
+    Ok((workspace, extraction.root))
 }
 
 fn generous_limits() -> ArchiveLimits {
@@ -215,9 +215,22 @@ fn zip_quota_boundaries_accept_the_limit_and_reject_one_over() {
     extract(&four_bytes, limits).expect("file exactly at file and expanded limits");
 
     let five_bytes = make_zip(&[("root/file", b"12345", EntryKind::File)]);
+    let workspace = TempDir::new().expect("oversized skip workspace");
+    let archive = workspace.path().join("repository.zip");
+    fs::write(&archive, &five_bytes).expect("write oversized fixture");
+    let extraction = extract_zip(&archive, &workspace.path().join("unpacked"), limits)
+        .expect("a file over the per-file cap is skipped by name, not fatal");
     assert_eq!(
-        extract(&five_bytes, limits).expect_err("file one over quota"),
-        ArchiveError::TooLarge
+        extraction
+            .skipped_oversized
+            .iter()
+            .map(|skip| (skip.path.as_str(), skip.bytes))
+            .collect::<Vec<_>>(),
+        vec![("root/file", 5)]
+    );
+    assert!(
+        !extraction.root.join("file").exists(),
+        "skipped file must not reach the analysis tree"
     );
 
     let aggregate_exact = make_zip(&[
@@ -266,7 +279,8 @@ fn zip_quota_boundaries_accept_the_limit_and_reject_one_over() {
             &ratio_workspace.path().join("over"),
             limits,
             2
-        ),
+        )
+        .map(|extraction| extraction.root),
         Err(ArchiveError::TooLarge)
     );
 
@@ -280,7 +294,8 @@ fn zip_quota_boundaries_accept_the_limit_and_reject_one_over() {
         .expect("compressed stream exactly at limit");
     limits.compressed_bytes = compressed_len - 1;
     assert_eq!(
-        extract_zip(&archive, &workspace.path().join("over"), limits),
+        extract_zip(&archive, &workspace.path().join("over"), limits)
+            .map(|extraction| extraction.root),
         Err(ArchiveError::TooLarge)
     );
 }

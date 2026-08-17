@@ -1,5 +1,5 @@
 use crate::service::{
-    archive::{self, ArchiveLimits},
+    archive::{self, ArchiveError, ArchiveLimits},
     dto::*,
     github::{AcquisitionError, RemoteSource, archive_path},
     identity::GithubRepoId,
@@ -301,12 +301,15 @@ async fn run(state: AppState, id: Uuid, key: String, identity: GithubRepoId) {
     }
     set(&state, id, JobState::Extracting).await;
     let dest = temp.path().join("source");
-    let root = match tokio::task::spawn_blocking(move || {
+    let extraction = match tokio::task::spawn_blocking(move || {
         archive::extract_zip(&zip, &dest, ArchiveLimits::default())
     })
     .await
     {
         Ok(Ok(p)) => p,
+        Ok(Err(ArchiveError::TooLarge | ArchiveError::TooManyEntries)) => {
+            return fail(&state, id, &key, AcquisitionError::TooLarge).await;
+        }
         _ => return fail(&state, id, &key, AcquisitionError::InvalidMetadata).await,
     };
     set(&state, id, JobState::Analyzing).await;
@@ -320,11 +323,18 @@ async fn run(state: AppState, id: Uuid, key: String, identity: GithubRepoId) {
         Ok(e) => e,
         Err(_) => return fail(&state, id, &key, AcquisitionError::Io).await,
     };
-    let result =
-        match worker::run_child(&exe, &root, provenance, state.inner.config.worker_timeout).await {
-            Ok(r) => r,
-            Err(_) => return fail(&state, id, &key, AcquisitionError::Upstream).await,
-        };
+    let mut result = match worker::run_child(
+        &exe,
+        &extraction.root,
+        provenance,
+        state.inner.config.worker_timeout,
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(_) => return fail(&state, id, &key, AcquisitionError::Upstream).await,
+    };
+    result.archive_skips = extraction.skipped_oversized;
     if let Ok(bytes) = serde_json::to_vec(&result) {
         let tmp = cache.with_extension(format!("{}.tmp", Uuid::new_v4()));
         if tokio::fs::write(&tmp, &bytes).await.is_ok() {

@@ -1,6 +1,7 @@
 use crate::{
     api_surface, deps,
     duplicates::{self, DuplicateConfig},
+    frontier::{FrontierConfig, profile_path},
     metrics::{self, MetricSort},
     service::dto::{CompactResult, InstrumentResult, InstrumentState, RepositoryProvenance},
     tests_analysis,
@@ -157,15 +158,37 @@ pub fn analyze(root: &Path, provenance: RepositoryProvenance) -> CompactResult {
         Err(_) => failed("test-structure"),
     };
     instruments.insert("tests".into(), t);
+    let f = match profile_path(root, &FrontierConfig::default()) {
+        Ok(profile) => InstrumentResult {
+            analyzer: "frontier".into(),
+            state: InstrumentState::Complete,
+            coverage: json!({
+                "coverage": profile.coverage,
+                "analyzers": profile.analyzers,
+            }),
+            observations: json!({
+                "schema_version": profile.schema_version,
+                "elapsed_ms": profile.elapsed_ms,
+                "signals": profile.signals,
+                "families": profile.families,
+            }),
+            limitations: profile.limitations.clone(),
+            error: None,
+        },
+        Err(_) => failed("frontier"),
+    };
+    instruments.insert("frontier".into(), f);
     let complete = instruments
         .values()
         .filter(|x| x.state == InstrumentState::Complete)
         .count();
+    let failed = instruments.len() - complete;
     CompactResult {
         repository: provenance,
         instruments,
         completed_instruments: complete,
-        failed_instruments: 5 - complete,
+        failed_instruments: failed,
+        archive_skips: Vec::new(),
     }
 }
 
