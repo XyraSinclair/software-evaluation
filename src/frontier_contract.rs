@@ -1,7 +1,6 @@
-use std::collections::BTreeSet;
-
 use crate::frontier::*;
 
+#[derive(Clone, Copy)]
 pub(crate) struct SignalContract {
     pub id: &'static str,
     pub family: &'static str,
@@ -17,9 +16,18 @@ const SYMBOLS: &str = "symbols";
 const DISCIPLINE: &str = "discipline";
 const DUPLICATES: &str = "duplicates";
 
+const SIGNAL_IDS: [&str; 6] = [
+    "reader.local-cognitive-p90",
+    "reader.symbol-working-set-p90-fraction",
+    "interface.shallow-function-fraction",
+    "effects.syntactic-pure-fraction",
+    "effects.mutable-live-range-p90-lines",
+    "uniformity.reported-clone-token-density",
+];
+
 const SIGNAL_CONTRACTS: [SignalContract; 6] = [
     SignalContract {
-        id: "reader.local-cognitive-p90",
+        id: SIGNAL_IDS[0],
         family: "reader-load",
         polarity: SignalPolarity::LowerIsBetter,
         analyzer_id: SHAPE,
@@ -31,7 +39,7 @@ const SIGNAL_CONTRACTS: [SignalContract; 6] = [
         bounded_by_one: false,
     },
     SignalContract {
-        id: "reader.symbol-working-set-p90-fraction",
+        id: SIGNAL_IDS[1],
         family: "reader-load",
         polarity: SignalPolarity::LowerIsBetter,
         analyzer_id: SYMBOLS,
@@ -45,7 +53,7 @@ const SIGNAL_CONTRACTS: [SignalContract; 6] = [
         bounded_by_one: true,
     },
     SignalContract {
-        id: "interface.shallow-function-fraction",
+        id: SIGNAL_IDS[2],
         family: "interface-depth",
         polarity: SignalPolarity::LowerIsBetter,
         analyzer_id: SHAPE,
@@ -57,7 +65,7 @@ const SIGNAL_CONTRACTS: [SignalContract; 6] = [
         bounded_by_one: true,
     },
     SignalContract {
-        id: "effects.syntactic-pure-fraction",
+        id: SIGNAL_IDS[3],
         family: "effect-locality",
         polarity: SignalPolarity::HigherIsBetter,
         analyzer_id: DISCIPLINE,
@@ -66,7 +74,7 @@ const SIGNAL_CONTRACTS: [SignalContract; 6] = [
         bounded_by_one: true,
     },
     SignalContract {
-        id: "effects.mutable-live-range-p90-lines",
+        id: SIGNAL_IDS[4],
         family: "effect-locality",
         polarity: SignalPolarity::LowerIsBetter,
         analyzer_id: DISCIPLINE,
@@ -78,7 +86,7 @@ const SIGNAL_CONTRACTS: [SignalContract; 6] = [
         bounded_by_one: false,
     },
     SignalContract {
-        id: "uniformity.reported-clone-token-density",
+        id: SIGNAL_IDS[5],
         family: "uniformity",
         polarity: SignalPolarity::LowerIsBetter,
         analyzer_id: DUPLICATES,
@@ -94,46 +102,31 @@ const SIGNAL_CONTRACTS: [SignalContract; 6] = [
 ];
 
 const FAMILY_CONTRACTS: [(&str, &[&str]); 4] = [
-    (
-        "reader-load",
-        &[
-            "reader.local-cognitive-p90",
-            "reader.symbol-working-set-p90-fraction",
-        ],
-    ),
-    ("interface-depth", &["interface.shallow-function-fraction"]),
-    (
-        "effect-locality",
-        &[
-            "effects.syntactic-pure-fraction",
-            "effects.mutable-live-range-p90-lines",
-        ],
-    ),
-    ("uniformity", &["uniformity.reported-clone-token-density"]),
+    ("reader-load", &SIGNAL_IDS[..2]),
+    ("interface-depth", &SIGNAL_IDS[2..3]),
+    ("effect-locality", &SIGNAL_IDS[3..5]),
+    ("uniformity", &SIGNAL_IDS[5..]),
 ];
 
 const ANALYZER_IDS: [&str; 4] = [SHAPE, SYMBOLS, DISCIPLINE, DUPLICATES];
 
-pub(crate) fn signal_ids() -> impl ExactSizeIterator<Item = &'static str> + Clone {
-    SIGNAL_CONTRACTS.iter().map(|contract| contract.id)
+pub(crate) fn signal_ids() -> std::array::IntoIter<&'static str, 6> {
+    SIGNAL_IDS.into_iter()
 }
 
-pub(crate) fn signal_contract(id: &str) -> Option<&'static SignalContract> {
-    SIGNAL_CONTRACTS.iter().find(|contract| contract.id == id)
+pub(crate) fn signal_contract(id: &str) -> Option<SignalContract> {
+    SIGNAL_CONTRACTS
+        .into_iter()
+        .find(|contract| contract.id == id)
 }
 
 pub(crate) fn valid_signal_registry(profile: &FrontierProfile) -> bool {
     profile.signals.len() == SIGNAL_CONTRACTS.len()
-        && SIGNAL_CONTRACTS.iter().all(|contract| {
-            let mut matches = profile
-                .signals
-                .iter()
-                .filter(|signal| signal.id == contract.id);
-            let Some(signal) = matches.next() else {
-                return false;
-            };
-            matches.next().is_none() && valid_signal_contract(signal, contract)
-        })
+        && profile
+            .signals
+            .iter()
+            .zip(SIGNAL_CONTRACTS)
+            .all(|(signal, contract)| valid_signal_contract(signal, &contract))
         && valid_family_registry(profile)
         && valid_coverage_ledger(profile)
 }
@@ -213,13 +206,13 @@ fn valid_signal_contract(signal: &FrontierSignal, contract: &SignalContract) -> 
                 && signal.unavailable_reason.is_none()
         }
         SignalStatus::Censored => {
-            signal.id == "uniformity.reported-clone-token-density"
+            signal.id == SIGNAL_IDS[5]
                 && signal.value.is_some()
                 && signal.denominator.is_some_and(|value| value > 0.0)
                 && has_reason
         }
         SignalStatus::InsufficientCoverage => {
-            signal.id == "reader.symbol-working-set-p90-fraction"
+            signal.id == SIGNAL_IDS[1]
                 && signal.value.is_some()
                 && signal.denominator.is_some_and(|value| value > 0.0)
                 && has_reason
@@ -236,54 +229,44 @@ fn valid_signal_contract(signal: &FrontierSignal, contract: &SignalContract) -> 
 
 fn valid_family_registry(profile: &FrontierProfile) -> bool {
     profile.families.len() == FAMILY_CONTRACTS.len()
-        && FAMILY_CONTRACTS.iter().all(|(id, expected_signals)| {
-            let mut matches = profile.families.iter().filter(|family| family.id == *id);
-            let Some(family) = matches.next() else {
-                return false;
-            };
-            matches.next().is_none()
-                && family
-                    .signal_ids
-                    .iter()
-                    .map(String::as_str)
-                    .eq(expected_signals.iter().copied())
-        })
+        && profile
+            .families
+            .iter()
+            .zip(FAMILY_CONTRACTS)
+            .all(|(family, (id, expected_signals))| {
+                family.id == id
+                    && family
+                        .signal_ids
+                        .iter()
+                        .map(String::as_str)
+                        .eq(expected_signals.iter().copied())
+            })
 }
 
 fn valid_coverage_ledger(profile: &FrontierProfile) -> bool {
-    let observed = profile
-        .signals
-        .iter()
-        .filter(|signal| signal.status == SignalStatus::Observed)
-        .count();
-    let unusable = profile
+    let expected_unusable = profile
         .signals
         .iter()
         .filter(|signal| signal.status != SignalStatus::Observed)
         .map(|signal| signal.id.as_str())
-        .collect::<BTreeSet<_>>();
-    let reported_unusable = profile
-        .coverage
-        .unusable_signal_ids
-        .iter()
-        .map(String::as_str)
-        .collect::<BTreeSet<_>>();
+        .collect::<Vec<_>>();
     profile.coverage.declared == SIGNAL_CONTRACTS.len()
-        && profile.coverage.observed == observed
-        && profile.coverage.unusable_signal_ids.len() == reported_unusable.len()
-        && observed + unusable.len() == SIGNAL_CONTRACTS.len()
-        && unusable == reported_unusable
+        && profile.coverage.observed == SIGNAL_CONTRACTS.len() - expected_unusable.len()
+        && profile
+            .coverage
+            .unusable_signal_ids
+            .iter()
+            .map(String::as_str)
+            .eq(expected_unusable)
 }
 
 fn valid_analyzer_registry(profile: &FrontierProfile) -> bool {
     profile.analyzers.len() == ANALYZER_IDS.len()
-        && ANALYZER_IDS.into_iter().all(|id| {
-            let mut matches = profile
-                .analyzers
-                .iter()
-                .filter(|receipt| receipt.id == id);
-            matches.next().is_some() && matches.next().is_none()
-        })
+        && profile
+            .analyzers
+            .iter()
+            .map(|receipt| receipt.id.as_str())
+            .eq(ANALYZER_IDS)
 }
 
 fn unique_complete_implementation<'a>(
