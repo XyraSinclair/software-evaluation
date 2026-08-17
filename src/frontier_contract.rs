@@ -102,10 +102,22 @@ const SIGNAL_CONTRACTS: [SignalContract; 6] = [
 ];
 
 const FAMILY_CONTRACTS: [(&str, &[&str]); 4] = [
-    ("reader-load", &SIGNAL_IDS[..2]),
-    ("interface-depth", &SIGNAL_IDS[2..3]),
-    ("effect-locality", &SIGNAL_IDS[3..5]),
-    ("uniformity", &SIGNAL_IDS[5..]),
+    (
+        "reader-load",
+        &[
+            "reader.local-cognitive-p90",
+            "reader.symbol-working-set-p90-fraction",
+        ],
+    ),
+    ("interface-depth", &["interface.shallow-function-fraction"]),
+    (
+        "effect-locality",
+        &[
+            "effects.syntactic-pure-fraction",
+            "effects.mutable-live-range-p90-lines",
+        ],
+    ),
+    ("uniformity", &["uniformity.reported-clone-token-density"]),
 ];
 
 const ANALYZER_IDS: [&str; 4] = [SHAPE, SYMBOLS, DISCIPLINE, DUPLICATES];
@@ -135,10 +147,7 @@ pub(crate) fn compatible_config(left: &FrontierConfig, right: &FrontierConfig) -
     valid_config(left) && valid_config(right) && left == right
 }
 
-pub(crate) fn compatible_implementations(
-    left: &FrontierProfile,
-    right: &FrontierProfile,
-) -> bool {
+pub(crate) fn compatible_implementations(left: &FrontierProfile, right: &FrontierProfile) -> bool {
     valid_analyzer_registry(left)
         && valid_analyzer_registry(right)
         && ANALYZER_IDS.into_iter().all(|analyzer_id| {
