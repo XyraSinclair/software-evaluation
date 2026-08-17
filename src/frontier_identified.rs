@@ -174,10 +174,11 @@ pub fn compare_profiles(left: FrontierProfile, right: FrontierProfile) -> Identi
     let sharp_order_set = derive_sharp_order_set(&signals, signal_registries_valid);
     let base = frontier::compare_profiles(left, right);
     let readiness = identified_readiness(&base, signal_registries_valid, sharp_order_set.complete);
-    let qualified_necessary_order = readiness
-        .qualified_identified_set
-        .then_some(sharp_order_set.necessary_order)
-        .flatten();
+    let qualified_necessary_order = if readiness.qualified_identified_set {
+        sharp_order_set.necessary_order
+    } else {
+        None
+    };
 
     IdentifiedComparison {
         schema_version: IDENTIFIED_ORDER_SCHEMA_VERSION.to_owned(),
@@ -217,8 +218,7 @@ fn identified_readiness(
 ) -> IdentifiedReadiness {
     let schema_compatible = base.readiness.schema_compatible;
     let analysis_config_compatible = base.readiness.analysis_config_compatible;
-    let analyzer_implementations_compatible =
-        base.readiness.analyzer_implementations_compatible;
+    let analyzer_implementations_compatible = base.readiness.analyzer_implementations_compatible;
     let artifacts_commit_pinned = base.readiness.artifacts_commit_pinned;
     let qualified_identified_set = schema_compatible
         && analysis_config_compatible
@@ -243,8 +243,9 @@ fn identified_readiness(
         blockers.push("one or both signal registries violate the canonical contract".to_owned());
     }
     if !interval_surface_complete {
-        blockers.push("one or more directional signals lack a preregistered identified interval"
-            .to_owned());
+        blockers.push(
+            "one or more directional signals lack a preregistered identified interval".to_owned(),
+        );
     }
     IdentifiedReadiness {
         schema_compatible,
@@ -441,15 +442,17 @@ fn equivalent_possible(left: IdentifiedInterval, right: IdentifiedInterval) -> b
     if left.overlaps(right) {
         return true;
     }
-    match (left.upper, right.upper) {
-        (Some(left_upper), Some(right_upper)) if left_upper < right.lower => {
-            approximately_equal(left_upper, right.lower)
-        }
-        (Some(left_upper), Some(right_upper)) if right_upper < left.lower => {
-            approximately_equal(right_upper, left.lower)
-        }
-        _ => false,
+    if let Some(left_upper) = left.upper
+        && left_upper < right.lower
+    {
+        return approximately_equal(left_upper, right.lower);
     }
+    if let Some(right_upper) = right.upper
+        && right_upper < left.lower
+    {
+        return approximately_equal(right_upper, left.lower);
+    }
+    false
 }
 
 fn approximately_equal(left: f64, right: f64) -> bool {
@@ -467,9 +470,8 @@ fn derive_sharp_order_set(
         .collect::<Vec<_>>();
     let comparable_signals = signals.len().saturating_sub(unusable_signal_ids.len());
     let expected_signals = signal_ids().len();
-    let complete = registry_valid
-        && signals.len() == expected_signals
-        && unusable_signal_ids.is_empty();
+    let complete =
+        registry_valid && signals.len() == expected_signals && unusable_signal_ids.is_empty();
     if !complete {
         return SharpOrderSet {
             registry_valid,
