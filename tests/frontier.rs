@@ -143,9 +143,17 @@ fn missing_evidence_fails_closed_without_hiding_observed_deltas() {
     assert!(!comparison.readiness.artifacts_commit_pinned);
     assert_eq!(comparison.qualified_order, None);
 
+    let mut malformed_identity = profile("right", 0.5);
+    malformed_identity.artifact.git.as_mut().unwrap().kind = "git".to_owned();
+    let comparison = compare_profiles(left.clone(), malformed_identity);
+    assert!(!comparison.readiness.artifacts_commit_pinned);
+    assert_eq!(comparison.qualified_order, None);
+
     let mut censored = profile("right", 0.5);
     censored.signals[5].status = SignalStatus::Censored;
     censored.signals[5].unavailable_reason = Some("fixture cap reached".to_owned());
+    censored.coverage.observed -= 1;
+    censored.coverage.unusable_signal_ids = vec![censored.signals[5].id.clone()];
     let comparison = compare_profiles(left.clone(), censored);
     assert!(!comparison.readiness.directional_signals_complete);
     assert_eq!(comparison.qualified_order, None);
@@ -192,6 +200,12 @@ fn malformed_receipts_registries_and_configurations_never_qualify() {
     assert!(!comparison.readiness.analyzer_implementations_compatible);
     assert_eq!(comparison.qualified_order, None);
 
+    let mut absent_coverage = profile("right", 0.5);
+    absent_coverage.analyzers[0].coverage = None;
+    let comparison = compare_profiles(left.clone(), absent_coverage);
+    assert!(!comparison.readiness.analyzer_implementations_compatible);
+    assert_eq!(comparison.qualified_order, None);
+
     let mut duplicate_receipt = profile("right", 0.5);
     duplicate_receipt
         .analyzers
@@ -211,7 +225,15 @@ fn malformed_receipts_registries_and_configurations_never_qualify() {
     let mut config_drift = profile("right", 0.5);
     config_drift.config.min_symbol_resolution_fraction =
         f64::from_bits(config_drift.config.min_symbol_resolution_fraction.to_bits() + 1);
-    let comparison = compare_profiles(left, config_drift);
+    let comparison = compare_profiles(left.clone(), config_drift);
+    assert!(!comparison.readiness.analysis_config_compatible);
+    assert_eq!(comparison.qualified_order, None);
+
+    let mut invalid_config = profile("right", 0.5);
+    invalid_config.config.duplicate_max_groups = 0;
+    let mut invalid_left = left;
+    invalid_left.config.duplicate_max_groups = 0;
+    let comparison = compare_profiles(invalid_left, invalid_config);
     assert!(!comparison.readiness.analysis_config_compatible);
     assert_eq!(comparison.qualified_order, None);
 }
@@ -227,9 +249,13 @@ fn mutually_consistent_contract_forgery_still_fails_qualification() {
 
     assert!(!comparison.readiness.directional_signals_complete);
     assert_eq!(comparison.qualified_order, None);
-    assert!(comparison.readiness.blockers.iter().any(|blocker| {
-        blocker.contains("preregistered signal")
-    }));
+    assert!(
+        comparison
+            .readiness
+            .blockers
+            .iter()
+            .any(|blocker| blocker.contains("preregistered signal"))
+    );
 }
 
 fn profile(name: &str, lower_value: f64) -> FrontierProfile {
@@ -258,6 +284,11 @@ fn profile(name: &str, lower_value: f64) -> FrontierProfile {
             unavailable_reason: None,
         })
         .collect();
+    let (revision_digit, tree_digit) = if name == "left" {
+        ('1', '3')
+    } else {
+        ('2', '4')
+    };
 
     FrontierProfile {
         schema_version: "seval.frontier.v1".to_owned(),
@@ -266,9 +297,9 @@ fn profile(name: &str, lower_value: f64) -> FrontierProfile {
             git: Some(ArtifactSnapshot {
                 id: format!("fixture:{name}"),
                 root: PathBuf::from(format!("/{name}")),
-                revision: format!("{name:0<40}"),
-                tree_digest: format!("{name:0<64}"),
-                kind: "git".to_owned(),
+                revision: revision_digit.to_string().repeat(40),
+                tree_digest: tree_digit.to_string().repeat(40),
+                kind: "git-repository".to_owned(),
             }),
             identity_error: None,
         },
@@ -282,7 +313,7 @@ fn profile(name: &str, lower_value: f64) -> FrontierProfile {
                 implementation: Some(format!("{id}.v1")),
                 elapsed_ms: 0,
                 payload_sha256: Some("00".repeat(32)),
-                coverage: None,
+                coverage: Some(serde_json::json!({"fixture": true})),
                 limitations: Vec::new(),
                 error: None,
             })
@@ -307,10 +338,7 @@ fn family(id: &str, signals: &[SignalFixture]) -> SignalFamily {
     SignalFamily {
         id: id.to_owned(),
         label: id.to_owned(),
-        signal_ids: signals
-            .iter()
-            .map(|signal| signal.id.to_owned())
-            .collect(),
+        signal_ids: signals.iter().map(|signal| signal.id.to_owned()).collect(),
         rule: "fixture".to_owned(),
     }
 }
