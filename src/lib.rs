@@ -15,6 +15,8 @@ pub mod deps;
 pub mod discipline;
 pub mod duplicates;
 pub mod frontier;
+pub mod frontier_identified;
+pub(crate) mod frontier_contract;
 pub mod info;
 pub mod kernel;
 pub mod metrics;

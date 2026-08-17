@@ -1,6 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
+use crate::frontier_contract::{
+    artifact_is_pinned, compatible_config, compatible_implementations, valid_signal_registry,
+};
+
 use super::*;
 
 pub fn compare_paths(
@@ -35,11 +39,11 @@ pub fn compare_profiles(left: FrontierProfile, right: FrontierProfile) -> Fronti
         blockers.push("frontier schema versions differ or are unsupported".to_owned());
     }
     if !analysis_config_compatible {
-        blockers.push("analysis-affecting configurations differ".to_owned());
+        blockers.push("analysis-affecting configurations differ or are invalid".to_owned());
     }
     if !analyzer_implementations_compatible {
         blockers.push(
-            "underlying analyzer receipts are missing, duplicated, failed, undigested, unnamed, or implementation-incompatible"
+            "underlying analyzer receipts are missing, extra, duplicated, failed, undigested, unnamed, uncovered, or implementation-incompatible"
                 .to_owned(),
         );
     }
@@ -51,12 +55,15 @@ pub fn compare_profiles(left: FrontierProfile, right: FrontierProfile) -> Fronti
     }
     if !signal_registries_valid {
         blockers.push(
-            "each profile must contain exactly one instance of every declared directional signal and no undeclared directional signals"
+            "each profile must exactly satisfy the preregistered signal, family, polarity, unit, analyzer, projection, status, value-domain, and coverage-ledger contract"
                 .to_owned(),
         );
     }
     if !artifacts_commit_pinned {
-        blockers.push("both scans must remain clean and commit-pinned".to_owned());
+        blockers.push(
+            "both scans must carry structurally valid, clean, stable Git snapshot identities"
+                .to_owned(),
+        );
     }
     let families = left
         .families
@@ -98,62 +105,6 @@ pub fn compare_profiles(left: FrontierProfile, right: FrontierProfile) -> Fronti
             "Any missing, non-finite, censored, failed, or coverage-gated signal removes the qualified order rather than shrinking the denominator silently.".to_owned(),
         ],
     }
-}
-
-fn artifact_is_pinned(profile: &FrontierProfile) -> bool {
-    profile.artifact.git.is_some() && profile.artifact.identity_error.is_none()
-}
-
-fn valid_signal_registry(profile: &FrontierProfile) -> bool {
-    profile.signals.len() == SIGNAL_IDS.len()
-        && SIGNAL_IDS.iter().all(|id| {
-            profile
-                .signals
-                .iter()
-                .filter(|signal| signal.id == *id)
-                .count()
-                == 1
-        })
-}
-
-fn compatible_implementations(left: &FrontierProfile, right: &FrontierProfile) -> bool {
-    [SHAPE, SYMBOLS, DISCIPLINE, DUPLICATES]
-        .into_iter()
-        .all(|analyzer_id| {
-            let left = unique_complete_implementation(left, analyzer_id);
-            let right = unique_complete_implementation(right, analyzer_id);
-            matches!((left, right), (Some(left), Some(right)) if left == right)
-        })
-}
-
-fn unique_complete_implementation<'a>(
-    profile: &'a FrontierProfile,
-    analyzer_id: &str,
-) -> Option<&'a str> {
-    let mut matches = profile
-        .analyzers
-        .iter()
-        .filter(|receipt| receipt.id == analyzer_id);
-    let receipt = matches.next()?;
-    if matches.next().is_some()
-        || receipt.status != AnalyzerStatus::Complete
-        || receipt.error.is_some()
-        || !receipt
-            .payload_sha256
-            .as_deref()
-            .is_some_and(valid_sha256_hex)
-    {
-        return None;
-    }
-    receipt.implementation.as_deref()
-}
-
-fn valid_sha256_hex(value: &str) -> bool {
-    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
-}
-
-fn compatible_config(left: &FrontierConfig, right: &FrontierConfig) -> bool {
-    left == right
 }
 
 fn compare_signal_sets(left: &[FrontierSignal], right: &[FrontierSignal]) -> Vec<SignalComparison> {

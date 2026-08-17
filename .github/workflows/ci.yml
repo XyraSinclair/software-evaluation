@@ -17,7 +17,7 @@ jobs:
         with:
           toolchain: 1.97.0
           components: rustfmt, clippy
-      - run: rustfmt --edition 2024 --check src/frontier.rs src/frontier/compare.rs src/frontier/signals.rs src/bin/seval-frontier.rs tests/frontier.rs
+      - run: rustfmt --edition 2024 --check src/frontier.rs src/frontier/compare.rs src/frontier/signals.rs src/frontier_contract.rs src/frontier_identified.rs src/bin/seval-frontier.rs tests/frontier.rs tests/frontier_identified.rs
       - run: cargo test --all-targets --locked
       - run: cargo run --locked --bin seval-frontier -- profile . --format json > /tmp/frontier.json
       - run: |
@@ -27,18 +27,42 @@ jobs:
           with open("/tmp/frontier.json", encoding="utf-8") as source:
               report = json.load(source)
 
-          expected = {
+          expected = [
               "reader.local-cognitive-p90",
               "reader.symbol-working-set-p90-fraction",
               "interface.shallow-function-fraction",
               "effects.syntactic-pure-fraction",
               "effects.mutable-live-range-p90-lines",
               "uniformity.reported-clone-token-density",
-          }
+          ]
           assert report["schema_version"] == "seval.frontier.v1"
-          assert {signal["id"] for signal in report["signals"]} == expected
-          assert len(report["analyzers"]) == 4
+          assert [signal["id"] for signal in report["signals"]] == expected
+          assert [receipt["id"] for receipt in report["analyzers"]] == [
+              "shape", "symbols", "discipline", "duplicates"
+          ]
           assert all(receipt["status"] == "complete" for receipt in report["analyzers"])
+          assert all(receipt["coverage"] is not None for receipt in report["analyzers"])
           assert report["artifact"]["git"] is not None
+          PY
+      - run: |
+          set +e
+          cargo run --locked --bin seval-frontier -- identify . . --format json > /tmp/identified.json
+          code=$?
+          set -e
+          test "$code" -eq 0 -o "$code" -eq 1
+      - run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/identified.json", encoding="utf-8") as source:
+              report = json.load(source)
+
+          assert report["schema_version"] == "seval.frontier.identified.v1"
+          assert report["base"]["schema_version"] == "seval.frontier.v1"
+          assert report["readiness"]["signal_registries_valid"] is True
+          assert report["readiness"]["qualified_identified_set"] is True
+          assert report["sharp_order_set"]["registry_valid"] is True
+          assert report["sharp_order_set"]["complete"] is True
+          assert len(report["signals"]) == 6
           PY
       - run: cargo clippy --lib --bin seval-frontier --locked -- -D warnings
