@@ -254,9 +254,13 @@ fn compare_signal(
             Vec::new(),
             Some("signal family, polarity, unit, analyzer, or projection differs".to_owned()),
         )
-    } else if let (Ok(left), Ok(right)) = (&left_result, &right_result) {
+    } else if let (Ok(left_evidence), Ok(right_evidence)) = (&left_result, &right_result) {
         (
-            local_possible_outcomes(left.interval, right.interval, left_source_polarity(left)),
+            local_possible_outcomes(
+                left_evidence.interval,
+                right_evidence.interval,
+                left.polarity,
+            ),
             None,
         )
     } else {
@@ -283,13 +287,6 @@ fn compare_signal(
     }
 }
 
-fn left_source_polarity(evidence: &IntervalEvidence) -> SignalPolarity {
-    let _ = evidence;
-    // The caller supplies the signal's polarity; this helper exists only to
-    // keep the interval match borrow-local and is replaced immediately below.
-    unreachable!("polarity is supplied by compare_signal")
-}
-
 fn interval_evidence(signal: &FrontierSignal) -> Result<IntervalEvidence, String> {
     let value = signal
         .value
@@ -298,7 +295,10 @@ fn interval_evidence(signal: &FrontierSignal) -> Result<IntervalEvidence, String
         return Err(format!("{} has a non-finite observation", signal.id));
     }
     if value < 0.0 {
-        return Err(format!("{} has a negative value outside its declared domain", signal.id));
+        return Err(format!(
+            "{} has a negative value outside its declared domain",
+            signal.id
+        ));
     }
 
     match signal.status {
@@ -317,8 +317,9 @@ fn interval_evidence(signal: &FrontierSignal) -> Result<IntervalEvidence, String
         }),
         SignalStatus::InsufficientCoverage if signal.id == SYMBOL_WORKING_SET => {
             if value > 1.0 {
-                return Err("symbol working-set fraction exceeds its natural upper bound"
-                    .to_owned());
+                return Err(
+                    "symbol working-set fraction exceeds its natural upper bound".to_owned(),
+                );
             }
             Ok(IntervalEvidence {
                 interval: IdentifiedInterval::bounded(value, 1.0)?,
@@ -450,11 +451,17 @@ fn derive_sharp_order_set(
     };
     let right_necessarily_not_worse = !possible_orders.is_empty()
         && possible_orders.iter().all(|order| {
-            matches!(order, PartialOrder::RightDominates | PartialOrder::Equivalent)
+            matches!(
+                order,
+                PartialOrder::RightDominates | PartialOrder::Equivalent
+            )
         });
     let left_necessarily_not_worse = !possible_orders.is_empty()
         && possible_orders.iter().all(|order| {
-            matches!(order, PartialOrder::LeftDominates | PartialOrder::Equivalent)
+            matches!(
+                order,
+                PartialOrder::LeftDominates | PartialOrder::Equivalent
+            )
         });
 
     SharpOrderSet {
