@@ -17,7 +17,7 @@ jobs:
         with:
           toolchain: 1.97.0
           components: rustfmt, clippy
-      - run: rustfmt --edition 2024 --check src/frontier.rs src/frontier/compare.rs src/frontier/signals.rs src/bin/seval-frontier.rs tests/frontier.rs
+      - run: rustfmt --edition 2024 --check src/frontier.rs src/frontier/compare.rs src/frontier/signals.rs src/frontier_identified.rs src/bin/seval-frontier.rs tests/frontier.rs tests/frontier_identified.rs
       - run: cargo test --all-targets --locked
       - run: cargo run --locked --bin seval-frontier -- profile . --format json > /tmp/frontier.json
       - run: |
@@ -40,5 +40,23 @@ jobs:
           assert len(report["analyzers"]) == 4
           assert all(receipt["status"] == "complete" for receipt in report["analyzers"])
           assert report["artifact"]["git"] is not None
+          PY
+      - run: |
+          set +e
+          cargo run --locked --bin seval-frontier -- identify . . --format json > /tmp/identified.json
+          code=$?
+          set -e
+          test "$code" -eq 0 -o "$code" -eq 1
+      - run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/identified.json", encoding="utf-8") as source:
+              report = json.load(source)
+
+          assert report["schema_version"] == "seval.frontier.identified.v1"
+          assert report["base"]["schema_version"] == "seval.frontier.v1"
+          assert report["sharp_order_set"]["registry_valid"] is True
+          assert len(report["signals"]) == 6
           PY
       - run: cargo clippy --lib --bin seval-frontier --locked -- -D warnings
