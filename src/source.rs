@@ -1,16 +1,21 @@
 //! Shared deterministic source discovery and tree-sitter parsing.
 //!
-//! `SourceCorpusSession` materializes one immutable source snapshot for a
+//! [`SourceCorpusSession`] materializes one immutable source snapshot for a
 //! bounded analysis scope. Existing analyzers can keep calling
-//! [`load_source_tree`] and [`parse_source`]; while a matching session is live,
-//! those calls receive cheap `Arc`/tree clones from the corpus rather than
-//! walking, reading, and parsing the same files independently.
+//! [`load_source_tree`] and [`parse_source`]; while executing inside a matching
+//! session, those calls receive cheap `Arc`/tree clones from the corpus rather
+//! than walking, reading, and parsing the same files independently.
+//!
+//! Corpus selection is thread-scoped rather than process-global. Concurrent
+//! scans of the same path therefore cannot observe one another's snapshots.
 
-use std::collections::{BTreeMap, HashMap};
+use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::fmt::Write as _;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, OnceLock, RwLock, Weak};
+use std::sync::Arc;
 
 use ignore::WalkBuilder;
 use serde::Serialize;
@@ -19,6 +24,10 @@ use thiserror::Error;
 use tree_sitter::{Parser, Tree};
 
 pub const SOURCE_CORPUS_SCHEMA_VERSION: &str = "seval.source-corpus.v1";
+
+thread_local! {
+    static ACTIVE_CORPORA: RefCell<Vec<Arc<SourceCorpus>>> = const { RefCell::new(Vec::new()) };
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -89,7 +98,7 @@ pub struct SourceCorpusReceipt {
     pub skipped_files: usize,
     pub total_bytes: u64,
     pub syntax_error_files: usize,
-    pub filesystem_walks: usize,
+    pub filesystem_discoveries: usize,
     pub file_reads: usize,
     pub parses: usize,
     pub files: Vec<SourceFileReceipt>,
@@ -139,6 +148,7 @@ struct CachedParse {
 
 #[derive(Debug)]
 struct SourceCorpus {
+    key: PathBuf,
     tree: SourceTree,
     parsed: BTreeMap<PathBuf, CachedParse>,
     receipt: SourceCorpusReceipt,
@@ -146,18 +156,15 @@ struct SourceCorpus {
     parse_tree_hits: AtomicUsize,
 }
 
-/// A scoped immutable source corpus shared by analyzers running in any thread.
-///
-/// Dropping the session removes it from the process-local lookup registry. A
-/// previous nested session for the same input is restored rather than lost.
+/// A reusable immutable source corpus that can be entered from multiple
+/// analyzer threads without sharing ambient state between concurrent scans.
 #[derive(Debug)]
 pub struct SourceCorpusSession {
-    key: PathBuf,
     corpus: Arc<SourceCorpus>,
-    previous: Option<Weak<SourceCorpus>>,
 }
 
 impl SourceCorpusSession {
+    /// Discover, read, hash, and parse every supported source file exactly once.
     pub fn activate(input: &Path) -> Result<Self, SourceError> {
         let key = input_key(input);
         let tree = load_source_tree_uncached(input)?;
@@ -181,14 +188,14 @@ impl SourceCorpusSession {
             update_manifest_field(&mut manifest, file.path.as_bytes());
             update_manifest_field(&mut manifest, file.language.name().as_bytes());
             manifest.update(bytes.to_be_bytes());
-            manifest.update(digest);
+            manifest.update(&digest);
             manifest.update([u8::from(observation.has_syntax_errors)]);
 
             file_receipts.push(SourceFileReceipt {
                 path: file.path.clone(),
                 language: file.language,
                 bytes,
-                sha256: hex_digest(&digest),
+                sha256: hex_digest(digest.as_ref()),
                 syntax_errors: observation.has_syntax_errors,
             });
             parsed.insert(
@@ -204,30 +211,37 @@ impl SourceCorpusSession {
         let receipt = SourceCorpusReceipt {
             schema_version: SOURCE_CORPUS_SCHEMA_VERSION.to_owned(),
             root: tree.root.clone(),
-            manifest_sha256: hex_digest(&manifest.finalize()),
+            manifest_sha256: hex_digest(Sha256::finalize(manifest).as_ref()),
             enumerated_files: tree.enumerated,
             supported_files: tree.files.len(),
             skipped_files: tree.skipped,
             total_bytes,
             syntax_error_files,
-            filesystem_walks: 1,
+            filesystem_discoveries: 1,
             file_reads: tree.files.len(),
             parses: tree.files.len(),
             files: file_receipts,
         };
-        let corpus = Arc::new(SourceCorpus {
-            tree,
-            parsed,
-            receipt,
-            source_tree_hits: AtomicUsize::new(0),
-            parse_tree_hits: AtomicUsize::new(0),
-        });
-        let previous = registry_write().insert(key.clone(), Arc::downgrade(&corpus));
         Ok(Self {
-            key,
-            corpus,
-            previous,
+            corpus: Arc::new(SourceCorpus {
+                key,
+                tree,
+                parsed,
+                receipt,
+                source_tree_hits: AtomicUsize::new(0),
+                parse_tree_hits: AtomicUsize::new(0),
+            }),
         })
+    }
+
+    /// Execute one analyzer operation with this corpus installed only in the
+    /// current thread. Nested scopes restore the previous corpus on unwind.
+    pub fn scope<T>(&self, operation: impl FnOnce() -> T) -> T {
+        ACTIVE_CORPORA.with(|active| active.borrow_mut().push(Arc::clone(&self.corpus)));
+        let _guard = SourceCorpusScopeGuard {
+            corpus: Arc::clone(&self.corpus),
+        };
+        operation()
     }
 
     #[must_use]
@@ -244,23 +258,21 @@ impl SourceCorpusSession {
     }
 }
 
-impl Drop for SourceCorpusSession {
+struct SourceCorpusScopeGuard {
+    corpus: Arc<SourceCorpus>,
+}
+
+impl Drop for SourceCorpusScopeGuard {
     fn drop(&mut self) {
-        let current = Arc::downgrade(&self.corpus);
-        let mut registry = registry_write();
-        if registry
-            .get(&self.key)
-            .is_some_and(|registered| Weak::ptr_eq(registered, &current))
-        {
-            if self.previous.as_ref().and_then(Weak::upgrade).is_some() {
-                registry.insert(
-                    self.key.clone(),
-                    self.previous.take().expect("previous session was present"),
-                );
-            } else {
-                registry.remove(&self.key);
+        ACTIVE_CORPORA.with(|active| {
+            let mut active = active.borrow_mut();
+            if let Some(position) = active
+                .iter()
+                .rposition(|corpus| Arc::ptr_eq(corpus, &self.corpus))
+            {
+                active.remove(position);
             }
-        }
+        });
     }
 }
 
@@ -416,40 +428,33 @@ pub fn language_for_path(path: &Path) -> Option<SourceLanguage> {
 }
 
 fn active_corpus(input: &Path) -> Option<Arc<SourceCorpus>> {
-    registry_read().get(&input_key(input)).and_then(Weak::upgrade)
+    let key = input_key(input);
+    ACTIVE_CORPORA.with(|active| {
+        active
+            .borrow()
+            .iter()
+            .rev()
+            .find(|corpus| corpus.key == key)
+            .cloned()
+    })
 }
 
 fn active_parse(file: &SourceFile) -> Option<(Tree, bool, Arc<SourceCorpus>)> {
-    for corpus in registry_read().values().filter_map(Weak::upgrade) {
-        let Some(parsed) = corpus.parsed.get(&file.absolute_path) else {
-            continue;
-        };
-        if Arc::ptr_eq(&parsed.bytes, &file.bytes) {
-            return Some((
-                parsed.tree.clone(),
-                parsed.has_syntax_errors,
-                corpus,
-            ));
+    ACTIVE_CORPORA.with(|active| {
+        for corpus in active.borrow().iter().rev() {
+            let Some(parsed) = corpus.parsed.get(&file.absolute_path) else {
+                continue;
+            };
+            if Arc::ptr_eq(&parsed.bytes, &file.bytes) {
+                return Some((
+                    parsed.tree.clone(),
+                    parsed.has_syntax_errors,
+                    Arc::clone(corpus),
+                ));
+            }
         }
-    }
-    None
-}
-
-fn registry() -> &'static RwLock<HashMap<PathBuf, Weak<SourceCorpus>>> {
-    static REGISTRY: OnceLock<RwLock<HashMap<PathBuf, Weak<SourceCorpus>>>> = OnceLock::new();
-    REGISTRY.get_or_init(|| RwLock::new(HashMap::new()))
-}
-
-fn registry_read() -> std::sync::RwLockReadGuard<'static, HashMap<PathBuf, Weak<SourceCorpus>>> {
-    registry()
-        .read()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-}
-
-fn registry_write() -> std::sync::RwLockWriteGuard<'static, HashMap<PathBuf, Weak<SourceCorpus>>> {
-    registry()
-        .write()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        None
+    })
 }
 
 fn input_key(input: &Path) -> PathBuf {
@@ -470,7 +475,6 @@ fn update_manifest_field(hasher: &mut Sha256, bytes: &[u8]) {
 fn hex_digest(bytes: &[u8]) -> String {
     let mut rendered = String::with_capacity(bytes.len() * 2);
     for byte in bytes {
-        use std::fmt::Write as _;
         let _ = write!(&mut rendered, "{byte:02x}");
     }
     rendered
