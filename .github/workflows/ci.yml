@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.0
+          components: rustfmt, clippy
+      - run: rustfmt --edition 2024 --check src/frontier.rs src/frontier/compare.rs src/frontier/signals.rs src/bin/seval-frontier.rs tests/frontier.rs
+      - run: cargo test --all-targets --locked
+      - run: cargo run --locked --bin seval-frontier -- profile . --format json > /tmp/frontier.json
+      - run: |
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/frontier.json", encoding="utf-8") as source:
+              report = json.load(source)
+
+          expected = {
+              "reader.local-cognitive-p90",
+              "reader.symbol-working-set-p90-fraction",
+              "interface.shallow-function-fraction",
+              "effects.syntactic-pure-fraction",
+              "effects.mutable-live-range-p90-lines",
+              "uniformity.reported-clone-token-density",
+          }
+          assert report["schema_version"] == "seval.frontier.v1"
+          assert {signal["id"] for signal in report["signals"]} == expected
+          assert len(report["analyzers"]) == 4
+          assert all(receipt["status"] == "complete" for receipt in report["analyzers"])
+          assert report["artifact"]["git"] is not None
+          PY
+      - run: cargo clippy --lib --bin seval-frontier --locked -- -D warnings

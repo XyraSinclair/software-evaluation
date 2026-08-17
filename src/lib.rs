@@ -14,6 +14,7 @@ pub mod conductance;
 pub mod deps;
 pub mod discipline;
 pub mod duplicates;
+pub mod frontier;
 pub mod info;
 pub mod kernel;
 pub mod metrics;

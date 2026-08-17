@@ -160,15 +160,15 @@ async fn create(
         }
     };
     let key = id.key();
-    if let Some(existing) = state.inner.active.lock().await.get(&key).copied() {
-        if let Some(job) = state.inner.jobs.lock().await.get(&existing) {
-            let status = if job.state.terminal() {
-                StatusCode::OK
-            } else {
-                StatusCode::ACCEPTED
-            };
-            return response(status, public(job));
-        }
+    if let Some(existing) = state.inner.active.lock().await.get(&key).copied()
+        && let Some(job) = state.inner.jobs.lock().await.get(&existing)
+    {
+        let status = if job.state.terminal() {
+            StatusCode::OK
+        } else {
+            StatusCode::ACCEPTED
+        };
+        return response(status, public(job));
     }
     let queued = state.inner.queued.fetch_add(1, Ordering::SeqCst);
     if queued >= state.inner.config.queue_capacity {
@@ -278,12 +278,12 @@ async fn run(state: AppState, id: Uuid, key: String, identity: GithubRepoId) {
         snapshot.repository_id,
         &snapshot.commit,
     );
-    if let Ok(bytes) = tokio::fs::read(&cache).await {
-        if let Ok(mut result) = serde_json::from_slice::<CompactResult>(&bytes) {
-            result.repository.cached = true;
-            complete(&state, id, key, result).await;
-            return;
-        }
+    if let Ok(bytes) = tokio::fs::read(&cache).await
+        && let Ok(mut result) = serde_json::from_slice::<CompactResult>(&bytes)
+    {
+        result.repository.cached = true;
+        complete(&state, id, key, result).await;
+        return;
     }
     let temp = match tempfile::Builder::new().prefix("sevald-").tempdir() {
         Ok(t) => t,
