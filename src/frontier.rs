@@ -23,6 +23,7 @@ use crate::duplicates::{DuplicateConfig, analyze_duplicates};
 use crate::kernel::ArtifactSnapshot;
 use crate::repo::snapshot_git_repo;
 use crate::shape::analyze_shape;
+use crate::source::SourceCorpusSession;
 use crate::symbols::analyze_symbols;
 
 mod compare;
@@ -295,17 +296,39 @@ pub fn profile_path(
 
     let started = Instant::now();
     let before = git_snapshot(input, metadata.is_dir());
+    let (source_corpus, source_corpus_error) = match SourceCorpusSession::activate(input) {
+        Ok(corpus) => (Some(corpus), None),
+        Err(error) => (None, Some(error.to_string())),
+    };
     let duplicate_config = DuplicateConfig {
         min_tokens: config.duplicate_min_tokens,
         min_lines: config.duplicate_min_lines,
         max_groups: config.duplicate_max_groups,
     };
     let runs = thread::scope(|scope| {
-        let shape = scope.spawn(|| run_analyzer(SHAPE, || analyze_shape(input)));
-        let symbols = scope.spawn(|| run_analyzer(SYMBOLS, || analyze_symbols(input)));
-        let discipline = scope.spawn(|| run_analyzer(DISCIPLINE, || analyze_discipline(input)));
-        let duplicates = scope
-            .spawn(|| run_analyzer(DUPLICATES, || analyze_duplicates(input, &duplicate_config)));
+        let corpus = source_corpus.as_ref();
+        let shape = scope.spawn(|| {
+            with_source_corpus(corpus, || {
+                run_analyzer(SHAPE, || analyze_shape(input))
+            })
+        });
+        let symbols = scope.spawn(|| {
+            with_source_corpus(corpus, || {
+                run_analyzer(SYMBOLS, || analyze_symbols(input))
+            })
+        });
+        let discipline = scope.spawn(|| {
+            with_source_corpus(corpus, || {
+                run_analyzer(DISCIPLINE, || analyze_discipline(input))
+            })
+        });
+        let duplicates = scope.spawn(|| {
+            with_source_corpus(corpus, || {
+                run_analyzer(DUPLICATES, || {
+                    analyze_duplicates(input, &duplicate_config)
+                })
+            })
+        });
         vec![
             join_analyzer(SHAPE, shape.join()),
             join_analyzer(SYMBOLS, symbols.join()),
@@ -324,6 +347,12 @@ pub fn profile_path(
         analyzers.push(run.receipt);
     }
     let signals = signals::project(&values, config);
+    let mut limitations = signals::limitations();
+    if let Some(error) = source_corpus_error {
+        limitations.push(format!(
+            "Shared source-corpus materialization failed ({error}); analyzers fell back to independent discovery, reads, and parses."
+        ));
+    }
 
     Ok(FrontierProfile {
         schema_version: FRONTIER_SCHEMA_VERSION.to_owned(),
@@ -334,8 +363,18 @@ pub fn profile_path(
         coverage: signals::coverage(&signals),
         signals,
         families: signals::families(),
-        limitations: signals::limitations(),
+        limitations,
     })
+}
+
+fn with_source_corpus<T>(
+    corpus: Option<&SourceCorpusSession>,
+    operation: impl FnOnce() -> T,
+) -> T {
+    match corpus {
+        Some(corpus) => corpus.scope(operation),
+        None => operation(),
+    }
 }
 
 fn run_analyzer<T, E, F>(id: &str, analyze: F) -> AnalyzerRun

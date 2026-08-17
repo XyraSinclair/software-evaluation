@@ -1,8 +1,10 @@
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 
 use software_evaluation::source::{
-    SourceError, SourceLanguage, language_for_path, load_source_tree, parse_source,
+    SourceCorpusCacheStats, SourceCorpusSession, SourceError, SourceLanguage, language_for_path,
+    load_source_tree, parse_source,
 };
 use tempfile::TempDir;
 
@@ -158,7 +160,7 @@ fn directory_discovery_is_ignored_sorted_counted_and_parseable() {
         tree.files.iter().zip(fixtures)
     {
         assert_eq!(file.path, expected_path);
-        assert_eq!(file.bytes, expected_bytes.as_bytes());
+        assert_eq!(file.bytes.as_ref(), expected_bytes.as_bytes());
         assert_eq!(file.language, expected_language);
         let parsed =
             parse_source(file).unwrap_or_else(|error| panic!("parse {expected_path}: {error}"));
@@ -258,4 +260,146 @@ fn non_file_non_directory_input_is_rejected() {
         SourceError::Traverse { path, message }
             if path == socket && message == "input is neither a regular file nor a directory"
     ));
+}
+
+#[test]
+fn corpus_materialization_is_content_digested_and_reused_without_copying_bytes() {
+    let directory = TempDir::new().expect("temporary source corpus");
+    let root = directory.path();
+    write_file(root, "a.rs", "fn alpha() -> u8 { 1 }\n");
+    write_file(root, "b.py", "def beta() -> int:\n    return 2\n");
+    write_file(root, "notes.txt", "unsupported\n");
+
+    let session = SourceCorpusSession::activate(root).expect("materialize source corpus");
+    let receipt = session.receipt();
+    assert_eq!(receipt.schema_version, "seval.source-corpus.v1");
+    assert_eq!(receipt.enumerated_files, 3);
+    assert_eq!(receipt.supported_files, 2);
+    assert_eq!(receipt.skipped_files, 1);
+    assert_eq!(receipt.filesystem_discoveries, 1);
+    assert_eq!(receipt.file_reads, 2);
+    assert_eq!(receipt.parses, 2);
+    assert_eq!(receipt.files.len(), 2);
+    assert_eq!(receipt.manifest_sha256.len(), 64);
+    assert!(
+        receipt
+            .manifest_sha256
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    );
+
+    session.scope(|| {
+        let first = load_source_tree(root).expect("first cached source tree");
+        let second = load_source_tree(root).expect("second cached source tree");
+        assert_eq!(first.files.len(), 2);
+        assert!(Arc::ptr_eq(&first.files[0].bytes, &second.files[0].bytes));
+        for file in &first.files {
+            parse_source(file).expect("cached parse");
+        }
+    });
+
+    assert_eq!(
+        session.cache_stats(),
+        SourceCorpusCacheStats {
+            source_tree_hits: 2,
+            parse_tree_hits: 2,
+        }
+    );
+}
+
+#[test]
+fn corpus_manifest_is_stable_and_changes_with_source_identity() {
+    let directory = TempDir::new().expect("temporary source corpus identity");
+    let root = directory.path();
+    write_file(root, "value.rs", "fn value() -> u8 { 1 }\n");
+
+    let first = SourceCorpusSession::activate(root)
+        .expect("first corpus")
+        .receipt()
+        .manifest_sha256
+        .clone();
+    let second = SourceCorpusSession::activate(root)
+        .expect("second corpus")
+        .receipt()
+        .manifest_sha256
+        .clone();
+    assert_eq!(first, second);
+
+    write_file(root, "value.rs", "fn value() -> u8 { 2 }\n");
+    let changed_bytes = SourceCorpusSession::activate(root)
+        .expect("changed-byte corpus")
+        .receipt()
+        .manifest_sha256
+        .clone();
+    assert_ne!(first, changed_bytes);
+
+    fs::rename(root.join("value.rs"), root.join("renamed.rs")).expect("rename fixture source");
+    let changed_path = SourceCorpusSession::activate(root)
+        .expect("changed-path corpus")
+        .receipt()
+        .manifest_sha256
+        .clone();
+    assert_ne!(changed_bytes, changed_path);
+}
+
+#[test]
+fn nested_and_concurrent_scopes_keep_their_own_immutable_snapshots() {
+    let directory = TempDir::new().expect("temporary scoped corpus");
+    let root = directory.path();
+    write_file(root, "value.rs", "fn value() -> u8 { 1 }\n");
+    let first = SourceCorpusSession::activate(root).expect("first snapshot");
+
+    write_file(root, "value.rs", "fn value() -> u8 { 2 }\n");
+    let second = SourceCorpusSession::activate(root).expect("second snapshot");
+
+    first.scope(|| {
+        let outer = load_source_tree(root).expect("outer tree");
+        assert!(
+            std::str::from_utf8(outer.files[0].bytes.as_ref())
+                .expect("UTF-8 fixture")
+                .contains("{ 1 }")
+        );
+        second.scope(|| {
+            let inner = load_source_tree(root).expect("inner tree");
+            assert!(
+                std::str::from_utf8(inner.files[0].bytes.as_ref())
+                    .expect("UTF-8 fixture")
+                    .contains("{ 2 }")
+            );
+        });
+        let restored = load_source_tree(root).expect("restored outer tree");
+        assert!(Arc::ptr_eq(
+            &outer.files[0].bytes,
+            &restored.files[0].bytes
+        ));
+    });
+
+    std::thread::scope(|scope| {
+        let left = scope.spawn(|| {
+            first.scope(|| {
+                load_source_tree(root).expect("first concurrent tree").files[0]
+                    .bytes
+                    .clone()
+            })
+        });
+        let right = scope.spawn(|| {
+            second.scope(|| {
+                load_source_tree(root).expect("second concurrent tree").files[0]
+                    .bytes
+                    .clone()
+            })
+        });
+        let left = left.join().expect("first corpus thread");
+        let right = right.join().expect("second corpus thread");
+        assert!(
+            std::str::from_utf8(left.as_ref())
+                .expect("UTF-8 fixture")
+                .contains("{ 1 }")
+        );
+        assert!(
+            std::str::from_utf8(right.as_ref())
+                .expect("UTF-8 fixture")
+                .contains("{ 2 }")
+        );
+    });
 }
