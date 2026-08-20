@@ -15,6 +15,7 @@ use software_evaluation::shape::{
 };
 use software_evaluation::symbols::{SymbolEdgeKind, SymbolReport};
 use software_evaluation::tests_analysis::TestReport;
+use software_evaluation::twins::{NearPairScanStatus, TwinsReport};
 use software_evaluation::typespace::TypeSpaceReport;
 
 pub fn print_symbols(report: &SymbolReport, top: usize) {
@@ -1881,4 +1882,101 @@ fn shown_ratio(ratio: Option<&ExactRatio>) -> String {
             )
         },
     )
+}
+
+pub fn print_twins(report: &TwinsReport, top: usize) {
+    println!("analyzer: {}", report.analyzer);
+    println!("root: {}", report.root);
+    println!(
+        "denominator: {} analyzed files; {} unique internal edges; {} isolated files",
+        report.analyzed_files, report.internal_edges, report.isolated_files,
+    );
+    println!(
+        "config: near-percent={} min-class-shared={} min-shared={} max-pairs={} near-pair-node-limit={}",
+        report.config.near_percent,
+        report.config.min_class_shared,
+        report.config.min_shared,
+        report.config.max_pairs,
+        report.config.near_pair_node_limit,
+    );
+    println!(
+        "twin membership: {} / {} files ({:.3}) across {} open + {} closed classes",
+        report.twin_member_numerator,
+        report.twin_member_denominator,
+        report.twin_member_fraction,
+        report.open_twin_class_count,
+        report.closed_twin_class_count,
+    );
+    if report.suppressed_class_count > 0 {
+        println!(
+            "suppressed: {} classes below min-class-shared, {} files only there",
+            report.suppressed_class_count, report.suppressed_member_files,
+        );
+    }
+    print_twin_class_section("open twin classes", &report.open_twin_classes, top);
+    print_twin_class_section("closed twin classes", &report.closed_twin_classes, top);
+    match report.near_pair_scan {
+        NearPairScanStatus::Complete => {
+            println!(
+                "near-twin pairs (J >= {}%): {}{}",
+                report.config.near_percent,
+                report.near_twin_pairs.len(),
+                if report.near_twin_pairs_censored {
+                    " (censored at max-pairs; incomplete)"
+                } else {
+                    ""
+                },
+            );
+            for pair in report.near_twin_pairs.iter().take(top) {
+                println!(
+                    "  {} ~ {}: J = {}/{} ({:.3})",
+                    pair.left, pair.right, pair.intersection, pair.union, pair.jaccard,
+                );
+                if !pair.left_only.is_empty() {
+                    println!("    left-only: {}", pair.left_only.join(", "));
+                }
+                if !pair.right_only.is_empty() {
+                    println!("    right-only: {}", pair.right_only.join(", "));
+                }
+            }
+        }
+        NearPairScanStatus::SkippedNodeLimit => {
+            println!(
+                "near-twin pairs: scan skipped (non-isolated files exceed node limit {})",
+                report.config.near_pair_node_limit,
+            );
+        }
+    }
+    print_limitations(&report.limitations);
+}
+
+fn print_twin_class_section(
+    label: &str,
+    classes: &[software_evaluation::twins::TwinClass],
+    top: usize,
+) {
+    println!("{label}: {}", classes.len());
+    for class in classes.iter().take(top) {
+        println!(
+            "  {} members; shared in={} out={} distinct={}{}",
+            class.member_count,
+            class.shared_in_count,
+            class.shared_out_count,
+            class.shared_distinct_count,
+            if class.members_mutually_linked {
+                "; members mutually linked"
+            } else {
+                ""
+            },
+        );
+        for member in &class.members {
+            println!("    {member}");
+        }
+        if !class.shared_in.is_empty() {
+            println!("    shared-in: {}", class.shared_in.join(", "));
+        }
+        if !class.shared_out.is_empty() {
+            println!("    shared-out: {}", class.shared_out.join(", "));
+        }
+    }
 }

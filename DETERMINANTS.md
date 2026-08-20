@@ -876,3 +876,21 @@ code.
    — the type-space cardinality problem. Partially covered by the discipline
    instrument (any-annotations, global mutable state, unannotated params);
    the PL-theory range (types-as-invariants measurement) is the open arm.
+
+### Fourth wave (2026-08-19): twin census
+
+The Davis–Kahan objection that killed eigenvector methods — generated code
+creates twin nodes that make eigenvectors non-unique — is itself the
+instrument. `seval twins` reports the degeneracy directly as exact
+combinatorics: open twin classes (identical resolved in/out neighborhoods,
+an equivalence relation, so classes are canonical), closed twin classes
+(identical after self-inclusion, which forces mutual edges — mutually linked
+siblings), and near-twin pairs at a declared exact-rational Jaccard threshold
+with tagged difference witnesses. A distinct-neighbor class floor (default 2)
+absorbs the Rust `mod.rs` parent↔child confounder — a lone parent linked both
+ways counts as one shared neighbor — and suppressed classes are counted so the
+ledger closes. Twin structure establishes parallel declared shape only: it is
+the sharpest cheap locator for template-stamped module families, and it cannot
+distinguish them from legitimate plugin registries; that adjudication is the
+reader's. Function-granularity twins over the resolved symbol graph remain
+later.

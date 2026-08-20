@@ -8,7 +8,8 @@ use std::process::ExitCode;
 
 use analysis_output::{
     print_api, print_benchmark, print_cochange_layout, print_cochange_support, print_dependencies,
-    print_discipline, print_duplicates, print_shape, print_symbols, print_tests, print_typespace,
+    print_discipline, print_duplicates, print_shape, print_symbols, print_tests, print_twins,
+    print_typespace,
 };
 use change_profile_output::{render_change_profile_svg, render_change_profile_text};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -38,6 +39,10 @@ use software_evaluation::repo::{
 use software_evaluation::shape::analyze_shape;
 use software_evaluation::symbols::analyze_symbols;
 use software_evaluation::tests_analysis::analyze_tests;
+use software_evaluation::twins::{
+    TWINS_DEFAULT_MAX_PAIRS, TWINS_DEFAULT_MIN_CLASS_SHARED, TWINS_DEFAULT_MIN_SHARED,
+    TWINS_DEFAULT_NEAR_PERCENT, TwinsConfig, analyze_twins,
+};
 use software_evaluation::typespace::analyze_typespace;
 
 #[derive(Debug, Parser)]
@@ -242,6 +247,28 @@ enum Command {
         /// Maximum file/path rows shown in each text section.
         #[arg(long, default_value_t = 100)]
         top: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Census structural twins: files with identical or near-identical resolved neighborhoods.
+    Twins {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Maximum classes/pairs shown in each text section.
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        /// Exact Jaccard threshold for near-twin pairs, as an integer percent.
+        #[arg(long, default_value_t = TWINS_DEFAULT_NEAR_PERCENT)]
+        near_percent: u32,
+        /// Minimum shared neighborhood size for a twin class to be reported.
+        #[arg(long, default_value_t = TWINS_DEFAULT_MIN_CLASS_SHARED)]
+        min_class_shared: usize,
+        /// Minimum tagged-union size for a near-twin pair to be considered.
+        #[arg(long, default_value_t = TWINS_DEFAULT_MIN_SHARED)]
+        min_shared: usize,
+        /// Maximum reported near-twin pairs; exceeding it censors the list.
+        #[arg(long, default_value_t = TWINS_DEFAULT_MAX_PAIRS)]
+        max_pairs: usize,
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
         format: OutputFormat,
     },
@@ -682,6 +709,28 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             match format {
                 OutputFormat::Json => print_json(&report)?,
                 OutputFormat::Text => print_tests(&report, top),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Twins {
+            path,
+            top,
+            near_percent,
+            min_class_shared,
+            min_shared,
+            max_pairs,
+            format,
+        } => {
+            let config = TwinsConfig {
+                near_percent,
+                min_class_shared,
+                min_shared,
+                max_pairs,
+            };
+            let report = analyze_twins(&path, &config).map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_twins(&report, top),
             }
             Ok(ExitCode::SUCCESS)
         }
