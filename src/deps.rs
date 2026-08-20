@@ -43,6 +43,8 @@ pub struct DependencyReport {
     pub syntax_error_files: usize,
     pub unreadable_manifests: Vec<UnreadableManifest>,
     pub manifest_dependencies: Vec<ManifestDependency>,
+    /// Declared-versus-imported join with two-tier evidence per row.
+    pub manifest_usage: ManifestUsage,
     pub manifest_dependency_count: usize,
     pub non_registry_manifest_dependency_count: usize,
     pub risky_manifest_dependency_count: usize,
@@ -479,6 +481,61 @@ pub enum ManifestSourceKind {
     Unknown,
 }
 
+/// Manifest-declared dependencies joined against import declarations and a
+/// whole-word lexical scan of walked source bytes. The strongest negative
+/// claim is `unused-candidate`: no import declaration matches AND the name
+/// never appears as a word anywhere. Liveness is over-stated, never invented.
+#[derive(Debug, Clone, Serialize)]
+pub struct ManifestUsage {
+    pub rows: Vec<ManifestUsageRow>,
+    pub used: usize,
+    pub mentioned_only: usize,
+    pub unused_candidates: usize,
+    pub unmappable: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ManifestUsageRow {
+    pub manifest: String,
+    pub ecosystem: String,
+    pub scope: String,
+    pub name: String,
+    /// Import declarations whose specifier root matches this dependency.
+    pub import_declaration_matches: usize,
+    /// First matching declaration site, when any exists.
+    pub declaration_witness: Option<ManifestUsageWitness>,
+    /// Whole-word occurrences of the lexical tokens across walked source
+    /// bytes, including comments and strings — deliberately, so a mention in
+    /// an attribute macro, qualified path, or doc blocks the unused claim.
+    /// Computed only when no import declaration matches; 0 for used rows.
+    pub lexical_word_mentions: usize,
+    /// Tokens the lexical scan searched for.
+    pub lexical_tokens: Vec<String>,
+    /// False for Python: distribution names are not mappable to import
+    /// modules, so the unused claim is never made there.
+    pub mapping_reliable: bool,
+    pub status: ManifestUsageStatus,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ManifestUsageWitness {
+    pub path: String,
+    pub line: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ManifestUsageStatus {
+    /// At least one import declaration matches.
+    Used,
+    /// No declaration matches, but the name occurs as a word somewhere.
+    MentionedOnly,
+    /// No declaration and no lexical mention; the strongest negative claim.
+    UnusedCandidate,
+    /// The ecosystem's declared name cannot be mapped to import spellings.
+    Unmappable,
+}
+
 #[derive(Debug)]
 struct Declaration {
     line: usize,
@@ -689,6 +746,7 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
     let import_grading = import_grading(&source_tree.files, &declarations, &edges);
     let evidence_count = edges.iter().map(|e| e.evidence.len()).sum();
     let (manifest_dependencies, manifest_count, unreadable_manifests) = inventory_manifests(input)?;
+    let manifest_usage = manifest_usage(&manifest_dependencies, &declarations, &source_tree.files);
     let non_registry_manifest_dependency_count = manifest_dependencies
         .iter()
         .filter(|d| d.source_kind != ManifestSourceKind::Registry)
@@ -751,6 +809,7 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
         risky_manifest_dependency_count,
         manifest_source_kind_counts,
         manifest_dependencies,
+        manifest_usage,
         node_count: nodes.len(), edge_count: edges.len(), internal_edges, external_edges, unresolved_edges,
         import_grading,
         nodes, edges, strongly_connected_components: sccs, cycles, weak_components,
@@ -771,6 +830,8 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
 
 fn base_limitations() -> Vec<String> {
     vec![
+        "Manifest usage is a two-tier lexical join: `used` means a matching import declaration exists, `mentioned-only` means the name occurs as a word somewhere (comments and strings count deliberately), and `unused-candidate` is only claimed when both tiers are empty in a reliable-mapping ecosystem. Feature-gated, re-exported, and build-script-only usage outside walked files stays invisible.".to_owned(),
+        "Python distribution names are not mappable to import module names; their rows are never claimed unused.".to_owned(),
             "Syntax-error trees are analyzed error-tolerantly; declarations from those files may be partial.".to_owned(),
             "Resolution is filesystem-only: no Cargo metadata, Python environment, package.json/tsconfig aliases, JavaScript package exports, Go modules, build tags, generated code, or conditional compilation are interpreted.".to_owned(),
             "Manifest inventory reads only direct declarations; it does not resolve lockfiles, target markers, feature activation, transitive dependencies, or registry defaults beyond the literal manifest syntax.".to_owned(),
@@ -2796,6 +2857,219 @@ fn parse_go_mod(manifest: &str, content: &str, out: &mut Vec<ManifestDependency>
             ));
         }
     }
+}
+
+fn manifest_usage(
+    manifest_dependencies: &[ManifestDependency],
+    declarations: &[(&SourceFile, Declaration)],
+    files: &[SourceFile],
+) -> ManifestUsage {
+    let mut rows = Vec::new();
+    let (mut used, mut mentioned_only, mut unused_candidates, mut unmappable) = (0, 0, 0, 0);
+    for dependency in manifest_dependencies {
+        let (roots, tokens, mapping_reliable): (Vec<String>, Vec<String>, bool) =
+            match dependency.ecosystem.as_str() {
+                "cargo" => {
+                    let token = dependency.name.replace('-', "_");
+                    (vec![token.clone()], vec![token], true)
+                }
+                "npm" => {
+                    let last = dependency
+                        .name
+                        .rsplit('/')
+                        .next()
+                        .unwrap_or(dependency.name.as_str())
+                        .to_owned();
+                    let mut tokens = vec![dependency.name.clone()];
+                    if last != dependency.name {
+                        tokens.push(last);
+                    }
+                    (vec![dependency.name.clone()], tokens, true)
+                }
+                "python" => {
+                    let token = dependency.name.to_ascii_lowercase().replace('-', "_");
+                    (
+                        vec![token.clone()],
+                        vec![dependency.name.clone(), token],
+                        false,
+                    )
+                }
+                "go" => {
+                    let last = dependency
+                        .name
+                        .rsplit('/')
+                        .next()
+                        .unwrap_or(dependency.name.as_str())
+                        .to_owned();
+                    (vec![dependency.name.clone()], vec![last], true)
+                }
+                _ => (
+                    vec![dependency.name.clone()],
+                    vec![dependency.name.clone()],
+                    false,
+                ),
+            };
+
+        let mut matches = 0usize;
+        let mut witness = None;
+        for (file, declaration) in declarations {
+            let matched = match dependency.ecosystem.as_str() {
+                "cargo" => {
+                    matches!(declaration.hint, ResolutionHint::RustUse)
+                        && roots
+                            .iter()
+                            .any(|root| declaration.specifier.split("::").next() == Some(root))
+                }
+                "npm" => {
+                    // JS imports/requires carry a Path hint; a bare (non-`.`,
+                    // non-`/`) specifier is a package reference.
+                    matches!(
+                        declaration.hint,
+                        ResolutionHint::Package | ResolutionHint::Path
+                    ) && !declaration.specifier.starts_with('.')
+                        && !declaration.specifier.starts_with('/')
+                        && roots
+                            .iter()
+                            .any(|root| package_root(&declaration.specifier) == *root)
+                }
+                "python" => {
+                    matches!(declaration.hint, ResolutionHint::Package)
+                        && roots.iter().any(|root| {
+                            declaration
+                                .specifier
+                                .split('.')
+                                .next()
+                                .map(str::to_ascii_lowercase)
+                                .as_deref()
+                                == Some(root)
+                        })
+                }
+                "go" => {
+                    matches!(declaration.hint, ResolutionHint::GoPackage)
+                        && roots.iter().any(|root| {
+                            declaration.specifier == *root
+                                || declaration.specifier.starts_with(&format!("{root}/"))
+                        })
+                }
+                _ => false,
+            };
+            if matched {
+                matches += 1;
+                if witness.is_none() {
+                    witness = Some(ManifestUsageWitness {
+                        path: file.path.clone(),
+                        line: declaration.line,
+                    });
+                }
+            }
+        }
+
+        let lexical_word_mentions = if matches > 0 {
+            0
+        } else {
+            tokens
+                .iter()
+                .map(|token| {
+                    files
+                        .iter()
+                        .map(|file| word_mentions(&file.bytes, token))
+                        .sum::<usize>()
+                })
+                .sum()
+        };
+        let status = if matches > 0 {
+            used += 1;
+            ManifestUsageStatus::Used
+        } else if lexical_word_mentions > 0 {
+            mentioned_only += 1;
+            ManifestUsageStatus::MentionedOnly
+        } else if mapping_reliable {
+            unused_candidates += 1;
+            ManifestUsageStatus::UnusedCandidate
+        } else {
+            unmappable += 1;
+            ManifestUsageStatus::Unmappable
+        };
+        rows.push(ManifestUsageRow {
+            manifest: dependency.manifest.clone(),
+            ecosystem: dependency.ecosystem.clone(),
+            scope: dependency.scope.clone(),
+            name: dependency.name.clone(),
+            import_declaration_matches: matches,
+            declaration_witness: witness,
+            lexical_word_mentions,
+            lexical_tokens: tokens,
+            mapping_reliable,
+            status,
+        });
+    }
+    rows.sort_by(|a, b| {
+        status_rank(a.status)
+            .cmp(&status_rank(b.status))
+            .then(a.manifest.cmp(&b.manifest))
+            .then(a.name.cmp(&b.name))
+    });
+    ManifestUsage {
+        rows,
+        used,
+        mentioned_only,
+        unused_candidates,
+        unmappable,
+    }
+}
+
+fn status_rank(status: ManifestUsageStatus) -> u8 {
+    match status {
+        ManifestUsageStatus::UnusedCandidate => 0,
+        ManifestUsageStatus::MentionedOnly => 1,
+        ManifestUsageStatus::Unmappable => 2,
+        ManifestUsageStatus::Used => 3,
+    }
+}
+
+fn package_root(specifier: &str) -> String {
+    let mut segments = specifier.split('/');
+    let first = segments.next().unwrap_or(specifier);
+    if first.starts_with('@') {
+        match segments.next() {
+            Some(second) => format!("{first}/{second}"),
+            None => first.to_owned(),
+        }
+    } else {
+        first.to_owned()
+    }
+}
+
+/// Whole-word occurrences of `token` in raw bytes. Word boundary: adjacent
+/// bytes are not `[A-Za-z0-9_]`. Comments and strings count deliberately.
+fn word_mentions(bytes: &[u8], token: &str) -> usize {
+    if token.is_empty() {
+        return 0;
+    }
+    let token_bytes = token.as_bytes();
+    let is_word = |byte: u8| byte.is_ascii_alphanumeric() || byte == b'_';
+    let mut count = 0usize;
+    let mut start = 0usize;
+    while start + token_bytes.len() <= bytes.len() {
+        let Some(position) = find_from(bytes, token_bytes, start) else {
+            break;
+        };
+        let before_ok = position == 0 || !is_word(bytes[position - 1]);
+        let after = position + token_bytes.len();
+        let after_ok = after >= bytes.len() || !is_word(bytes[after]);
+        if before_ok && after_ok {
+            count += 1;
+        }
+        start = position + 1;
+    }
+    count
+}
+
+fn find_from(haystack: &[u8], needle: &[u8], from: usize) -> Option<usize> {
+    haystack[from..]
+        .windows(needle.len())
+        .position(|window| window == needle)
+        .map(|offset| offset + from)
 }
 
 fn manifest_row(

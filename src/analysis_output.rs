@@ -4,7 +4,7 @@ use software_evaluation::api_surface::ApiReport;
 use software_evaluation::benchmark::{BenchmarkReport, RunAttestation};
 use software_evaluation::cochange::CochangeLayoutReport;
 use software_evaluation::cochange_support::{CochangeSupportReport, ExactRatio, SupportMassBin};
-use software_evaluation::deps::DependencyReport;
+use software_evaluation::deps::{DependencyReport, ManifestUsageStatus};
 use software_evaluation::discipline::{
     DisciplineReport, DisciplineSort, Tail, rank_files as rank_discipline_files,
     rank_functions as rank_discipline_functions,
@@ -160,6 +160,7 @@ fn print_ranked_symbols(
 }
 
 pub fn print_dependencies(report: &DependencyReport, top: usize) {
+    print_manifest_usage(report);
     println!("analyzer: {}", report.analyzer);
     println!("root: {}", report.root);
     println!(
@@ -2060,6 +2061,33 @@ fn print_liveness_section(report: &LivenessReport, status: NameStatus, label: &s
         println!(
             "  {} [{}] {}:{}{}{}",
             row.name, site.kind, site.path, site.line, more, witness,
+        );
+    }
+}
+
+fn print_manifest_usage(report: &DependencyReport) {
+    let usage = &report.manifest_usage;
+    if usage.rows.is_empty() {
+        return;
+    }
+    println!(
+        "manifest usage: {} used, {} mentioned-only, {} unused-candidates, {} unmappable",
+        usage.used, usage.mentioned_only, usage.unused_candidates, usage.unmappable,
+    );
+    for row in usage
+        .rows
+        .iter()
+        .filter(|row| row.status != ManifestUsageStatus::Used)
+    {
+        let label = match row.status {
+            ManifestUsageStatus::UnusedCandidate => "unused-candidate",
+            ManifestUsageStatus::MentionedOnly => "mentioned-only",
+            ManifestUsageStatus::Unmappable => "unmappable",
+            ManifestUsageStatus::Used => unreachable!("used rows are filtered"),
+        };
+        println!(
+            "  {} [{}] {} ({}): {}; {} lexical word mentions",
+            row.name, row.ecosystem, row.manifest, row.scope, label, row.lexical_word_mentions,
         );
     }
 }
