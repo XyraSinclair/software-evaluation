@@ -50,7 +50,29 @@ pub struct DuplicateReport {
     pub config: DuplicateConfigReport,
     pub totals: DuplicateTotals,
     pub groups: Vec<CloneGroup>,
+    /// Unordered file pairs aggregated from the reported groups, the
+    /// merge-candidate view: which two files share the most clone-pattern
+    /// mass. `left == right` marks within-file duplication. Derived from the
+    /// capped group list, so pair masses are lower bounds whenever the group
+    /// list was truncated.
+    pub file_pairs: Vec<CloneFilePair>,
+    /// True when `groups_found > max_groups`: groups, totals, and file pairs
+    /// then describe a censored prefix, not the complete clone population.
+    pub groups_censored: bool,
+    /// Groups meeting the thresholds before the cap was applied.
+    pub groups_found: usize,
     pub limitations: Vec<String>,
+}
+
+/// Shared clone-pattern mass between one unordered file pair, aggregated over
+/// the reported groups. `shared_tokens` sums each shared group's
+/// tokens-per-occurrence once — pattern mass, not occurrence-multiplied mass.
+#[derive(Debug, Clone, Serialize)]
+pub struct CloneFilePair {
+    pub left: String,
+    pub right: String,
+    pub shared_groups: usize,
+    pub shared_tokens: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -161,6 +183,8 @@ pub fn analyze_duplicates(
             .then_with(|| first_path(a, &files).cmp(first_path(b, &files)))
             .then_with(|| a.digest.cmp(&b.digest))
     });
+    let groups_found = groups.len();
+    let groups_censored = groups_found > config.max_groups;
     groups.truncate(config.max_groups);
 
     let public_groups: Vec<_> = groups
@@ -168,6 +192,7 @@ pub fn analyze_duplicates(
         .map(|group| public_group(group, &files))
         .collect();
     let totals = totals(&groups, &files);
+    let file_pairs = aggregate_file_pairs(&public_groups);
     Ok(DuplicateReport {
         root: source_tree.root,
         analyzer: "tree-sitter normalized-token clone detector".to_owned(),
@@ -185,14 +210,72 @@ pub fn analyze_duplicates(
         },
         totals,
         groups: public_groups,
+        file_pairs,
+        groups_censored,
+        groups_found,
         limitations: vec![
             "This is a structural proxy: normalization can create false positives and is not semantic equivalence.".to_owned(),
             "Identifiers and literals are replaced by typed placeholders; binding identity, types, and runtime behavior are not compared.".to_owned(),
             "Only supported source files discovered by the shared source loader are considered.".to_owned(),
             "Syntax-error files are parsed using tree-sitter's error-tolerant tree, so their results may be partial.".to_owned(),
-            "Reported groups are capped after deterministic severity ordering; totals describe only reported groups.".to_owned(),
+            "Reported groups are capped after deterministic severity ordering; totals and file pairs describe only reported groups and are lower bounds when the cap censors.".to_owned(),
         ],
     })
+}
+
+/// Aggregate reported groups into unordered file pairs by shared pattern
+/// mass. Deterministic: BTreeMap keys, then sort by mass, groups, and paths.
+fn aggregate_file_pairs(groups: &[CloneGroup]) -> Vec<CloneFilePair> {
+    let mut pair_stats: BTreeMap<(String, String), (usize, usize)> = BTreeMap::new();
+    for group in groups {
+        let mut paths: Vec<&str> = group
+            .occurrences
+            .iter()
+            .map(|occurrence| occurrence.path.as_str())
+            .collect();
+        paths.sort_unstable();
+        let mut pairs: BTreeSet<(&str, &str)> = BTreeSet::new();
+        let distinct: Vec<&str> = {
+            let mut d = paths.clone();
+            d.dedup();
+            d
+        };
+        for (index, &left) in distinct.iter().enumerate() {
+            let repeated_within = paths.iter().filter(|&&p| p == left).count() >= 2;
+            if repeated_within {
+                pairs.insert((left, left));
+            }
+            for &right in &distinct[index + 1..] {
+                pairs.insert((left, right));
+            }
+        }
+        for (left, right) in pairs {
+            let entry = pair_stats
+                .entry((left.to_owned(), right.to_owned()))
+                .or_insert((0, 0));
+            entry.0 += 1;
+            entry.1 += group.tokens_per_occurrence;
+        }
+    }
+    let mut file_pairs: Vec<CloneFilePair> = pair_stats
+        .into_iter()
+        .map(
+            |((left, right), (shared_groups, shared_tokens))| CloneFilePair {
+                left,
+                right,
+                shared_groups,
+                shared_tokens,
+            },
+        )
+        .collect();
+    file_pairs.sort_by(|a, b| {
+        b.shared_tokens
+            .cmp(&a.shared_tokens)
+            .then(b.shared_groups.cmp(&a.shared_groups))
+            .then(a.left.cmp(&b.left))
+            .then(a.right.cmp(&b.right))
+    });
+    file_pairs
 }
 
 fn normalized_tokens(file: &SourceFile, root: Node<'_>) -> Vec<Token> {

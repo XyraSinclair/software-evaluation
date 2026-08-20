@@ -781,6 +781,29 @@ pub fn print_duplicates(report: &DuplicateReport) {
         report.totals.duplicated_tokens,
         report.totals.duplicated_lines,
     );
+    println!(
+        "file pairs (pattern mass, from {} reported / {} found groups{}):",
+        report.groups.len(),
+        report.groups_found,
+        if report.groups_censored {
+            "; censored — lower bounds"
+        } else {
+            ""
+        },
+    );
+    for pair in report.file_pairs.iter().take(20) {
+        if pair.left == pair.right {
+            println!(
+                "  {} (within-file): {} groups, {} tokens",
+                pair.left, pair.shared_groups, pair.shared_tokens,
+            );
+        } else {
+            println!(
+                "  {} ~ {}: {} groups, {} tokens",
+                pair.left, pair.right, pair.shared_groups, pair.shared_tokens,
+            );
+        }
+    }
     for (index, group) in report.groups.iter().enumerate() {
         println!(
             "group {}: {} tokens × {} occurrences; {} lines/occurrence; mass={} tokens / {} lines; digest={}",
