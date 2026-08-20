@@ -8,8 +8,8 @@ use std::process::ExitCode;
 
 use analysis_output::{
     print_api, print_benchmark, print_cochange_layout, print_cochange_support, print_dependencies,
-    print_discipline, print_duplicates, print_shape, print_symbols, print_tests, print_twins,
-    print_typespace,
+    print_discipline, print_duplicates, print_liveness, print_shape, print_symbols, print_tests,
+    print_twins, print_typespace,
 };
 use change_profile_output::{render_change_profile_svg, render_change_profile_text};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -28,6 +28,7 @@ use software_evaluation::kernel::{
     BeliefState, CriterionProgram, DecisionSpec, EvaluationRun, ResourceBudget, StopReason,
     evaluate_pipeline,
 };
+use software_evaluation::liveness::analyze_liveness;
 use software_evaluation::metrics::{
     FileIdentity, FileMetric, FunctionMetric, MatchedFileDifference, MetricSort, MetricsComparison,
     MetricsComparisonSide, MetricsReport, NumericDifference, analyze_path, compare_paths,
@@ -246,6 +247,16 @@ enum Command {
         path: PathBuf,
         /// Maximum file/path rows shown in each text section.
         #[arg(long, default_value_t = 100)]
+        top: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Census name-level liveness: dead-candidate, single-use, and test-only defined names.
+    Liveness {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Maximum rows shown in each text section.
+        #[arg(long, default_value_t = 30)]
         top: usize,
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
         format: OutputFormat,
@@ -709,6 +720,14 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             match format {
                 OutputFormat::Json => print_json(&report)?,
                 OutputFormat::Text => print_tests(&report, top),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Liveness { path, top, format } => {
+            let report = analyze_liveness(&path).map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_liveness(&report, top),
             }
             Ok(ExitCode::SUCCESS)
         }

@@ -10,6 +10,7 @@ use software_evaluation::discipline::{
     rank_functions as rank_discipline_functions,
 };
 use software_evaluation::duplicates::DuplicateReport;
+use software_evaluation::liveness::{LivenessReport, NameStatus};
 use software_evaluation::shape::{
     IntegerDistribution, ShapeReport, rank_functions as rank_shape_functions,
 };
@@ -2001,5 +2002,64 @@ fn print_twin_class_section(
         if !class.shared_out.is_empty() {
             println!("    shared-out: {}", class.shared_out.join(", "));
         }
+    }
+}
+
+pub fn print_liveness(report: &LivenessReport, top: usize) {
+    println!("analyzer: {}", report.analyzer);
+    println!("root: {}", report.root);
+    println!(
+        "coverage: {} considered / {} enumerated files; {} skipped; {} identifier leaves; syntax-error-files={}",
+        report.coverage.considered_files,
+        report.coverage.enumerated_files,
+        report.coverage.skipped_files,
+        report.coverage.identifier_leaves,
+        report.coverage.syntax_error_files,
+    );
+    println!(
+        "names: {} definitions -> {} distinct; dead-private={} dead-public={} single-use={} test-only={} excluded={}",
+        report.definitions,
+        report.distinct_names,
+        report.dead_private_names,
+        report.dead_public_names,
+        report.single_use_names,
+        report.test_only_names,
+        report.excluded_names,
+    );
+    print_liveness_section(report, NameStatus::DeadPrivate, "dead private names", top);
+    print_liveness_section(
+        report,
+        NameStatus::DeadPublic,
+        "dead public names (external consumers invisible)",
+        top,
+    );
+    print_liveness_section(report, NameStatus::SingleUse, "single-use names", top);
+    print_liveness_section(report, NameStatus::TestOnly, "test-only names", top);
+    print_limitations(&report.limitations);
+}
+
+fn print_liveness_section(report: &LivenessReport, status: NameStatus, label: &str, top: usize) {
+    let rows: Vec<_> = report
+        .rows
+        .iter()
+        .filter(|row| row.status == status)
+        .collect();
+    println!("{label}: {}", rows.len());
+    for row in rows.iter().take(top) {
+        let site = &row.definitions[0];
+        let more = if row.definition_count > 1 {
+            format!(" (+{} more defs)", row.definition_count - 1)
+        } else {
+            String::new()
+        };
+        let witness = row
+            .mention_witness
+            .as_ref()
+            .map(|mention| format!("; mentioned at {}:{}", mention.path, mention.line))
+            .unwrap_or_default();
+        println!(
+            "  {} [{}] {}:{}{}{}",
+            row.name, site.kind, site.path, site.line, more, witness,
+        );
     }
 }

@@ -65,6 +65,7 @@ $ cargo run --release -- files /path/to/repo --sort maintainability --top 30
 $ cargo run --release -- metrics-compare /path/to/left /path/to/right --format json
 $ cargo run --release -- deps /path/to/repo
 $ cargo run --release -- twins /path/to/repo --near-percent 80
+$ cargo run --release -- liveness /path/to/repo --top 30
 $ cargo run --release -- duplicates /path/to/repo --min-tokens 40 --min-lines 5
 $ cargo run --release -- api /path/to/repo --top 100
 $ cargo run --release -- tests /path/to/repo --top 100

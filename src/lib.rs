@@ -21,6 +21,7 @@ pub mod frontier_policies;
 pub mod frontier_probes;
 pub mod info;
 pub mod kernel;
+pub mod liveness;
 pub mod metrics;
 pub mod repo;
 pub mod shape;
