@@ -10,6 +10,7 @@ use software_evaluation::discipline::{
     rank_functions as rank_discipline_functions,
 };
 use software_evaluation::duplicates::DuplicateReport;
+use software_evaluation::guards::GuardsReport;
 use software_evaluation::liveness::{LivenessReport, NameStatus};
 use software_evaluation::shape::{
     IntegerDistribution, ShapeReport, rank_functions as rank_shape_functions,
@@ -2090,4 +2091,51 @@ fn print_manifest_usage(report: &DependencyReport) {
             row.name, row.ecosystem, row.manifest, row.scope, label, row.lexical_word_mentions,
         );
     }
+}
+
+pub fn print_guards(report: &GuardsReport, top: usize) {
+    println!("analyzer: {}", report.analyzer);
+    println!("root: {}", report.root);
+    println!(
+        "coverage: {} considered / {} enumerated files; {} skipped; {} conditions observed; syntax-error-files={}",
+        report.coverage.considered_files,
+        report.coverage.enumerated_files,
+        report.coverage.skipped_files,
+        report.coverage.conditions_observed,
+        report.coverage.syntax_error_files,
+    );
+    println!(
+        "config: min-count={} min-tokens={} max-patterns={}",
+        report.config.min_count, report.config.min_tokens, report.config.max_patterns,
+    );
+    println!(
+        "patterns: {} found{}; repeated occurrences {}/{} considered conditions ({:.3})",
+        report.patterns_found,
+        if report.patterns_censored {
+            " (censored at max-patterns; incomplete)"
+        } else {
+            ""
+        },
+        report.repeated_occurrence_numerator,
+        report.repeated_occurrence_denominator,
+        report.repeated_occurrence_fraction,
+    );
+    for pattern in report.patterns.iter().take(top) {
+        println!(
+            "  ×{} in {} files [{} tokens; verbatim ×{} \"{}\"]: {}",
+            pattern.occurrence_count,
+            pattern.distinct_files,
+            pattern.tokens,
+            pattern.identical_raw_max,
+            pattern.identical_raw_witness,
+            pattern.raw_spellings.join("  |  "),
+        );
+        for occurrence in pattern.occurrences.iter().take(6) {
+            println!("    {}:{}", occurrence.path, occurrence.line);
+        }
+        if pattern.occurrences.len() > 6 {
+            println!("    … {} more", pattern.occurrences.len() - 6);
+        }
+    }
+    print_limitations(&report.limitations);
 }

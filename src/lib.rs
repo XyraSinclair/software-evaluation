@@ -19,6 +19,7 @@ pub(crate) mod frontier_contract;
 pub mod frontier_identified;
 pub mod frontier_policies;
 pub mod frontier_probes;
+pub mod guards;
 pub mod info;
 pub mod kernel;
 pub mod liveness;

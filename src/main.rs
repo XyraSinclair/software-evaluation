@@ -8,8 +8,8 @@ use std::process::ExitCode;
 
 use analysis_output::{
     print_api, print_benchmark, print_cochange_layout, print_cochange_support, print_dependencies,
-    print_discipline, print_duplicates, print_liveness, print_shape, print_symbols, print_tests,
-    print_twins, print_typespace,
+    print_discipline, print_duplicates, print_guards, print_liveness, print_shape, print_symbols,
+    print_tests, print_twins, print_typespace,
 };
 use change_profile_output::{render_change_profile_svg, render_change_profile_text};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -23,6 +23,10 @@ use software_evaluation::compare::{CompareError, EvaluationComparison, compare_e
 use software_evaluation::deps::analyze_dependencies;
 use software_evaluation::discipline::{DisciplineSort, analyze_discipline};
 use software_evaluation::duplicates::{DuplicateConfig, analyze_duplicates};
+use software_evaluation::guards::{
+    GUARDS_DEFAULT_MAX_PATTERNS, GUARDS_DEFAULT_MIN_COUNT, GUARDS_DEFAULT_MIN_TOKENS, GuardsConfig,
+    analyze_guards,
+};
 use software_evaluation::info::{PlanReport, PlanSpec, plan};
 use software_evaluation::kernel::{
     BeliefState, CriterionProgram, DecisionSpec, EvaluationRun, ResourceBudget, StopReason,
@@ -248,6 +252,25 @@ enum Command {
         /// Maximum file/path rows shown in each text section.
         #[arg(long, default_value_t = 100)]
         top: usize,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Census repeated normalized branch/loop conditions (guard predicates).
+    Guards {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Maximum patterns shown in text output.
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        /// Minimum occurrences for a predicate pattern to be reported.
+        #[arg(long, default_value_t = GUARDS_DEFAULT_MIN_COUNT)]
+        min_count: usize,
+        /// Minimum normalized tokens in a condition to be considered.
+        #[arg(long, default_value_t = GUARDS_DEFAULT_MIN_TOKENS)]
+        min_tokens: usize,
+        /// Maximum reported patterns; exceeding it censors the list.
+        #[arg(long, default_value_t = GUARDS_DEFAULT_MAX_PATTERNS)]
+        max_patterns: usize,
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
         format: OutputFormat,
     },
@@ -720,6 +743,26 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             match format {
                 OutputFormat::Json => print_json(&report)?,
                 OutputFormat::Text => print_tests(&report, top),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Guards {
+            path,
+            top,
+            min_count,
+            min_tokens,
+            max_patterns,
+            format,
+        } => {
+            let config = GuardsConfig {
+                min_count,
+                min_tokens,
+                max_patterns,
+            };
+            let report = analyze_guards(&path, &config).map_err(|error| error.to_string())?;
+            match format {
+                OutputFormat::Json => print_json(&report)?,
+                OutputFormat::Text => print_guards(&report, top),
             }
             Ok(ExitCode::SUCCESS)
         }
