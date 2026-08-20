@@ -155,9 +155,11 @@ pub fn analyze_liveness(input: &Path) -> Result<LivenessReport, LivenessError> {
                 }
             }
             // Rust format strings hold `{name}` interpolations invisible to
-            // the grammar; count them lexically so they read as liveness.
+            // the grammar, and serde-style attributes reference functions as
+            // whole-string paths (`default = "default_page"`); count both
+            // lexically so they read as liveness.
             if file.language == SourceLanguage::Rust && node.kind() == "string_content" {
-                for name in brace_interpolations(text(file, node)) {
+                for name in rust_string_mentions(text(file, node)) {
                     identifier_leaves += 1;
                     let entry = counts.entry(name).or_insert((0, 0));
                     entry.0 += 1;
@@ -224,7 +226,7 @@ pub fn analyze_liveness(input: &Path) -> Result<LivenessReport, LivenessError> {
                     }
                 }
                 if file.language == SourceLanguage::Rust && node.kind() == "string_content" {
-                    for name in brace_interpolations(text(file, node)) {
+                    for name in rust_string_mentions(text(file, node)) {
                         if let Some(slot) = sparse.get_mut(name.as_str())
                             && slot.is_none()
                         {
@@ -323,7 +325,7 @@ pub fn analyze_liveness(input: &Path) -> Result<LivenessReport, LivenessError> {
         rows,
         limitations: vec![
             "Mentions are identifier-shaped leaves, never resolved references: any binding, field, or parameter sharing a defined name counts as liveness, so mention counts over-state liveness and never invent deadness.".to_owned(),
-            "String literals are not scanned except Rust `{name}` format interpolations (Python f-strings and JS templates parse to real identifiers): names referenced only through plain strings (CLI dispatch tables, serde renames, reflection, dynamic import) read as dead and must be cleared by a human or a runtime probe.".to_owned(),
+            "String literals are not scanned except Rust `{name}` format interpolations and whole-string identifier paths (the serde attribute convention); Python f-strings and JS templates parse to real identifiers. Names referenced only through other string forms (CLI dispatch tables, reflection, dynamic import) read as dead and must be cleared by a human or a runtime probe.".to_owned(),
             "Lexically public definitions may have consumers outside this repository; their dead rows are a separate, weaker list, not deletion evidence.".to_owned(),
             "Multiple definitions sharing one name are aggregated: the census cannot attribute mentions among them, so per-name status is the strongest claim available.".to_owned(),
             "Entry points, dunder names, names defined only in test files or under test attributes, and names defined only in Rust trait impls are excluded from dead-candidacy and reported as excluded, not hidden.".to_owned(),
@@ -437,6 +439,29 @@ fn has_export_ancestor(node: Node<'_>) -> bool {
         current = parent.parent();
     }
     false
+}
+
+/// Name mentions inside one Rust string body: `{name}` format interpolations
+/// plus whole-string identifier paths (`default_page`,
+/// `crate::module::function`), the serde attribute convention. Conservative
+/// in the stated direction: matching text that is not a reference only adds
+/// liveness.
+fn rust_string_mentions(body: &str) -> Vec<String> {
+    let mut names = brace_interpolations(body);
+    if !body.is_empty()
+        && body.split("::").all(|segment| {
+            let mut chars = segment.chars();
+            chars
+                .next()
+                .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+                && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+        })
+    {
+        for segment in body.split("::") {
+            names.push(segment.to_owned());
+        }
+    }
+    names
 }
 
 /// Identifier-shaped names inside `{...}` interpolation slots of a Rust

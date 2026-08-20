@@ -1,6 +1,8 @@
 //! Deterministic, evidence-first static dependency graph analysis.
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+
+use ignore::WalkBuilder;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
@@ -482,9 +484,11 @@ pub enum ManifestSourceKind {
 }
 
 /// Manifest-declared dependencies joined against import declarations and a
-/// whole-word lexical scan of walked source bytes. The strongest negative
-/// claim is `unused-candidate`: no import declaration matches AND the name
-/// never appears as a word anywhere. Liveness is over-stated, never invented.
+/// whole-word lexical scan of every non-ignored text file (any extension;
+/// lockfiles and dependency manifests excluded so declarations cannot vouch
+/// for themselves). The strongest negative claim is `unused-candidate`: no
+/// import declaration matches AND the name never appears as a word anywhere.
+/// Liveness is over-stated, never invented.
 #[derive(Debug, Clone, Serialize)]
 pub struct ManifestUsage {
     pub rows: Vec<ManifestUsageRow>,
@@ -511,8 +515,10 @@ pub struct ManifestUsageRow {
     pub lexical_word_mentions: usize,
     /// Tokens the lexical scan searched for.
     pub lexical_tokens: Vec<String>,
-    /// False for Python: distribution names are not mappable to import
-    /// modules, so the unused claim is never made there.
+    /// False for Python (distribution names are not mappable to import
+    /// modules) and npm development scope (toolchains resolve binaries and
+    /// peer requirements by other names); the unused claim is never made
+    /// for unreliable mappings.
     pub mapping_reliable: bool,
     pub status: ManifestUsageStatus,
 }
@@ -746,7 +752,7 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
     let import_grading = import_grading(&source_tree.files, &declarations, &edges);
     let evidence_count = edges.iter().map(|e| e.evidence.len()).sum();
     let (manifest_dependencies, manifest_count, unreadable_manifests) = inventory_manifests(input)?;
-    let manifest_usage = manifest_usage(&manifest_dependencies, &declarations, &source_tree.files);
+    let manifest_usage = manifest_usage(&manifest_dependencies, &declarations, input);
     let non_registry_manifest_dependency_count = manifest_dependencies
         .iter()
         .filter(|d| d.source_kind != ManifestSourceKind::Registry)
@@ -830,8 +836,8 @@ pub fn analyze_dependencies(input: &Path) -> Result<DependencyReport, Dependency
 
 fn base_limitations() -> Vec<String> {
     vec![
-        "Manifest usage is a two-tier lexical join: `used` means a matching import declaration exists, `mentioned-only` means the name occurs as a word somewhere (comments and strings count deliberately), and `unused-candidate` is only claimed when both tiers are empty in a reliable-mapping ecosystem. Feature-gated, re-exported, and build-script-only usage outside walked files stays invisible.".to_owned(),
-        "Python distribution names are not mappable to import module names; their rows are never claimed unused.".to_owned(),
+        "Manifest usage is a two-tier lexical join: `used` means a matching import declaration exists, `mentioned-only` means the name occurs as a word in any non-ignored text file (comments, strings, and unwalked languages count deliberately; lockfiles and manifests are excluded so declarations cannot vouch for themselves), and `unused-candidate` is only claimed when both tiers are empty in a reliable-mapping ecosystem.".to_owned(),
+        "Python distribution names are not mappable to import module names, and npm development-scope tools are resolved by other tools; those rows are never claimed unused.".to_owned(),
             "Syntax-error trees are analyzed error-tolerantly; declarations from those files may be partial.".to_owned(),
             "Resolution is filesystem-only: no Cargo metadata, Python environment, package.json/tsconfig aliases, JavaScript package exports, Go modules, build tags, generated code, or conditional compilation are interpreted.".to_owned(),
             "Manifest inventory reads only direct declarations; it does not resolve lockfiles, target markers, feature activation, transitive dependencies, or registry defaults beyond the literal manifest syntax.".to_owned(),
@@ -2862,16 +2868,24 @@ fn parse_go_mod(manifest: &str, content: &str, out: &mut Vec<ManifestDependency>
 fn manifest_usage(
     manifest_dependencies: &[ManifestDependency],
     declarations: &[(&SourceFile, Declaration)],
-    files: &[SourceFile],
+    root: &Path,
 ) -> ManifestUsage {
+    let lexical_files = lexical_scan_files(root);
     let mut rows = Vec::new();
     let (mut used, mut mentioned_only, mut unused_candidates, mut unmappable) = (0, 0, 0, 0);
     for dependency in manifest_dependencies {
         let (roots, tokens, mapping_reliable): (Vec<String>, Vec<String>, bool) =
             match dependency.ecosystem.as_str() {
                 "cargo" => {
-                    let token = dependency.name.replace('-', "_");
-                    (vec![token.clone()], vec![token], true)
+                    // Crates may rename their lib target (`md-5` exposes
+                    // `md5`), so both the underscored and hyphen-stripped
+                    // spellings are accepted.
+                    let mut variants = vec![dependency.name.replace('-', "_")];
+                    let stripped = dependency.name.replace('-', "");
+                    if !variants.contains(&stripped) {
+                        variants.push(stripped);
+                    }
+                    (variants.clone(), variants, true)
                 }
                 "npm" => {
                     let last = dependency
@@ -2884,7 +2898,10 @@ fn manifest_usage(
                     if last != dependency.name {
                         tokens.push(last);
                     }
-                    (vec![dependency.name.clone()], tokens, true)
+                    // Development-scope tools are resolved by other tools
+                    // (binaries, peer requirements), not by imports.
+                    let reliable = dependency.scope != "development";
+                    (vec![dependency.name.clone()], tokens, reliable)
                 }
                 "python" => {
                     let token = dependency.name.to_ascii_lowercase().replace('-', "_");
@@ -2970,24 +2987,20 @@ fn manifest_usage(
             tokens
                 .iter()
                 .map(|token| {
-                    files
+                    lexical_files
                         .iter()
-                        .map(|file| word_mentions(&file.bytes, token))
+                        .map(|bytes| word_mentions(bytes, token))
                         .sum::<usize>()
                 })
                 .sum()
         };
         let status = if matches > 0 {
-            used += 1;
             ManifestUsageStatus::Used
         } else if lexical_word_mentions > 0 {
-            mentioned_only += 1;
             ManifestUsageStatus::MentionedOnly
         } else if mapping_reliable {
-            unused_candidates += 1;
             ManifestUsageStatus::UnusedCandidate
         } else {
-            unmappable += 1;
             ManifestUsageStatus::Unmappable
         };
         rows.push(ManifestUsageRow {
@@ -3003,6 +3016,29 @@ fn manifest_usage(
             status,
         });
     }
+    // A workspace-scope Cargo row declares the same dependency its member
+    // crates import; it inherits their usage instead of reading as unused.
+    let names_with_matches: BTreeSet<(String, String)> = rows
+        .iter()
+        .filter(|row| row.import_declaration_matches > 0)
+        .map(|row| (row.ecosystem.clone(), row.name.clone()))
+        .collect();
+    for row in &mut rows {
+        if row.status != ManifestUsageStatus::Used
+            && row.scope == "workspace"
+            && names_with_matches.contains(&(row.ecosystem.clone(), row.name.clone()))
+        {
+            row.status = ManifestUsageStatus::Used;
+        }
+    }
+    for row in &rows {
+        match row.status {
+            ManifestUsageStatus::Used => used += 1,
+            ManifestUsageStatus::MentionedOnly => mentioned_only += 1,
+            ManifestUsageStatus::UnusedCandidate => unused_candidates += 1,
+            ManifestUsageStatus::Unmappable => unmappable += 1,
+        }
+    }
     rows.sort_by(|a, b| {
         status_rank(a.status)
             .cmp(&status_rank(b.status))
@@ -3016,6 +3052,62 @@ fn manifest_usage(
         unused_candidates,
         unmappable,
     }
+}
+
+/// Bytes of every non-ignored, non-hidden text file under `root` for the
+/// lexical mention tier: any extension, so imports in unwalked languages
+/// (Svelte, Vue, config files) still vouch for a dependency. Lockfiles and
+/// dependency manifests are excluded so declarations cannot vouch for
+/// themselves. Files over 2 MiB or containing NUL in the first KiB are
+/// skipped as binary.
+fn lexical_scan_files(root: &Path) -> Vec<Vec<u8>> {
+    const EXCLUDED_NAMES: &[&str] = &[
+        "Cargo.lock",
+        "Cargo.toml",
+        "package.json",
+        "package-lock.json",
+        "yarn.lock",
+        "pnpm-lock.yaml",
+        "bun.lock",
+        "bun.lockb",
+        "pyproject.toml",
+        "go.mod",
+        "go.sum",
+    ];
+    const MAX_BYTES: u64 = 2 * 1024 * 1024;
+    let mut files = Vec::new();
+    let mut paths = Vec::new();
+    for entry in WalkBuilder::new(root).build().flatten() {
+        if entry.file_type().is_none_or(|kind| !kind.is_file()) {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy();
+        if EXCLUDED_NAMES.contains(&name.as_ref())
+            || name.starts_with("requirements") && name.ends_with(".txt")
+        {
+            continue;
+        }
+        if entry
+            .metadata()
+            .map(|metadata| metadata.len() > MAX_BYTES)
+            .unwrap_or(true)
+        {
+            continue;
+        }
+        paths.push(entry.into_path());
+    }
+    paths.sort();
+    for path in paths {
+        let Ok(bytes) = fs::read(&path) else {
+            continue;
+        };
+        let head = &bytes[..bytes.len().min(1024)];
+        if head.contains(&0) {
+            continue;
+        }
+        files.push(bytes);
+    }
+    files
 }
 
 fn status_rank(status: ManifestUsageStatus) -> u8 {
