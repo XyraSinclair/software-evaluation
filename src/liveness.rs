@@ -386,10 +386,8 @@ fn definition_of<'a>(file: &SourceFile, node: Node<'a>) -> Option<(Node<'a>, &'s
     let public = match file.language {
         SourceLanguage::Rust => {
             let mut cursor = node.walk();
-            let visible = node
-                .children(&mut cursor)
-                .any(|child| child.kind() == "visibility_modifier" && text(file, child) == "pub");
-            visible
+            node.children(&mut cursor)
+                .any(|child| child.kind() == "visibility_modifier" && text(file, child) == "pub")
         }
         SourceLanguage::Python => !name.starts_with('_'),
         SourceLanguage::Go => name.chars().next().is_some_and(char::is_uppercase),
