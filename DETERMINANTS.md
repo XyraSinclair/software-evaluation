@@ -402,6 +402,17 @@ of well-known crates is dominated by scope (small crates complete or get
 superseded), not by structural decay. A follow-up corpus must be
 size-stratified.
 
+*Population base rates (probed 2026-08-22).* grep.codemod.com runs ast-grep
+rules over one HEAD snapshot of every GitHub repo above ≈25k stars (~1,600
+repos; 16 shards; ~300 ms/query; unauthenticated `POST
+/api/v1/search/stream`, ndjson, commit-pinned blob URL per match). Any
+determinant phrasable as an ast-grep rule can therefore be given a base
+rate over the most-adopted population, with PROVENANCE-grade evidence, in
+one request. It is survivors-only, so it serves as a base-rate instrument
+for the corpus-model rows above, never as an outcome-discrimination corpus;
+the B3 follow-up still needs its own size-stratified sample. Probe notes
+and request helper: `~/projects/scratch/grep-codemod-2026-08-22/`.
+
 **Finding 1 — El Emam's prior confirmed wholesale.** Fourteen coordinates
 showed raw class associations |ρ| ≥ 0.3 (deeper condensations, more cycles,
 higher modularity Q, larger working sets, lower φ certificates in active
