@@ -12,6 +12,7 @@ use software_evaluation::discipline::{
 use software_evaluation::duplicates::DuplicateReport;
 use software_evaluation::guards::GuardsReport;
 use software_evaluation::liveness::{LivenessReport, NameStatus};
+use software_evaluation::look::{LookDelta, LookReport, LookRow};
 use software_evaluation::shape::{
     IntegerDistribution, ShapeReport, rank_functions as rank_shape_functions,
 };
@@ -2064,6 +2065,68 @@ fn print_liveness_section(report: &LivenessReport, status: NameStatus, label: &s
             row.name, site.kind, site.path, site.line, more, witness,
         );
     }
+}
+
+pub fn print_look(report: &LookReport) {
+    println!("analyzer: {}", report.analyzer);
+    println!("root: {}", report.root);
+    println!(
+        "coverage: {} supported files; {} functions; file line ceiling {}",
+        report.supported_files, report.functions, report.file_line_ceiling
+    );
+    println!(
+        "look here first (cited by more than one lens): {}",
+        report.agreements.len()
+    );
+    for agreement in &report.agreements {
+        let lenses: Vec<&str> = agreement.lenses.iter().map(|lens| lens.label()).collect();
+        println!("  {} [{}]", agreement.path, lenses.join(", "));
+        for row in agreement.rows.iter().take(4) {
+            println!(
+                "    {:<12} :{:<6} {}",
+                row.lens.label(),
+                row.line,
+                row.evidence
+            );
+        }
+    }
+    for section in &report.sections {
+        println!();
+        println!(
+            "{}: {} in tail of {} candidates (tail floor {}) — {}",
+            section.lens.label(),
+            section.found,
+            section.candidates,
+            section.tail_floor,
+            section.reading
+        );
+        if let Some(reason) = &section.unavailable {
+            println!("  unavailable: {reason}");
+        }
+        for row in &section.rows {
+            print_look_row(row);
+        }
+    }
+    print_limitations(&report.limitations);
+}
+
+pub fn print_look_delta(delta: &LookDelta) {
+    println!("base: {}", delta.base);
+    println!("introduced since base: {}", delta.introduced.len());
+    for row in &delta.introduced {
+        println!("  {:<12} {}", row.lens.label(), row.key);
+        println!("  {:<12} {}", "", row.evidence);
+    }
+    println!("found, head − base:");
+    for (lens, change) in &delta.found_delta {
+        println!("  {:<12} {change:+}", lens.label());
+    }
+    println!();
+    print_look(&delta.head);
+}
+
+fn print_look_row(row: &LookRow) {
+    println!("  {}:{}  {}", row.path, row.line, row.evidence);
 }
 
 fn print_manifest_usage(report: &DependencyReport) {

@@ -178,9 +178,10 @@ Report as distributions and tails; use as review routers, never gates.
 | D6 | Unit-return without disclosure | unit-returning functions whose signature has no `&mut`/receiver and whose body has effect calls (hidden effect); `fn f(&mut self) -> ()` is honest — the signature *is* the disclosure | have (derivable from `seval discipline` JSON: unit_return ∧ mut_params=0 ∧ effect_calls>0) |
 | D7 | Magic literals; global mutable state | numeric/string literals outside const/config/test files (excluding 0/1/-1/2); `static mut`, module-level reassigned bindings, `global` writes | have (`seval discipline`, file level; magic strings are a volume, not a smell count) |
 | D8 | Commented-out code; TODO/FIXME/HACK density | comment bodies that parse as code; markers per kSLOC with blame age | next |
+| D8b | Never-re-read evidence | longest line past every formatter's wrap (`squash`); `rustfmt --check` drift (`format-drift`); exact and language-relative, cheap, and empirically co-located with D1/D2 tails on exopriors-core (2026-08-29) | have (`seval look`) |
 | D9 | Dead private code | unreferenced non-public definitions | later (symbol graph) |
 | D10 | Rework / hidden co-change coupling | lines rewritten within N days; fix-after-fix chains; revert rate; co-change far apart in tree (**have** the co-change half). Best-validated signals in the literature (Nagappan & Ball 2005; Hassan 2009) — against *defects*, not beauty. Evolvability axis only; never near a beauty claim | have / later |
-| D11 | Formatter / lint conformance | `rustfmt --check`, `prettier --check`, `ruff`, `clippy` per kSLOC — exact, external, hygiene | later (external tool evidence) |
+| D11 | Formatter / lint conformance | `rustfmt --check`, `prettier --check`, `ruff`, `clippy` per kSLOC — exact, external, hygiene | rustfmt half **have** (`seval look` format-drift); rest later |
 | D12 | Boolean-expression complexity | operators per condition, negations, mixed `&&`/`||` without parens, nested ternaries; largely subsumed by nesting + symmetry | next (cheap, low weight) |
 | D13 | Naming length-vs-scope | identifier length correlated with scope length; vocabulary size vs definition count | later |
 | D14 | Encapsulation | public field fraction; `pub` vs `pub(crate)` | next |

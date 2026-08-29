@@ -8,8 +8,8 @@ use std::process::ExitCode;
 
 use analysis_output::{
     print_api, print_benchmark, print_cochange_layout, print_cochange_support, print_dependencies,
-    print_discipline, print_duplicates, print_guards, print_liveness, print_shape, print_symbols,
-    print_tests, print_twins, print_typespace,
+    print_discipline, print_duplicates, print_guards, print_liveness, print_look, print_look_delta,
+    print_shape, print_symbols, print_tests, print_twins, print_typespace,
 };
 use change_profile_output::{render_change_profile_svg, render_change_profile_text};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -33,6 +33,7 @@ use software_evaluation::kernel::{
     evaluate_pipeline,
 };
 use software_evaluation::liveness::analyze_liveness;
+use software_evaluation::look::{look, look_delta};
 use software_evaluation::metrics::{
     FileIdentity, FileMetric, FunctionMetric, MatchedFileDifference, MetricSort, MetricsComparison,
     MetricsComparisonSide, MetricsReport, NumericDifference, analyze_path, compare_paths,
@@ -147,6 +148,23 @@ enum Command {
         /// Criterion-program limit applied independently to each repository.
         #[arg(long, default_value_t = 2)]
         max_programs: u32,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+    },
+    /// Where should a reader look first: tangle, asymmetry, dead-public, bulk, and format-drift
+    /// lenses ranked by agreement; `--base REV` names what the working tree introduced.
+    Look {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Git revision to compare against; reports rows introduced since it.
+        #[arg(long)]
+        base: Option<String>,
+        /// Maximum rows shown per lens.
+        #[arg(long, default_value_t = 12)]
+        top: usize,
+        /// Files at or above this many lines are cited by the bulk lens.
+        #[arg(long, default_value_t = 1728)]
+        file_line_ceiling: usize,
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
         format: OutputFormat,
     },
@@ -814,6 +832,35 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             match format {
                 OutputFormat::Json => print_json(&report)?,
                 OutputFormat::Text => print_typespace(&report, top),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Look {
+            path,
+            base,
+            top,
+            file_line_ceiling,
+            format,
+        } => {
+            match base {
+                Some(base) => {
+                    let mut delta = look_delta(&path, &base, file_line_ceiling)
+                        .map_err(|error| error.to_string())?;
+                    delta.head = delta.head.truncated(top);
+                    match format {
+                        OutputFormat::Json => print_json(&delta)?,
+                        OutputFormat::Text => print_look_delta(&delta),
+                    }
+                }
+                None => {
+                    let report = look(&path, file_line_ceiling)
+                        .map_err(|error| error.to_string())?
+                        .truncated(top);
+                    match format {
+                        OutputFormat::Json => print_json(&report)?,
+                        OutputFormat::Text => print_look(&report),
+                    }
+                }
             }
             Ok(ExitCode::SUCCESS)
         }

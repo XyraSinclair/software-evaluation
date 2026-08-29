@@ -174,7 +174,7 @@ pub fn analyze_shape(input: &Path) -> Result<ShapeReport, ShapeError> {
             "Interface width counts syntactic surface, not information content: a HashMap<String, Any> parameter has width 1 while potentially leaking an unbounded protocol.".to_owned(),
             "All values are exact for the error-tolerant tree-sitter AST, but module depth, cognitive burden, nesting burden, and branch uniformity are proxies for reader experience rather than direct observations of it.".to_owned(),
             "Files with syntax errors stay in every file/function denominator and are flagged; recovery nodes can make their counts partial.".to_owned(),
-            "Lexical same-name calls are the recursion proxy; unresolved aliases, dynamic dispatch, and mutual recursion are not detected, while an unrelated same-name receiver call can overcount.".to_owned(),
+            "Lexical same-name calls (bare, or qualified by Self/self/this) are the recursion proxy; unresolved aliases, dynamic dispatch, and mutual recursion are not detected, while a same-name method on an instance variable can overcount.".to_owned(),
         ],
     })
 }
@@ -498,14 +498,35 @@ impl<'a> FunctionWalk<'a> {
         self.max_arm_ratio = Some(self.max_arm_ratio.map_or(ratio, |old| old.max(ratio)));
     }
 
+    /// A bare same-name call, or a qualified one whose qualifier is the
+    /// enclosing type or instance (`Self::`, `self.`, `this.`). Any other
+    /// qualifier names a different owner — `AtomicU64::new` inside `fn new`
+    /// is construction, not recursion.
     fn is_recursive_call(&self, node: Node<'_>) -> bool {
         if !is_call(self.file.language, node.kind()) {
             return false;
         }
-        node.child_by_field_name("function")
+        let Some(callee) = node
+            .child_by_field_name("function")
             .or_else(|| node.child_by_field_name("method"))
-            .and_then(last_identifier)
-            .is_some_and(|callee| text(self.file, callee) == self.function_name)
+        else {
+            return false;
+        };
+        let Some(name) = last_identifier(callee) else {
+            return false;
+        };
+        if text(self.file, name) != self.function_name {
+            return false;
+        }
+        if name == callee {
+            return true;
+        }
+        let mut cursor = callee.walk();
+        let qualifier = callee
+            .named_children(&mut cursor)
+            .find(|child| *child != name)
+            .map(|child| text(self.file, child));
+        matches!(qualifier, None | Some("Self" | "self" | "this"))
     }
 }
 

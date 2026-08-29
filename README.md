@@ -19,6 +19,27 @@ Built on three refusals:
   judges; agreement compresses, disagreement is reported as the finding and
   routed to the owner.
 
+## The front door
+
+```console
+$ seval look /path/to/repo              # where should a reader look first
+$ seval look /path/to/repo --base main  # what this change introduced
+```
+
+Sloppy code is code that was written and never re-read. `look` composes the
+instruments below into six lenses that each measure evidence of that on the
+repository's own distribution — **tangle** (cognitive − cyclomatic gap with
+nesting), **asymmetry** (one branch arm dwarfing its siblings), **dead-public**
+(exported names nothing mentions), **bulk** (files over a line ceiling),
+**squash** (lines past every formatter's wrap), **format-drift** (what
+`rustfmt` would rewrite) — and ranks places by how many lenses agree, never by
+a weighted score. Each lens cites only its own nearest-rank p90 tail, states
+its reading and its known false-positive class inline, and reports itself
+unavailable rather than silently empty. `--base REV` re-runs the same lenses
+in a detached worktree of `REV` and names the head tail rows that are new or
+worse, joined on a line-number-free key — the ratchet form an agent can steer
+by while writing. Everything else in this README is the library underneath.
+
 ## The pieces
 
 | Doc | What it holds |
@@ -59,6 +80,7 @@ $ cargo run -- plan examples/audit-plan.json
 $ cargo run -- repo-profile /path/to/clean/repo --format json
 $ cargo run -- repo-compare /path/to/left /path/to/right --format json
 $ cargo run --release -- change-profile /path/to/clean/repo --history-commits 200 --format svg
+$ cargo run --release -- look /path/to/repo --base main
 $ cargo run --release -- metrics /path/to/repo
 $ cargo run --release -- functions /path/to/repo --sort cognitive --top 30
 $ cargo run --release -- files /path/to/repo --sort maintainability --top 30

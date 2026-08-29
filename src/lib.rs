@@ -23,6 +23,7 @@ pub mod guards;
 pub mod info;
 pub mod kernel;
 pub mod liveness;
+pub mod look;
 pub mod metrics;
 pub mod repo;
 pub mod shape;
