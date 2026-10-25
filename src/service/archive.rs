@@ -109,11 +109,11 @@ pub fn extract_zip_reader<R: Read + Seek>(
         if entry.encrypted() {
             return Err(ArchiveError::Encrypted);
         }
-        let name = entry.name();
+        let name = entry.name().map_err(|_| ArchiveError::UnsafePath)?;
         if name.as_bytes().contains(&0) || name.contains('\\') || name.len() > limits.path_bytes {
             return Err(ArchiveError::UnsafePath);
         }
-        let path = Path::new(name);
+        let path = Path::new(&*name);
         if path.is_absolute() {
             return Err(ArchiveError::UnsafePath);
         }
